@@ -219,7 +219,7 @@ public class NewAccountPanel extends GPanel {
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 10, 5, 5, 5);
 
-        JLabel copyright = new JLabel("(C) 2019-2025 Johanna and Richard Blumenthal. All Rights Reserved");
+        JLabel copyright = new JLabel("(C) 2025 Richard Blumenthal. All Rights Reserved");
         copyright.setFont(new Font("Dialog", Font.PLAIN, 10));
         copyright.setForeground(new Color(241,196,0));
         addc(copyright, 0, 2, 2, 1, 1.0, 1.0,
