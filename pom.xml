@@ -10,4 +10,46 @@
         <maven.compiler.release>24</maven.compiler.release>
         <exec.mainClass>edu.regis.merc.MercApp</exec.mainClass>
     </properties>
+        <repositories>
+        <repository>
+          <id>CronApp</id>
+          <name>CronApp Repository</name>
+          <url>	https://artifactory.cronapp.io/public-release/</url>
+        </repository>
+    </repositories>
+     <build>
+        <resources>
+        <resource>
+            <directory>
+                src/main/java/resources
+            </directory>
+        </resource>
+        </resources>
+     </build>
+      <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.google.code.gson/gson-extras -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson-extras</artifactId>
+            <version>2.8.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.8.6</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>9.0.0</version>
+        </dependency>
+         <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+            <type>jar</type>
+         </dependency>
+      </dependencies>
 </project>
