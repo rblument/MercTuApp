@@ -23,19 +23,12 @@ package edu.regis.merc.model;
  * 
  * @author rickb
  */
-public abstract class Problem extends Model {
-    protected int problemId;
+public class Problem extends TitledModel {
+
     
-    /**
-     * A brief informative description of this problem, which may be displayed 
-     * in the GUI.
-     */
-    protected String title;
     
-    /**
-     * An informative overview of this problem.
-     */
-    protected String description;
+    private TuringMachine turingMachine;
+    
     
     // ToDo:
     //public abstract ArrayList<Task> getTasks();
@@ -46,26 +39,19 @@ public abstract class Problem extends Model {
     
     public Problem(int id) {
         super(id);
+  
         
-        title = "";
-        description = "";
     }
 
-    public String getTitle() {
-        return title;
+    public TuringMachine getTuringMachine() {
+        return turingMachine;
     }
 
-    public void setTitle(String title) {
-        this.title = title;
+    public void setTuringMachine(TuringMachine turingMachine) {
+        this.turingMachine = turingMachine;
     }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    
+    
 
     @Override
     public String toString() {

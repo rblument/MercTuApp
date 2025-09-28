@@ -17,7 +17,7 @@ package edu.regis.merc.model;
  *
  * @author Michael Nguyen
  */
-public class Transition extends TitledModel {
+public class Transition extends Edge {
     private char read; // Symbol under the head
     private char write; // Symbol to overwrite in current cell
     private MoveKind direction; // Move left or right
@@ -25,6 +25,8 @@ public class Transition extends TitledModel {
 
     // Default constructor method for Transition class
     public Transition(char read, char write, MoveKind direction, State nextState) {
+        super(DEFAULT_ID);
+        
         this.read = read;
         this.write = write;
         this.direction = direction;
