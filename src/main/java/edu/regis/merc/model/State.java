@@ -17,8 +17,11 @@ package edu.regis.merc.model;
  *
  * @author Michael Nguyen
  */
-public class State extends TitledModel {
-    private String name; // State name
+public class State extends Node {
+    /**
+     * The name of this state.
+     */
+    private String name;
 
     // Default constructor for State class
     public State(String name) {

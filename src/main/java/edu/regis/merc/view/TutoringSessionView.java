@@ -12,6 +12,7 @@
  */
 package edu.regis.merc.view;
 
+import edu.regis.merc.model.PendingTask;
 import edu.regis.merc.model.TutoringSession;
 
 import java.awt.*;
@@ -109,7 +110,10 @@ public class TutoringSessionView extends GPanel {
     public void setModel(TutoringSession model) {
         this.model = model;
         
-        //PendingTask pTask = model.currentTask();
+        PendingTask pTask = model.currentTask();
+        
+        turingMachineView.setModel(pTask.getTask().getProblem().getTuringMachine());
+        
         //PendingStep pStep = pTask.getCurrentStep();
     }
 
