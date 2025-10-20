@@ -76,6 +76,71 @@ public class StateView extends JComponent implements MouseListener, MouseMotionL
     private JPopupMenu popupMenu;
 
     /**
+     * Booleans to enable/disable mouse events
+     */
+    private boolean clickEnabled = true;
+    private boolean doubleClickEnabled = false;
+    private boolean dragEnabled = false;
+    private boolean highlightEnabled = false;
+    private boolean popupEnabled = false;
+
+    /**
+     * Getters and setters for mouse events enable/disable
+     */
+    public boolean isClickEnabled() {
+        return clickEnabled;
+    }
+    public boolean isDoubleClickEnabled() {
+        return doubleClickEnabled;
+    }
+    public boolean isDragEnabled() {
+        return dragEnabled;
+    }
+    public boolean isHighlightEnabled() {
+        return highlightEnabled;
+    }
+    public boolean isPopUpEnabled() {
+        return popupEnabled;
+    }
+    public void setClickEnabled(boolean clickEnabled) {
+        this.clickEnabled = clickEnabled;
+    }
+    public void setDoubleClickEnabled(boolean doubleClickEnabled) {
+        this.doubleClickEnabled = doubleClickEnabled;
+    }
+    public void setDragEnabled(boolean dragEnabled) {
+        this.dragEnabled = dragEnabled;
+    }
+    public void setHighlighted(boolean highlighted) {
+        this.highlightEnabled = highlighted;
+    }
+    public void setPopUpEnabled(boolean popupEnabled) {
+        this.popupEnabled = popupEnabled;
+    }
+
+    /**
+     * Enable all mouse events
+     */
+    public void disableAllMouseEvents() {
+        clickEnabled = false;
+        doubleClickEnabled = false;
+        dragEnabled = false;
+        highlightEnabled = false;
+        popupEnabled = false;
+    }
+
+    /**
+     * Disable all mouse events
+     */
+    public void enableAllMouseEvents() {
+        clickEnabled = true;
+        doubleClickEnabled = true;
+        dragEnabled = true;
+        highlightEnabled = true;
+        popupEnabled = true;
+    }
+
+    /**
      * Initialize this view to display the given state.
      *
      * @param model a (Turing Machine) State
@@ -194,7 +259,7 @@ public class StateView extends JComponent implements MouseListener, MouseMotionL
      * @param e 
      */
     protected void maybeShowPopup(MouseEvent e) {
-        if (e.isPopupTrigger()) {
+        if (popupEnabled && e.isPopupTrigger()) {
             popupMenu.show(e.getComponent(), e.getX(), e.getY());
         }
     }
@@ -284,18 +349,21 @@ public class StateView extends JComponent implements MouseListener, MouseMotionL
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        if (e.getClickCount() == 2) {
+        if (!clickEnabled) return;
+        if (e.getClickCount() == 2 && isDoubleClickEnabled()) {
             doubleClick();
         }
     }
 
     @Override
     public void mouseEntered(MouseEvent e) {
+        if (!highlightEnabled) return;
         highlight();
     }
 
     @Override
     public void mouseExited(MouseEvent e) {
+        if (!highlightEnabled) return;
         unhighlight();
     }
 
@@ -304,6 +372,7 @@ public class StateView extends JComponent implements MouseListener, MouseMotionL
      */
     @Override
     public void mousePressed(MouseEvent e) {
+        if (!clickEnabled) return;
         select();
         maybeShowPopup(e);
 
@@ -320,6 +389,7 @@ public class StateView extends JComponent implements MouseListener, MouseMotionL
 
     @Override
     public void mouseDragged(MouseEvent e) {
+        if (!dragEnabled) return;
         if (isBeingDragged) {
             int newX = getX() + e.getX() - dragX;
             int newY = getY() + e.getY() - dragY;
