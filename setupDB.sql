@@ -143,7 +143,12 @@ CREATE TABLE Step (
   Description varchar(256) DEFAULT NULL,
   SequenceIndex int DEFAULT NULL,
   ExercisedComponentId int,
-  StepSubType varchar(256) DEFAULT NULL,
+  StepSubType ENUM(
+        'INFO_MESSAGE'
+        'TM_DESCRIPTION'
+        'LC_DESCRIPTION'
+        'MU_DESCRIPTION'
+        'REQUEST_HINT'),
   SubTypeId int,
   TimeoutId int,
   PRIMARY KEY (Id));
@@ -152,6 +157,23 @@ CREATE TABLE InfoMsgStep (
   SubStepId int NOT NULL,
   Text varchar(4096),
   PRIMARY KEY(SubStepId));
+
+CREATE TABLE TMDescription (
+    Id INT NOT NULL,
+    TuringMachineId INT, 
+    SubType ENUM (
+        'ACCEPT_STATE',
+        'CONFIGURATION',
+        'INITIAL_STATE',
+        'INPUT_ALPHABET',
+        'REJECT_STATE',
+        'STATE',
+        'TAPE_ALPHABET',
+        'TAPE',
+        'TRANSITION'),
+    ComponentId INT, 
+    PRIMARY KEY(Id)
+);
 
 CREATE TABLE Timeout (
   id int NOT NULL,
@@ -233,13 +255,120 @@ ExampleType, ProblemId)
 VALUES
 (0, 1, 0, 'Welcome', 'Let''s get started', 'USAGE', 0, 'N_A', -1);
 
+INSERT INTO Task
+(TaskId, CourseId, UnitId, Title, Description, Kind, SequenceIndex,
+ProblemType, ProblemId)
+VALUES
+(1, 1, 0, 'See a Turing Machine description', 'As our first real task, we''re going to show you the components of a Turing machine', 
+'TM_DESCRIPTION', 1, 'TURING_MACHINE', 0);
 
 INSERT INTO Step
 (Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex, 
  ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
 VALUES
-(0, 1, 0, 0, 'Acknowledge Welcome', 
- 'First Step in learning the tutor', 0, 0, 'Information Message', 0, 0);
+(100, 1, 0, 1, 'Show a student a state', 
+ 'Showing an example state in turing machine', 0, -1, 'TM_DESCRIPTION', 100, 0);
+
+
+INSERT INTO TMDescription
+    VALUES
+    (100, 0, 'STATE', 0);
+
+
+INSERT INTO Step
+(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex, 
+ ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
+VALUES
+(101, 1, 0, 1, 'Show a student an initial state',
+'The turing machine has a starting state, otherwise known as an INITIAL STATE', 1, -1, 
+'TM_DESCRIPTION', 101, 101, 0);
+
+INSERT INTO TMDescription
+    VALUES
+    (101, 0, 'INITIAL_STATE', 0);
+
+
+-- TO DO: work on description
+INSERT INTO Step
+(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex, 
+ ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
+VALUES
+(102, 1, 0, 'Show a student an accept state',
+'These state(s) allows for acceptance. Note: Accept states are usually shown through a double circle', 2, -1, 'TM_DESCRIPTION',
+102, 0);
+
+INSERT INTO TMDescription
+    VALUES
+    (102, 0, 'ACCEPT_STATE', 0);
+
+
+INSERT INTO Step
+(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex, 
+ ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
+VALUES
+(103, 1, 0, 'Show a a reject state.', 
+'A reject state rejects the current state of tape.',
+ 3, -1, 'TM_DESCRIPTION', 103, 0);
+
+INSERT INTO TMDescription
+    VALUES
+    (103, 0, 'REJECT_STATE', 0);
+
+
+INSERT INTO Step
+(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex, 
+ ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
+VALUES
+(104, 1, 0, 'Show a tape.', 
+'A tape is where you can read, write, and move around.',
+ 4, -1, 'TM_DESCRIPTION', 104, 0);
+
+INSERT INTO TMDescription
+    VALUES
+    (104, 0, 'TAPE', 0);
+
+
+INSERT INTO Step
+(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex, 
+ ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
+VALUES
+(105, 1, 0, 'Show tape alphabet', 
+'The tape contains symbols from a specific alphabet such as {0, 1, blank}',
+ 5, -1, 'TM_DESCRIPTION', 105, 0);
+
+INSERT INTO TMDescription
+    VALUES
+    (105, 0, 'TAPE_ALPHABET', 0);
+
+
+INSERT INTO Step
+(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex, 
+ ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
+VALUES
+(106, 1, 0, 'Turing Machine Configuration Example', 
+'Here is a sample configuration showing the tape contents, head position, and
+current state.',
+ 6, -1, 'TM_DESCRIPTION', 100, 0);
+
+INSERT INTO TMDescription
+    VALUES
+    (106, 0, 'CONFIGURATION', 0);
+
+INSERT INTO Step
+(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex, 
+ ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
+VALUES
+(107, 1, 0, 'Show transitions.', 
+'Transitions tell the machine what symbol to write, how to move the head (Left or Right), 
+and which state to go to next.',
+ 7, -1, 'TM_DESCRIPTION', 107, 0);
+
+INSERT INTO TMDescription
+    VALUES
+    (107, 0, 'TRANSITION', 0);
+
+
+
 
 INSERT INTO InfoMsgStep (SubStepId, Text) VALUES
  (0, 'Welcome, I''m Merc. I''ll begin by showing you how this
@@ -254,6 +383,10 @@ INSERT INTO Hint
 (Id, StepId, Text, SequenceIndex)
 VALUES
 (0, 0, 'Acknowledge this message by pressing the ''Acknowledged'' button.', 0);
+(1, 100, 'Remember that each circle in a diagram represents a state.', 0),
+(2, 101, 'The initial state usually has an incoming arrow with no origin.', 0),
+(3, 104, 'Think of the tape as infinite memory that the machine can scroll through.', 0);
+
 
 INSERT INTO KnowledgeComponent
 (Id, CourseId, Title,
