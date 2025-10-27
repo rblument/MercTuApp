@@ -24,7 +24,7 @@ public class TuringMachine extends GraphicalComponent {
      * The sates in this Turing Machine.
      */
     private ArrayList<State> states;
-    
+
     private LinkedList<Character> tape; // Working tape, starts as input, grows with blanks
     private LinkedList<Character> inputTape; // Copy of original input string - used to reset
     private ArrayList<Character> inputAlphabet; // List of allowed symbols
@@ -34,27 +34,27 @@ public class TuringMachine extends GraphicalComponent {
     private int head; // Current index of tape
 
     private Map<State, List<Transition>> transitions = new HashMap<>(); // Rules grouped by state they apply to
-    
+
     private HashSet<Transition> cachedTransitions;
     private static final char BLANK = '_'; // Default blank symbol
-    
+
     public TuringMachine() {
         this(DEFAULT_ID);
     }
-    
+
     public TuringMachine(int id) {
         super(id);
-        
+
         states = new ArrayList<>();
         cachedTransitions = new HashSet<>();
-        
+
         tape = new LinkedList<>();
         inputTape = new LinkedList<>();
-        
+
     }
-   
+
     // Default constructor for Turing Machine class
-   
+
     public TuringMachine(ArrayList<Character> inputAlphabet, ArrayList<Character> tapeAlphabet, State startState, State acceptState, State rejectState) {
         this.inputAlphabet = inputAlphabet;
         this.tapeAlphabet = tapeAlphabet;
@@ -64,9 +64,27 @@ public class TuringMachine extends GraphicalComponent {
         this.tape = new LinkedList<>();
         this.inputTape = new LinkedList<>();
         states = new ArrayList<>();
-        
+
         cachedTransitions = new HashSet<>();
-        
+
+        reset();
+    }
+
+    public TuringMachine(int id, String name, String description, ArrayList<Character> inputAlphabet, ArrayList<Character> tapeAlphabet, State startState, State acceptState, State rejectState) {
+        super(id);
+        super.setTitle(name);
+        super.setDescription(description);
+        this.inputAlphabet = inputAlphabet;
+        this.tapeAlphabet = tapeAlphabet;
+        this.startState = startState;
+        this.acceptState = acceptState;
+        this.rejectState = rejectState;
+        this.tape = new LinkedList<>();
+        this.inputTape = new LinkedList<>();
+        states = new ArrayList<>();
+
+        cachedTransitions = new HashSet<>();
+
         reset();
     }
 
@@ -74,7 +92,7 @@ public class TuringMachine extends GraphicalComponent {
     public void addState(State state) {
         states.add(state);
     }
-    
+
     public ArrayList<State> getStates() {
         return states;
     }
@@ -82,41 +100,41 @@ public class TuringMachine extends GraphicalComponent {
     public void setStates(ArrayList<State> states) {
         this.states = states;
     }
-    
+
     public void removeState(State state) {
         states.remove(state);
-        
+
         // ToDo: How to handle transitions for this deleted state.
     }
 
     public State getStartState() {
         return startState;
     }
-    
+
     public void setStartState(State startState) {
         this.startState = startState;
     }
-     
+
     public State getAcceptState() {
         return acceptState;
     }
-    
+
     public void setAcceptState(State acceptState) {
         this.acceptState = acceptState;
     }
-    
+
     public State getRejectState() {
         return rejectState;
     }
-    
+
     public void setRejectState(State rejectState) {
         this.rejectState = rejectState;
     }
-    
+
     public State getCurrentState() {
         return currentState;
     }
-    
+
     public void setCurrentState(State currentState) {
         this.currentState = currentState;
     }
@@ -124,7 +142,7 @@ public class TuringMachine extends GraphicalComponent {
     public LinkedList<Character> getTape() {
         return tape;
     }
-    
+
     public void setTape(LinkedList<Character> tape) {
         this.tape = tape;
     }
@@ -132,7 +150,7 @@ public class TuringMachine extends GraphicalComponent {
     public LinkedList<Character> getInputTape() {
         return inputTape;
     }
-    
+
     public void setInputTape(LinkedList<Character> inputTape) {
         this.inputTape = inputTape;
     }
@@ -140,7 +158,7 @@ public class TuringMachine extends GraphicalComponent {
     public ArrayList<Character> getInputAlphabet() {
         return inputAlphabet;
     }
-    
+
     public void setInputAlphabet(ArrayList<Character> inputAlphabet) {
         this.inputAlphabet = inputAlphabet;
     }
@@ -148,7 +166,7 @@ public class TuringMachine extends GraphicalComponent {
     public ArrayList<Character> getTapeAlphabet() {
         return tapeAlphabet;
     }
-    
+
     public void setTapeAlphabet(ArrayList<Character> tapeAlphabet) {
         this.tapeAlphabet = tapeAlphabet;
     }
@@ -156,7 +174,7 @@ public class TuringMachine extends GraphicalComponent {
     public int getHead() {
         return head;
     }
-    
+
     public void setHead(int head) {
         this.head = head;
     }
@@ -164,22 +182,22 @@ public class TuringMachine extends GraphicalComponent {
     // Add transition rule
     public void addTransition(State from, Transition transition) {
         transitions.computeIfAbsent(from, k -> new ArrayList<>()).add(transition);
-        
+
         if (!cachedTransitions.contains(transition))
             cachedTransitions.add(transition);
     }
-    
+
     public Map<State, List<Transition>> getTransitions() {
         return transitions;
     }
- 
-   public HashSet<Transition> getCachedTransitions() {
-       return cachedTransitions;
-   }
+
+    public HashSet<Transition> getCachedTransitions() {
+        return cachedTransitions;
+    }
 
     public void setTransitions(Map<State, List<Transition>> transitions) {
         this.transitions = transitions;
-        
+
         for (List<Transition> fromTransitions : transitions.values()) {
             for (Transition transition : fromTransitions)
                 cachedTransitions.add(transition);
