@@ -26,8 +26,8 @@ public class MuExpression {
 
     // For operations
     public MuExpression(OpKind opKind, Object leftOperand, Object rightOperand) {
-        this.kind = Kind.OPERATION;   // ✅ fixed
-        this.opKind = opKind;         // ✅ correct type & variable name
+        this.kind = Kind.OPERATION;  
+        this.opKind = opKind;         
         this.leftOperand = leftOperand;
         this.rightOperand = rightOperand;
     }

@@ -3,13 +3,13 @@
 
 package edu.regis.merc.model;
 
-// test for if everything is linked correctly 
+// TESTS FOR EVERYTHING BEING CONNECTED PROPERLY 
 
 public class MuFunctionTest {
     public static void main(String[] args) {
-        // ---------------------------------------------------
-        // 1. Simple Example: add(x, y) = (x + y)
-        // ---------------------------------------------------
+
+        // Simple Example: add(x, y) = (x + y)
+        
         LeftHandSide lhs1 = new LeftHandSide("add");
         lhs1.addParameter("x");
         lhs1.addParameter("y");
@@ -19,9 +19,8 @@ public class MuFunctionTest {
 
         System.out.println("Example 1: " + f1);
 
-        // ---------------------------------------------------
-        // 2. Multiply Example: multiplyByFive(x) = (x * 5)
-        // ---------------------------------------------------
+        // Multiply Example: multiplyByFive(x) = (x * 5)
+
         LeftHandSide lhs2 = new LeftHandSide("multiplyByFive");
         lhs2.addParameter("x");
 
@@ -32,9 +31,8 @@ public class MuFunctionTest {
 
         System.out.println("Example 2: " + f2);
 
-        // ---------------------------------------------------
-        // 3. Nested Example: addAndDouble(x, y) = ((x + y) * 2)
-        // ---------------------------------------------------
+        //  Nested Example: addAndDouble(x, y) = ((x + y) * 2)
+     
         LeftHandSide lhs3 = new LeftHandSide("addAndDouble");
         lhs3.addParameter("x");
         lhs3.addParameter("y");
@@ -45,9 +43,8 @@ public class MuFunctionTest {
 
         System.out.println("Example 3: " + f3);
 
-        // ---------------------------------------------------
-        // 4. Subtract Example: subtractTen(x) = (x - 10)
-        // ---------------------------------------------------
+        // Subtract Example: subtractTen(x) = (x - 10)
+
         LeftHandSide lhs4 = new LeftHandSide("subtractTen");
         lhs4.addParameter("x");
 
@@ -56,9 +53,9 @@ public class MuFunctionTest {
 
         System.out.println("Example 4: " + f4);
 
-        // ---------------------------------------------------
-        // 5. Divide Example: half(x) = (x / 2)
-        // ---------------------------------------------------
+        
+        // Divide Example: half(x) = (x / 2)
+
         LeftHandSide lhs5 = new LeftHandSide("half");
         lhs5.addParameter("x");
 

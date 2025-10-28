@@ -16,7 +16,7 @@ public class MuFunctionDAO extends MySqlDAO {
         ResultSet rs = null;
 
         try {
-            conn = DriverManager.getConnection(MySqlDAO.URL);  // ✅ FIXED HERE
+            conn = DriverManager.getConnection(MySqlDAO.URL);  
             stmt = conn.prepareStatement("SELECT * FROM MuFunction");
             rs = stmt.executeQuery();
 
@@ -27,12 +27,12 @@ public class MuFunctionDAO extends MySqlDAO {
                 String rhs = rs.getString("Rhs");
 
                 System.out.println("MuFunction: " + id + " " + name + " = " + rhs);
-                // TODO: create and add MuFunction objects if needed
+                // TO DO: create and add MuFunction objects if needed
             }
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            close(conn, stmt); // ✅ use inherited close() utility
+            close(conn, stmt); 
         }
 
         return functions;
@@ -43,7 +43,7 @@ public class MuFunctionDAO extends MySqlDAO {
         PreparedStatement stmt = null;
 
         try {
-            conn = DriverManager.getConnection(MySqlDAO.URL);  // ✅ FIXED HERE
+            conn = DriverManager.getConnection(MySqlDAO.URL);
             stmt = conn.prepareStatement(
                 "INSERT INTO MuFunction (Name, Lhs, Rhs) VALUES (?, ?, ?)");
             stmt.setString(1, f.getLhs().getName());
@@ -53,7 +53,7 @@ public class MuFunctionDAO extends MySqlDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            close(conn, stmt); // ✅ inherited from MySqlDAO
+            close(conn, stmt); //
         }
     }
 }
