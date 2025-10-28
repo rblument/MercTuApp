@@ -267,3 +267,4 @@ VALUES
 INSERT INTO ExercisingLocation
 (Id, CourseId, UnitId, TaskId, StepId)
 VALUES (0,1,0,0,0);
+
