@@ -67,11 +67,8 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
                     saveAlphabet(conn, machineId, "tape", machine.getTapeAlphabet());
 
                     for (State s : machine.getStates()) {
-                        // Check if the current state 's' is one of the special states already saved.
-                        // We use object reference comparison (==) as they should be the exact same State instance.
                         if (s != machine.getStartState() && s != machine.getAcceptState() && s != machine.getRejectState()) {
-                            // This is a normal state, save with all flags as false
-                            saveState(conn, machineId, s, false, false, false);
+                            saveState(conn, machineId, s);
                         }
                     }
 //
@@ -155,23 +152,6 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
     }
 
 
-    private State getStateById(Connection conn, int stateId) throws SQLException {
-        final String sql = "SELECT * FROM State WHERE id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, stateId);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                    State s = new State(rs.getString("name"));
-                    s.setId(rs.getInt("id"));
-                    return s;
-            }
-            //else throw inconsistent db error
-
-        }
-        return null;
-    }
-
-
     @Override
     public boolean deleteMachine(int id) {
         Connection conn = null;
@@ -230,7 +210,6 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         return 0;
     }
 
-
     @Override
     public int updateState(State state) {
         Connection conn = null;
@@ -251,16 +230,13 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         }
     }
 
-    private int saveState(Connection conn, int machineId, State state, boolean isStart, boolean isAccept, boolean isReject) throws SQLException {
+    private int saveState(Connection conn, int machineId, State state) throws SQLException {
         if (state == null) return 0;
-        final String sql = "INSERT INTO State(machine_id, name, is_start, is_accept, is_reject) VALUES (?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO State(machine_id, name) VALUES (?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setInt(1, machineId);
             stmt.setString(2, state.getName());
-            stmt.setBoolean(3, isStart);
-            stmt.setBoolean(4, isAccept);
-            stmt.setBoolean(5, isReject);
             stmt.executeUpdate();
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -286,11 +262,14 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-//                    states.add(new State(
-////                            rs.getInt("state_id"),
-////                            rs.getInt("machine_id"),
-//                            rs.getString("name")
-//                    ));
+                    states.add(new State(
+                            rs.getInt("state_id"),
+                            rs.getInt("machine_id"),
+                            rs.getString("name"))
+
+
+                    );
+
                 }
             }
         }catch (SQLException e) {
@@ -299,39 +278,22 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         return states;
     }
 
-//    public State getStateByMachineAndStateId(int machineId, int stateId) {
-//        State stateFromId = null;
-//        Connection conn = null;
-//        PreparedStatement stmt = null;
-//        final String query = "SELECT * FROM State WHERE machine_id = ?";
-//        List<State> states = new ArrayList<>();
-//
-//        try {
-//            conn = DriverManager.getConnection(URL);
-//            stmt = conn.prepareStatement(query);
-//
-//            stmt.setInt(1, machineId);
-//
-//            try (ResultSet rs = stmt.executeQuery()) {
-//                while (rs.next()) {
-//                    states.add(new State(
-//                            rs.getString("name"),
-//                            rs.getInt("machine_id"),
-//                            rs.getInt("state_id")
-//                    ));
-//                }
-//            }
-//        }catch (SQLException e) {
-//            throw new RuntimeException(e);
-//        }
-//
-//        for (State state : states) {
-//            if (stateId == state.getId()){
-//                stateFromId = state;
-//            }
-//        }
-//        return stateFromId;
-//    }
+    private State getStateById(Connection conn, int stateId) throws SQLException {
+        final String sql = "SELECT * FROM State WHERE id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, stateId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                State s = new State(rs.getString("name"));
+                s.setId(rs.getInt("id"));
+                return s;
+            }
+            //else throw inconsistent db error
+
+        }
+        return null;
+    }
+
 
 
     ///
@@ -396,6 +358,8 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
 //        }
         return transitions;
     }
+
+
 
     ///
     ///  Helper Classes
