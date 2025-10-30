@@ -198,6 +198,13 @@ CREATE TABLE Assessment (
    Hints INT
 );
 
+CREATE TABLE MuFunction(
+  Id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+  Name VARCHAR(64), 
+  Lhs VARCHAR(255), 
+  Rhs VARCHAR(255)
+); 
+
 -- Truncate Table Assessment;
 -- Will delete data, but also reset the next id counter to zero
 
@@ -268,3 +275,5 @@ INSERT INTO ExercisingLocation
 (Id, CourseId, UnitId, TaskId, StepId)
 VALUES (0,1,0,0,0);
 
+INSERT INTO MuFunction (Name, Lhs, Rhs)
+VALUES ('add', 'add(x, y)', '(x + y)');
