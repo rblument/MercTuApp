@@ -19,7 +19,8 @@
 -- If the ShaTuDB exists, drop it. In general, you will lose any existing data.
 DROP DATABASE IF EXISTS MercTuDB;
 
--- Create a database in MySql named: MercTuDB.
+
+-- Create a database in MySql named: MercTuDB
 CREATE DATABASE MercTuDB;
 
 -- Create user representing the DICE tutor.
@@ -204,6 +205,16 @@ CREATE TABLE State (
     name VARCHAR(50) NOT NULL
 );
 
+CREATE TABLE MuFunction(
+  Id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  Name VARCHAR(64),
+  Lhs VARCHAR(255),
+  Rhs VARCHAR(255)
+);
+
+-- Truncate Table Assessment;
+-- Will delete data, but also reset the next id counter to zero
+
 CREATE TABLE TuringMachine (
     machine_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -330,4 +341,6 @@ values
 
 
 
+INSERT INTO MuFunction (Name, Lhs, Rhs)
+VALUES ('add', 'add(x, y)', '(x + y)');
 
