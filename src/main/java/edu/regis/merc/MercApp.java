@@ -40,7 +40,7 @@ public class MercApp {
 
     /**
      * Configure the LOGGER with the properties found in the LOGGER_PROPERTIES
-     * file found on the CLASSPATH.
+     * file found on the CLASSPATH.ch
      */
     static {
         final InputStream strm
