@@ -19,12 +19,11 @@
 -- If the ShaTuDB exists, drop it. In general, you will lose any existing data.
 DROP DATABASE IF EXISTS MercTuDB;
 
-
--- Create a database in MySql named: MercTuDB
+-- Create a database in MySql named: MercTuDB.
 CREATE DATABASE MercTuDB;
 
 -- Create user representing the DICE tutor.
-CREATE USER 'MercTuTs'@'localhost' IDENTIFIED BY 'MercTu2025';
+-- CREATE USER 'MercTuTs'@'localhost' IDENTIFIED BY 'MercTu2025';
 
 -- Give the ShaTu tutor the following priveledges.
 GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP ON MercTuDB.* TO 'MercTuTs'@'localhost';
@@ -199,6 +198,12 @@ CREATE TABLE Assessment (
 );
 
 
+CREATE TABLE State (
+    state_id INT AUTO_INCREMENT PRIMARY KEY,
+    machine_id INT NOT NULL,
+    name VARCHAR(50) NOT NULL
+);
+
 CREATE TABLE TuringMachine (
     machine_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -211,11 +216,6 @@ CREATE TABLE TuringMachine (
     CONSTRAINT fk_reject FOREIGN KEY (reject_state_id) REFERENCES State(state_id)
 );
 
-CREATE TABLE State (
-    state_id INT AUTO_INCREMENT PRIMARY KEY,
-    machine_id INT NOT NULL,
-    name VARCHAR(50) NOT NULL
-);
 
 CREATE TABLE alphabets (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -232,9 +232,9 @@ CREATE TABLE alphabet_symbols (
 );
 
  Truncate Table Assessment;
- Will delete data, but also reset the next id counter to zero
+-- Will delete data, but also reset the next id counter to zero
 
- Populate tables
+ --Populate tables
 
 INSERT INTO Course
 (Id,
@@ -301,12 +301,6 @@ INSERT INTO ExercisingLocation
 (Id, CourseId, UnitId, TaskId, StepId)
 VALUES (0,1,0,0,0);
 
-INSERT INTO turingmachine
-(machine_id, name, description, start_state_id, accept_state_id, reject_state_id)
-
-values
-(0, 'The Zero TM', 'The Zero Function', 1, 3, -1);
-
 INSERT INTO State
 (state_id, machine_id, name)
 
@@ -326,6 +320,14 @@ INSERT INTO State
 (state_id, machine_id, name)
 
 VALUES (0, 0, 'Q2');
+
+INSERT INTO turingmachine
+(machine_id, name, description, start_state_id, accept_state_id, reject_state_id)
+
+values
+(0, 'The Zero TM', 'The Zero Function', 1, 3, -1);
+
+
 
 
 
