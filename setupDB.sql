@@ -277,4 +277,3 @@ VALUES (0,1,0,0,0);
 
 INSERT INTO MuFunction (Name, Lhs, Rhs)
 VALUES ('add', 'add(x, y)', '(x + y)');
-
