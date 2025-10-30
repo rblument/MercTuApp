@@ -12,10 +12,7 @@
  */
 package edu.regis.merc.svc;
 
-import edu.regis.merc.dao.AccountDAO;
-import edu.regis.merc.dao.CourseDAO;
-import edu.regis.merc.dao.SessionDAO;
-import edu.regis.merc.dao.StudentModelDAO;
+import edu.regis.merc.dao.*;
 
 /**
  * A singleton providing a concrete implementation of the service factory used
@@ -64,4 +61,16 @@ public class ServiceFactory {
     public static StudentModelSvc findStudentModelSvc() {
         return new StudentModelDAO();
     }
+
+
+    /**
+     * Return a reference to the turing machine service.
+     *
+     * @return TuringMachineSvc
+     */
+
+    public static TuringMachingSvc findTuringMachineSvc() {
+        return new TuringMachineDAO();
+    }
 }
+

@@ -22,10 +22,17 @@ public class State extends Node {
      * The name of this state.
      */
     private String name;
+    private int stateId;
 
     // Default constructor for State class
     public State(String name) {
         this.name = name;
+    }
+
+    public State(int stateId, int machineId, String name) {
+        this.name = name;
+
+        setId(stateId);
     }
 
     // Getter and setter methods
