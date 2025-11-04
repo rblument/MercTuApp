@@ -31,8 +31,8 @@ public class State extends Node {
 
     public State(int stateId, int machineId, String name) {
         this.name = name;
-
-        setId(stateId);
+        this.stateId = stateId;
+        setId(machineId);
     }
 
     // Getter and setter methods
@@ -41,6 +41,13 @@ public class State extends Node {
     }
     public void setName(String name) {
         this.name = name;
+    }
+
+    public int getStateId() {
+        return stateId;
+    }
+    public void setStateId(int stateId) {
+        this.stateId = stateId;
     }
 
     // Override equals() method for State comparison
