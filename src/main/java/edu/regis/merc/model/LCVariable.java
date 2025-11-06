@@ -13,15 +13,24 @@
 package edu.regis.merc.model;
 
 /**
- *
+ * A Lambda Calculus variable (token) with a given name.
+ * 
  * @author ellis
+ * @author rickb
  */
-public class LCVariable {
-    
+public class LCVariable extends LCExpression {
+    /**
+     * The symbolic name of this variable. 
+     */
     private String name;
     
-    public LCVariable(){
-        name = null;
+    /**
+     * Initialize this Lambda Calculus variable with the given symbolic name.
+     * 
+     * @param name an alphabetic name
+     */
+    public LCVariable(String name){
+        this.name = name;
     }
     
     public void setName(String name){
@@ -29,6 +38,11 @@ public class LCVariable {
     }
     
     public String getName(){
+        return name;
+    }
+    
+    @Override
+    public String toString() {
         return name;
     }
 }

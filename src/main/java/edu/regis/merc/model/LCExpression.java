@@ -18,8 +18,8 @@ package edu.regis.merc.model;
  */
 public class LCExpression {
 
-    private boolean isParentheses;
-    private boolean isApplied;
+    protected boolean isParentheses;
+    protected boolean isApplied;
     
     public LCExpression() {
         isParentheses = false;
