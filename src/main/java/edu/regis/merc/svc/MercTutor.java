@@ -379,24 +379,29 @@ public class MercTutor implements TutorSvc {
    // ToDo: Temporary
     public TuringMachine createTestModel() {
         TuringMachine tm = new TuringMachine();
-        
+        TuringMachingSvc svc = ServiceFactory.findTuringMachineSvc();
+        TuringMachine tm1 = svc.getMachineById(1);
         ArrayList<State> states = new ArrayList<>();
         
         State state = new State("Q0");
-        
+        State state2 = tm1.getStartState();
+        System.out.println(state2.getName());
+
         GuiCtx ctx = new GuiCtx();
         ctx.setX(100);
         ctx.setY(100);
         ctx.setWidth(30);
         ctx.setHeight(30);
-        
+
         state.setGuiCtx(ctx);
-        
+
         states.add(state);
-        
+        tm.setStartState(state);
         tm.setStates(states);
-        
+
+
         return tm;
+
     }
 
     /**
