@@ -378,25 +378,45 @@ public class MercTutor implements TutorSvc {
     }
    // ToDo: Temporary
     public TuringMachine createTestModel() {
-        TuringMachine tm = new TuringMachine();
         TuringMachingSvc svc = ServiceFactory.findTuringMachineSvc();
-        TuringMachine tm1 = svc.getMachineById(1);
+        TuringMachine tm = svc.getMachineById(1);
         ArrayList<State> states = new ArrayList<>();
-        
-        State state = new State("Q0");
-        State state2 = tm1.getStartState();
-        System.out.println(state2.getName());
+
+        State qStart = tm.getStartState();
+        System.out.println(qStart.getName());
 
         GuiCtx ctx = new GuiCtx();
-        ctx.setX(100);
+        ctx.setX(200);
         ctx.setY(100);
         ctx.setWidth(30);
         ctx.setHeight(30);
 
-        state.setGuiCtx(ctx);
+        qStart.setGuiCtx(ctx);
 
-        states.add(state);
-        tm.setStartState(state);
+        State qAccept = tm.getAcceptState();
+        System.out.println(qAccept.getName());
+        GuiCtx q1ctx = new GuiCtx();
+        q1ctx.setX(300);
+        q1ctx.setY(100);
+        q1ctx.setWidth(30);
+        q1ctx.setHeight(30);
+
+        qAccept.setGuiCtx(q1ctx);
+
+        State qReject = tm.getRejectState();
+        System.out.println(qReject.getName());
+        GuiCtx q2ctx = new GuiCtx();
+        q2ctx.setX(100);
+        q2ctx.setY(100);
+        q2ctx.setWidth(30);
+        q2ctx.setHeight(30);
+
+        qReject.setGuiCtx(q2ctx);
+
+        states.add(qStart);
+        states.add(qAccept);
+        states.add(qReject);
+        tm.setStartState(qStart);
         tm.setStates(states);
 
 
