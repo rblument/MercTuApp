@@ -29,6 +29,10 @@ public class State extends Node {
         this.name = name;
     }
 
+    public State(int id) {
+        this.stateId = id;
+    }
+
     public State(int stateId, int machineId, String name) {
         this.name = name;
         this.stateId = stateId;
