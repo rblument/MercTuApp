@@ -198,11 +198,20 @@ CREATE TABLE Assessment (
    Hints INT
 );
 
+CREATE TABLE TuringMachine (
+    machine_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    description varchar(256),
+    start_state_id INT NULL,
+    accept_state_id INT NULL,
+    reject_state_id INT NULL
+);
 
 CREATE TABLE State (
     state_id INT AUTO_INCREMENT PRIMARY KEY,
     machine_id INT NOT NULL,
-    name VARCHAR(50) NOT NULL
+    name VARCHAR(50) NOT NULL,
+    FOREIGN KEY (machine_id) REFERENCES TuringMachine(machine_id) ON DELETE CASCADE
 );
 
 CREATE TABLE MuFunction(
@@ -215,17 +224,12 @@ CREATE TABLE MuFunction(
 -- Truncate Table Assessment;
 -- Will delete data, but also reset the next id counter to zero
 
-CREATE TABLE TuringMachine (
-    machine_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description varchar(256) NOT NULL,
-    start_state_id INT,
-    accept_state_id INT,
-    reject_state_id INT,
-    CONSTRAINT fk_start FOREIGN KEY (start_state_id) REFERENCES State(state_id),
-    CONSTRAINT fk_accept FOREIGN KEY (accept_state_id) REFERENCES State(state_id),
-    CONSTRAINT fk_reject FOREIGN KEY (reject_state_id) REFERENCES State(state_id)
-);
+ALTER TABLE TuringMachine
+ADD CONSTRAINT fk_start FOREIGN KEY (start_state_id) REFERENCES State(state_id) ON DELETE SET NULL,
+ADD CONSTRAINT fk_accept FOREIGN KEY (accept_state_id) REFERENCES State(state_id) ON DELETE SET NULL,
+ADD CONSTRAINT fk_reject FOREIGN KEY (reject_state_id) REFERENCES State(state_id) ON DELETE SET NULL;
+
+
 
 
 CREATE TABLE alphabets (
@@ -241,6 +245,24 @@ CREATE TABLE alphabet_symbols (
     PRIMARY KEY (alphabet_id, symbol),
     FOREIGN KEY (alphabet_id) REFERENCES alphabets(id) ON DELETE CASCADE
 );
+-- CREATE TABLE MoveKinds (
+--     DirectionID INT PRIMARY KEY AUTO_INCREMENT,
+--     direction Enum('LEFT', 'RIGHT') NOT NULL DEFAULT 'RIGHT'
+--  );
+
+CREATE TABLE Transition (
+    transition_id INT AUTO_INCREMENT PRIMARY KEY,
+    machine_id INT NOT NULL,
+    read_symbol CHAR(1) NOT NULL,
+    write_symbol CHAR(1) NOT NULL,
+    current_state_id INT NOT NULL,
+    next_state_id INT NOT NULL,
+    direction CHAR(1) CHECK(direction IN ('L', 'R', 'S')) NOT NULL,
+    FOREIGN KEY (machine_id) REFERENCES TuringMachine(machine_id) ON DELETE CASCADE,
+    FOREIGN KEY (current_state_id) REFERENCES State(state_id) ON DELETE CASCADE,
+    FOREIGN KEY (next_state_id) REFERENCES State(state_id) ON DELETE CASCADE
+);
+
 
  Truncate Table Assessment;
 -- Will delete data, but also reset the next id counter to zero
@@ -312,31 +334,51 @@ INSERT INTO ExercisingLocation
 (Id, CourseId, UnitId, TaskId, StepId)
 VALUES (0,1,0,0,0);
 
-INSERT INTO State
-(state_id, machine_id, name)
-
-VALUES (-1, 0, 'Q-1');
-
-INSERT INTO State
-(state_id, machine_id, name)
-
-VALUES (0, 0, 'Q0');
-
-INSERT INTO State
-(state_id, machine_id, name)
-
-VALUES (0, 0, 'Q1');
-
-INSERT INTO State
-(state_id, machine_id, name)
-
-VALUES (0, 0, 'Q2');
-
 INSERT INTO turingmachine
-(machine_id, name, description, start_state_id, accept_state_id, reject_state_id)
-
+(name, description)
 values
-(0, 'The Zero TM', 'The Zero Function', 1, 3, -1);
+('The Zero TM', 'The Zero Function');
+
+SET @machine_id = LAST_INSERT_ID();
+SET @machine_id = LAST_INSERT_ID();
+
+
+INSERT INTO State (machine_id, name)
+VALUES (@machine_id, 'Q-1');
+
+SET @reject_state = LAST_INSERT_ID();
+
+INSERT INTO State (machine_id, name)
+VALUES (@machine_id, 'Q0');
+
+SET @start_state = LAST_INSERT_ID();
+
+INSERT INTO Transition (machine_id, read_symbol, write_symbol, current_state_id, next_state_id, direction)
+VALUES (@machine_id, '1', '0', @reject_state, @start_state, 'L');
+
+INSERT INTO Transition (machine_id, read_symbol, write_symbol, current_state_id, next_state_id, direction)
+VALUES (@machine_id, '1', '0', @start_state, @start_state, 'S');
+
+INSERT INTO State (machine_id, name)
+VALUES (@machine_id, 'Q1');
+
+SET @state_2 = LAST_INSERT_ID();
+
+INSERT INTO State (machine_id, name)
+VALUES (@machine_id, 'Q2');
+
+SET @accept_state = LAST_INSERT_ID();
+
+INSERT INTO Transition (machine_id, read_symbol, write_symbol, current_state_id, next_state_id, direction)
+VALUES (@machine_id, '1', '0', @start_state, @accept_state, 'R');
+
+
+-- Now update the TuringMachine with the correct state references
+UPDATE TuringMachine
+SET start_state_id = @start_state,
+    accept_state_id = @accept_state,
+    reject_state_id = @reject_state
+WHERE machine_id = @machine_id;
 
 
 

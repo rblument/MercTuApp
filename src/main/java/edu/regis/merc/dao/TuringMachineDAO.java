@@ -34,61 +34,68 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
 
     @Override
     public int createMachine(TuringMachine machine) {
-        final String sql =  "INSERT INTO TuringMachine(name, description, start_state_id, " +
-                "accept_state_id, reject_state_id) VALUES (?, ?, ?, ?, ?)";
+        final String insertMachineSql =
+                "INSERT INTO TuringMachine(name, description) VALUES (?, ?)";
 
+        final String updateMachineSql =
+                "UPDATE TuringMachine SET start_state_id=?, accept_state_id=?, reject_state_id=? WHERE machine_id=?";
         Connection conn = null;
         PreparedStatement stmt = null;
 
         try {
             conn = DriverManager.getConnection(URL);
-            stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            stmt = conn.prepareStatement(insertMachineSql, Statement.RETURN_GENERATED_KEYS);
 
-            // 1. Save States and get their IDs
-            int startStateId = saveState(conn, machine.getStartState());
-            int acceptStateId = saveState(conn, machine.getAcceptState());
-            int rejectStateId = saveState(conn, machine.getRejectState());
-
-            //stmt.setInt(1, machine.getId());
             stmt.setString(1, machine.getTitle());
             stmt.setString(2, machine.getDescription());
-            stmt.setInt(3, startStateId);
-            stmt.setInt(4, acceptStateId);
-            stmt.setInt(5, rejectStateId);
             stmt.executeUpdate();
 
+            int machineId;
             try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    int machineId = rs.getInt(1);
-                    machine.setId(machineId);
+                rs.next();
+                machineId = rs.getInt(1);
+                machine.setId(machineId);
+            }
 
-                    // 3. Save alphabets (linking to the new machine ID)
-                    saveAlphabet(conn, machineId, "input", machine.getInputAlphabet());
-                    saveAlphabet(conn, machineId, "tape", machine.getTapeAlphabet());
 
-                    for (State s : machine.getStates()) {
-                        if (s != machine.getStartState() && s != machine.getAcceptState() && s != machine.getRejectState()) {
-                            saveState(conn, machineId, s);
-                        }
-                    }
-//
-//                    // Save transitions
-//                    for (State s : machine.getStates()) {
-//                        for (Transition t : s.getTransitions()) {
-//                            saveTransition(conn, machineId, t);
-//                        }
-//                    }
+            // 1. Save States and get their IDs
+            int startStateId = saveState(conn, machineId, machine.getStartState());
 
-                    return machineId;
+
+            for (State s : machine.getStates()) {
+                if (s != machine.getStartState() && s != machine.getAcceptState() && s != machine.getRejectState()) {
+                    saveState(conn, machineId, s);
                 }
             }
+
+            PreparedStatement updateStmt = conn.prepareStatement(updateMachineSql);
+            updateStmt.setInt(1, startStateId);
+            if (machine.getAcceptState() == null) {
+                updateStmt.setNull(2, java.sql.Types.INTEGER);
+            } else {
+                int acceptStateId = saveState(conn, machine.getId(), machine.getAcceptState());
+                updateStmt.setInt(2, acceptStateId);
+            }
+
+            if (machine.getRejectState() == null) {
+                updateStmt.setNull(3, java.sql.Types.INTEGER);
+            } else {
+                int rejectStateId = saveState(conn, machine.getId(), machine.getRejectState());
+                updateStmt.setInt(3, rejectStateId);
+            }
+            updateStmt.setInt(4, machineId);
+            updateStmt.executeUpdate();
+
+
+            saveAlphabet(conn, machineId, "input", machine.getInputAlphabet());
+            saveAlphabet(conn, machineId, "tape", machine.getTapeAlphabet());
+
+            return machineId;
+
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
-        return 0;
     }
-
 
     @Override
     public TuringMachine getMachineById(int id) {
@@ -133,7 +140,7 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
     @Override
     public List<TuringMachine> getAllMachines() {
         List<TuringMachine> machines = new ArrayList<>();
-        final String sql = "SELECT id FROM TuringMachine";
+        final String sql = "SELECT machine_id FROM TuringMachine";
 
         try (Connection conn = DriverManager.getConnection(URL);
              Statement stmt = conn.createStatement();
@@ -237,8 +244,8 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setInt(1, machineId);
             stmt.setString(2, state.getName());
-            stmt.executeUpdate();
 
+            stmt.executeUpdate();
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) { int id = rs.getInt(1);
                     state.setId(id); return id;
@@ -279,13 +286,13 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
     }
 
     private State getStateById(Connection conn, int stateId) throws SQLException {
-        final String sql = "SELECT * FROM State WHERE id = ?";
+        final String sql = "SELECT * FROM State WHERE state_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, stateId);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 State s = new State(rs.getString("name"));
-                s.setId(rs.getInt("id"));
+                s.setId(rs.getInt("state_id"));
                 return s;
             }
             //else throw inconsistent db error
@@ -304,17 +311,18 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
     public int createTransition(Transition transition) {
         Connection conn = null;
         PreparedStatement stmt = null;
-        final String sql = "INSERT INTO Transition(machine_id, from_state_id, to_state_id, read_symbol, " +
-                "write_symbol, move_direction) VALUES (?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO Transition(machine_id, read, write, NextStateID,DirectionID) " +
+                "VALUES (?, ?, ?, ?, ?)";
 
         try {
             conn = DriverManager.getConnection(URL);
             stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
-            stmt.setString(1, String.valueOf(transition.getRead()));
-            stmt.setString(2, String.valueOf(transition.getWrite()));
-            stmt.setString(3, transition.getDirection().name());
-            stmt.setString(4, transition.getNextState().getName());
+            stmt.setInt(1, transition.getId());
+            stmt.setString(2, String.valueOf(transition.getRead()));
+            stmt.setString(3, String.valueOf(transition.getWrite()));
+            stmt.setString(5, transition.getDirection().name());
+            stmt.setInt(4, transition.getNextState().getStateId());
 
             int affected = stmt.executeUpdate();
             if (affected == 0) return 0;
@@ -338,24 +346,24 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         List<Transition> transitions = new ArrayList<>();
 
 
-//        try {
-//            conn = DriverManager.getConnection(URL);
-//            stmt = conn.prepareStatement(query);
-//
-//            stmt.setInt(1, machineId);
-//            try (ResultSet rs = stmt.executeQuery()) {
-//                while (rs.next()) {
-//                    transitions.add(new Transition(
-//                            rs.getString("read_symbol").charAt(0),
-//                            rs.getString("write_symbol").charAt(0),
-//                            MoveKind.valueOf(rs.getString("move_direction")),  // must match enum
-//                            new State(rs.getString("next_state")) // reconstruct State by name
-//                    ));
-//                }
-//            }
-//        } catch (SQLException e) {
-//            throw new RuntimeException("Error fetching transitions by machine", e);
-//        }
+        try {
+            conn = DriverManager.getConnection(URL);
+            stmt = conn.prepareStatement(query);
+
+            stmt.setInt(1, machineId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    transitions.add(new Transition(
+                            rs.getString("read").charAt(0),
+                            rs.getString("write").charAt(0),
+                            MoveKind.valueOf(rs.getString("move_direction")),
+                            new State(rs.getInt("NextStateID"))
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error fetching transitions by machine", e);
+        }
         return transitions;
     }
 
@@ -365,21 +373,22 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
     ///  Helper Classes
     ///
 
-    private int saveState(Connection conn, State state) throws SQLException {
-        // Logic to insert a State into the `states` table and return its ID
-        String sql = "INSERT INTO state (name, is_start, is_accept, is_reject) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            // Set parameters based on the State object
-            pstmt.setString(1, state.getName());
-            pstmt.executeUpdate();
-            try (ResultSet rs = pstmt.getGeneratedKeys()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-            }
-        }
-        throw new SQLException("Failed to save state.");
-    }
+//    private int saveState(Connection conn, State state) throws SQLException {
+//        // Logic to insert a State into the `states` table and return its ID
+//        System.out.println("state info" + state.getStateId());
+//        String sql = "INSERT INTO state (name, is_start, is_accept, is_reject) VALUES (?, ?, ?, ?)";
+//        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+//            // Set parameters based on the State object
+//            pstmt.setString(1, state.getName());
+//            pstmt.executeUpdate();
+//            try (ResultSet rs = pstmt.getGeneratedKeys()) {
+//                if (rs.next()) {
+//                    return rs.getInt(1);
+//                }
+//            }
+//        }
+//        throw new SQLException("Failed to save state.");
+//    }
 
     private ArrayList<Character> getAlphabet(Connection conn, int machineId, String type) throws SQLException {
         ArrayList<Character> alphabet = new ArrayList<>();
@@ -418,6 +427,10 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
     }
 
     private void saveAlphabet(Connection conn, int machineId, String type, ArrayList<Character> symbols) throws SQLException {
+        if (symbols == null || symbols.isEmpty()) {
+            return;
+        }
+
         // Logic to save symbols to the `alphabets` and `alphabet_symbols` tables
         String sqlAlphabet = "INSERT INTO alphabets (machine_id, type) VALUES (?, ?)";
         try (PreparedStatement pstmtAlphabet = conn.prepareStatement(sqlAlphabet, Statement.RETURN_GENERATED_KEYS)) {
