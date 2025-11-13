@@ -52,7 +52,7 @@ public class KnowledgeComponent extends TitledModel {
      * represents knowledge related to using the tutor/GUI itself.
      */
     private boolean isDomainFocus;
-    
+
     /**
      * The tasks and steps that demonstrate/exercise this knowledge component.
      */

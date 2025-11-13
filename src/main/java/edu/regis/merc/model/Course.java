@@ -47,7 +47,7 @@ public class Course extends TitledModel {
      * and step) within this course where these outcomes are addressed.
      */
     protected ArrayList<ExercisingLocation> exercisingLocations;
-    
+
     /**
      * Initialize this course with a default id, empty units, and outcomes
      */
@@ -173,7 +173,7 @@ public class Course extends TitledModel {
     public void setExercisingLocations(ArrayList<ExercisingLocation> exercisingLocations) {
         this.exercisingLocations = exercisingLocations;
     }
-    
+
     /**
      * Return the exercising location, if any, in this course with the given id.
      * 

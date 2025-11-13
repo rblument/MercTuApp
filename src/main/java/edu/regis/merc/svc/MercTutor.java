@@ -349,7 +349,19 @@ public class MercTutor implements TutorSvc {
                 }
 
                 SessionSvc svc = ServiceFactory.findSessionSvc();
-                TutoringSession session = svc.retrieve(student.getAccount().getUserId());
+                TutoringSession session;
+
+                try {
+                    session = svc.retrieve(student.getAccount().getUserId());
+                } catch (ObjNotFoundException ex) {
+                    // No session exists, create a new one
+                    try {
+                        Course course = ServiceFactory.findCourseSvc().retrieve(DEFAULT_COURSE_ID);
+                        session = createSession(student, course);
+                    } catch (ObjNotFoundException courseEx) {
+                        return createError("Default course not found: " + DEFAULT_COURSE_ID, courseEx);
+                    }
+                }
 
                 
                 // ToDo: tmp remove
@@ -359,16 +371,14 @@ public class MercTutor implements TutorSvc {
                 session.currentTask().getTask().setProblem(problem);
                 
                 TutorReply reply = new TutorReply("Authenticated");
-
                 reply.setData(gson.toJson(session));
-
                 return reply;
 
             } else {
                 return new TutorReply("InvalidPassword");
             }
 
-        } catch (ObjNotFoundException e) {
+        } catch (ObjNotFoundException e) { // Account not found
             return new TutorReply("UnknownUser");
         } catch (NonRecoverableException ex) {
             Logger.getLogger(MercTutor.class
@@ -411,8 +421,8 @@ public class MercTutor implements TutorSvc {
     public TutorReply requestHint(String jsonObj) {
         System.out.println("requestHint");
         StepCompletion completion = gson.fromJson(jsonObj, StepCompletion.class);
-        
-        return new TutorReply(":ERR", "Request Hint Not Implemented");     
+
+        return new TutorReply(":ERR", "Request Hint Not Implemented");
     }
 
     /**
@@ -423,7 +433,7 @@ public class MercTutor implements TutorSvc {
         System.out.println("completedStep");
 
         //StepCompletion completion = gson.fromJson(jsonObj, StepCompletion.class);
-        
+
                 return new TutorReply(":ERR", "Step completion Not Implemented");
     }
 
@@ -456,9 +466,14 @@ public class MercTutor implements TutorSvc {
         tSession.setUnit(course.currentUnit().getDigest());
 
         Task task = getFirstTask(course);
-        PendingTask pendingTask = new PendingTask(task);
-        pendingTask.setCurrentStep(new PendingStep(task.getCurrentStep()));
-        tSession.addTask(pendingTask);
+        // Only add pending task if a task exists in the database
+        if (task != null) {
+            PendingTask pendingTask = new PendingTask(task);
+            pendingTask.setCurrentStep(new PendingStep(task.getCurrentStep()));
+            tSession.addTask(pendingTask);
+        } else {
+            System.out.println("No task available for session, creating session without pending tasks");
+        }
 
         // Generate the security token for this tutoring session.
         Random rnd = new Random();
@@ -537,13 +552,20 @@ public class MercTutor implements TutorSvc {
                 Unit unit = course.findUnitBySequenceId(0);
 
                 if (unit == null) {
-                    throw new NonRecoverableException("Unit 0 not found in course: " + course.getId());
+                    System.out.println("Unit 0 not found in course: " + course.getId());
+                    return null;
                 }
 
                 Task task = unit.findTaskBySequence(0);
 
+                // If task with sequence 0 not found, try to get the first available task
+                if (task == null && unit.getTasks() != null && !unit.getTasks().isEmpty()) {
+                    task = unit.getTasks().get(0);
+                    System.out.println("Task with sequence 0 not found, using first available task: " + task.getTitle());
+                }
+
                 if (task == null) {
-                    throw new NonRecoverableException("Task 0 not found in Unit 0 of course: " + course.getId());
+                    System.out.println("No tasks found in Unit 0 of course: " + course.getId());
                 }
 
                 return task;
@@ -555,7 +577,7 @@ public class MercTutor implements TutorSvc {
                 return null; // ToDo
 
             default:
-                throw new NonRecoverableException("Unknwon task selection in course: " + course.getId());
+                throw new NonRecoverableException("Unknown task selection in course: " + course.getId());
         }
     }
 
@@ -578,3 +600,4 @@ public class MercTutor implements TutorSvc {
         return new TutorReply(":ERR", errMsg);
     }
 }
+

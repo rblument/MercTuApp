@@ -121,7 +121,7 @@ public class SignInAction extends MercGuiAction {
                 SplashFrame.instance().unknownUser();
                 break;
             default:
-                System.out.println("Coding error  status: " + reply.getStatus());
+                System.out.println("Coding error status: " + reply.getStatus());
         }
     }
 }

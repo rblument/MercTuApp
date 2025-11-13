@@ -16,27 +16,12 @@ import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.InconsistentDBException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
-import edu.regis.merc.model.Account;
-import edu.regis.merc.model.CourseDigest;
-import edu.regis.merc.model.PendingStep;
-import edu.regis.merc.model.PendingTask;
-import edu.regis.merc.model.Student;
-import edu.regis.merc.model.Task;
-import edu.regis.merc.model.TutoringSession;
-import edu.regis.merc.model.UnitDigest;
+import edu.regis.merc.model.*;
 import edu.regis.merc.svc.CourseSvc;
 import edu.regis.merc.svc.ServiceFactory;
 import edu.regis.merc.svc.SessionSvc;
-import java.io.File;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.GregorianCalendar;
+import java.sql.*;
+import java.util.*;
 
 /**
  *
@@ -55,7 +40,8 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     @Override
     public void create(TutoringSession session) throws IllegalArgException, NonRecoverableException {
-        final String sql = "INSERT INTO TutoringSession (UserId, SecurityToken, IsActive, StartDate, CourseId, UnitId) VALUES (?,?,?,?,?,?)";
+        // Align with schema: tutoring_sessions(userId, courseId, unitId, authToken, isActive, startedAt)
+        final String sql = "INSERT INTO tutoring_sessions (userId, authToken, isActive, startedAt, courseId, unitId) VALUES (?,?,?,?,?,?)";
 
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -76,7 +62,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             stmt.setBoolean(3, session.isActive());
             stmt.setTimestamp(4, new Timestamp(session.getStartDate().getTimeInMillis()));
             stmt.setInt(5, session.getCourse().getId());
-            stmt.setInt(6, 0); // Start with Unit 0
+            stmt.setInt(6, session.getUnit().getId()); // Use the actual unit ID from session
 
             stmt.executeUpdate();
 
@@ -84,8 +70,8 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             ResultSet rs = stmt.getGeneratedKeys();
             if (rs.next()) {
                 session.setId(rs.getInt(1));
-
-                createPendingTasks(session, conn);
+                // Persist initial pending step for each pending task's current step
+                createPendingSessionSteps(session, conn);
             }
 
         } catch (SQLException e) {
@@ -101,7 +87,8 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     @Override
     public TutoringSession retrieve(String userId) throws ObjNotFoundException, NonRecoverableException {
-        final String sql = "SELECT Id,SecurityToken,IsActive,StartDate,CourseId,UnitId FROM TutoringSession WHERE UserId = ?";
+        // Align with schema: tutoring_sessions(sessionId, userId, authToken, isActive, startedAt, courseId, unitId)
+        final String sql = "SELECT sessionId, authToken, isActive, startedAt, courseId, unitId FROM tutoring_sessions WHERE userId = ?";
 
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -114,15 +101,11 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
 
             ResultSet rs = stmt.executeQuery();
 
-            // I don't like this at all.
-            // Just don't know how else to return a tutoring session when you need a
-            // Student object to make a TutoringSession, but then in turn need an Account
-            // object to make a student.
-            AccountDAO accDao = new AccountDAO();
-            Account acc = accDao.retrieve(userId);
-            Student stu = new Student(acc);
-
             if (rs.next()) {
+                // Only retrieve account and create student if session exists
+                AccountDAO accDao = new AccountDAO();
+                Account acc = accDao.retrieve(userId);
+                Student stu = new Student(acc);
                 TutoringSession session = new TutoringSession(stu);
                 session.setId(rs.getInt(1));
                 session.setSecurityToken(rs.getString(2));
@@ -154,7 +137,8 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
                     throw new NonRecoverableException(errMsg);
                 }
 
-                session.setTasks(retrievePendingTasks(session, conn));
+                // Replace legacy retrievePendingTasks with new pending steps retrieval
+                session.setTasks(retrievePendingTasksViaPendingSteps(session, conn));
 
                 return session;
 
@@ -173,7 +157,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     @Override
     public String retrieveSecurityToken(String userId) throws ObjNotFoundException, NonRecoverableException {
-        final String sql = "SELECT SecurityToken FROM TutoringSession WHERE UserId = ?";
+        final String sql = "SELECT authToken FROM tutoring_sessions WHERE userId = ?";
 
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -208,7 +192,8 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     @Override
     public void update(TutoringSession session) throws ObjNotFoundException, NonRecoverableException {
-        final String sql = "INSERT INTO TutoringSession (UserId, SecurityToken, IsActive, StartDate, CourseId, UnitId) VALUES (?,?,?,?,?,?)";
+        // Original behavior inserts a new row; align table/columns with schema
+        final String sql = "INSERT INTO tutoring_sessions (userId, authToken, isActive, startedAt, courseId, unitId) VALUES (?,?,?,?,?,?)";
 
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -229,7 +214,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             stmt.setBoolean(3, session.isActive());
             stmt.setTimestamp(4, new Timestamp(session.getStartDate().getTimeInMillis()));
             stmt.setInt(5, session.getCourse().getId());
-            stmt.setInt(6, 0); // Start with Unit 0
+            stmt.setInt(6, session.getUnit().getId()); // Use the actual unit ID from session
 
             stmt.executeUpdate();
 
@@ -237,8 +222,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             ResultSet rs = stmt.getGeneratedKeys();
             if (rs.next()) {
                 session.setId(rs.getInt(1));
-
-                createPendingTasks(session, conn);
+                createPendingSessionSteps(session, conn);
             }
 
         } catch (SQLException e) {
@@ -254,7 +238,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     @Override
     public void delete(String userId) throws NonRecoverableException {
-        final String sql = "DELETE FROM TutoringSession WHERE UserId = ?";
+        final String sql = "DELETE FROM tutoring_sessions WHERE userId = ?";
 
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -280,160 +264,67 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         }
     }
 
-    /**
-     * Utility that deletes the given a file.
-     * 
-     * @param file a File with an absolute path to delete.
-     */
-    private void delete(File file) {
-        if (file.exists())
-            file.delete();
-    }
-
-    private void createPendingTasks(TutoringSession session, Connection conn)
-            throws NonRecoverableException {
-        final String sql = "INSERT INTO PendingTask (SessionId, TaskId, PendingStepId) VALUES (?,?,?)";
-
-        int sessionId = session.getId();
-
+    // Persist current steps into pending_session_steps table (max 1 row per session)
+    private void createPendingSessionSteps(TutoringSession session, Connection conn) throws NonRecoverableException {
+        final String sql = "INSERT INTO pending_session_steps (sessionId, stepId, notifyTutor, isCompleted, currentHintIndex, studentState) VALUES (?,?,?,?,?,?)";
         PreparedStatement stmt = null;
-
-        try {
-            stmt = conn.prepareStatement(sql);
-
-            for (PendingTask pTask : session.getTasks()) {
-                stmt.setInt(1, sessionId);
-                stmt.setInt(2, pTask.getTask().getId());
-                PendingStep pStep = pTask.currentStep();
-
-                int pId = createPendingStep(sessionId, pStep, conn);
-                stmt.setInt(3, pId);
-
-                stmt.executeUpdate();
-
-            }
-
-        } catch (SQLException e) {
-            throw new NonRecoverableException("SessionDAO-ERR-7", e);
-
-        } finally {
-            close(stmt);
-        }
-    }
-
-    private int createPendingStep(int sessionId, PendingStep pStep, Connection conn)
-            throws NonRecoverableException {
-        final String sql = "INSERT INTO PendingStep (SessionId, StepId, NotifyTutor, IsCompleted, CurrentHintIndex) VALUES (?,?,?,?,?)";
-
-        PreparedStatement stmt = null;
-
         try {
             stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-
-            stmt.setInt(1, sessionId);
-            stmt.setInt(2, pStep.getStep().getId());
-            stmt.setBoolean(3, pStep.isNotifyTutor());
-            stmt.setBoolean(4, pStep.isCompleted());
-            stmt.setInt(5, pStep.getCurrentHintIndex());
-
-            stmt.executeUpdate();
-
-            ResultSet rs = stmt.getGeneratedKeys();
-
-            if (rs.next()) {
-                int pId = rs.getInt(1);
-                pStep.setId(pId);
-                return pId;
-            } else {
-                throw new NonRecoverableException("SessionDAO-ERR-8: PendingStep AutoIncrement Failed");
+            int sessionId = session.getId();
+            for (PendingTask pTask : session.getTasks()) {
+                PendingStep pStep = pTask.currentStep();
+                if (pStep == null) continue; // safety
+                stmt.setInt(1, sessionId);
+                stmt.setInt(2, pStep.getStep().getId());
+                stmt.setBoolean(3, pStep.isNotifyTutor());
+                stmt.setBoolean(4, pStep.isCompleted());
+                stmt.setInt(5, pStep.getCurrentHintIndex());
+                stmt.setString(6, pStep.getCurrentState());
+                stmt.executeUpdate();
+                ResultSet rs = stmt.getGeneratedKeys();
+                if (rs.next()) {
+                    pStep.setId(rs.getInt(1));
+                }
+                break; // only one active pending step per session per schema
             }
-
         } catch (SQLException e) {
-            throw new NonRecoverableException("SessionDAO-ERR-9", e);
-
+            throw new NonRecoverableException("SessionDAO-ERR-PSS-1", e);
         } finally {
             close(stmt);
         }
     }
 
-    private ArrayList<PendingTask> retrievePendingTasks(TutoringSession session, Connection conn)
-            throws NonRecoverableException {
-
-        final String sql = "SELECT TaskId, PendingStepId FROM PendingTask WHERE SessionId = ?";
-
-        ArrayList<PendingTask> pendingTasks = new ArrayList<>();
-
+    // Retrieve pending steps and reconstruct PendingTasks
+    private ArrayList<PendingTask> retrievePendingTasksViaPendingSteps(TutoringSession session, Connection conn) throws NonRecoverableException {
+        final String sql = "SELECT pendingStepId, stepId, notifyTutor, isCompleted, currentHintIndex, studentState FROM pending_session_steps WHERE sessionId = ?";
         PreparedStatement stmt = null;
-
-        int sessionId = session.getId();
-
-        int taskId = -1;
-
+        ArrayList<PendingTask> tasks = new ArrayList<>();
         try {
             stmt = conn.prepareStatement(sql);
-
-            stmt.setInt(1, sessionId);
-
+            stmt.setInt(1, session.getId());
             ResultSet rs = stmt.executeQuery();
-
             CourseSvc courseSvc = ServiceFactory.findCourseSvc();
-
             while (rs.next()) {
-                taskId = rs.getInt(1);
-
-                Task task = courseSvc.retrieveTask(session.getCourse().getId(), taskId, conn);
-
+                int pendingStepId = rs.getInt(1);
+                int stepId = rs.getInt(2);
+                // Find task & step via courseSvc; assumes stepId uniquely identifies step within course tasks
+                Task task = courseSvc.findTaskByStepId(session.getCourse().getId(), stepId, conn); // TODO: implement in CourseSvc if missing
+                Step step = task.findStepById(stepId);
                 PendingTask pTask = new PendingTask(task);
-
-                PendingStep pStep = retrievePendingStep(rs.getInt(2), sessionId, task, conn);
-
+                PendingStep pStep = new PendingStep(step);
+                pStep.setId(pendingStepId);
+                pStep.setNotifyTutor(rs.getBoolean(3));
+                pStep.setIsCompleted(rs.getBoolean(4));
+                pStep.setCurrentHintIndex(rs.getInt(5));
+                pStep.setCurrentState(rs.getString(6));
                 pTask.setCurrentStep(pStep);
-
-                pendingTasks.add(pTask);
+                tasks.add(pTask);
             }
-
-            return pendingTasks;
-
-        } catch (ObjNotFoundException ex) {
-            String errMsg = "Task not found in pending task" + taskId;
-            throw new NonRecoverableException("SessionDAO-ERR-10", new InconsistentDBException(errMsg));
+            return tasks;
         } catch (SQLException e) {
-            throw new NonRecoverableException("SessionDAO-ERR-11", e);
-
-        } finally {
-            close(stmt);
-        }
-    }
-
-    public PendingStep retrievePendingStep(int pendingStepId, int sessionId, Task task, Connection conn)
-            throws NonRecoverableException {
-
-        final String sql = "SELECT StepId, NotifyTutor, IsCompleted, CurrentHintIndex FROM PendingStep WHERE Id = ?";
-
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = conn.prepareStatement(sql);
-
-            stmt.setInt(1, pendingStepId);
-
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                PendingStep pStep = new PendingStep(task.findStepById(rs.getInt(1)));
-
-                pStep.setNotifyTutor(rs.getBoolean(2));
-                pStep.setIsCompleted(rs.getBoolean(3));
-
-                return pStep;
-            } else {
-                String errMsg = "PendingStep not found in pending task" + pendingStepId;
-                throw new NonRecoverableException("SessionDAO-ERR-12", new InconsistentDBException(errMsg));
-            }
-
-        } catch (SQLException e) {
-            throw new NonRecoverableException("SessionDAO-ERR-13", e);
-
+            throw new NonRecoverableException("SessionDAO-ERR-PSS-2", e);
+        } catch (ObjNotFoundException e) {
+            throw new NonRecoverableException("SessionDAO-ERR-PSS-3", e);
         } finally {
             close(stmt);
         }
@@ -446,8 +337,8 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      * @throws NonRecoverableException (see ex.getCause().getErrorCode())
      */
     private boolean exists(int sessionId, Connection conn) throws NonRecoverableException {
-        final String sql = "SELECT SessionId FROM TutoringSession WHERE SessionId = ?;";
-        
+        final String sql = "SELECT sessionId FROM tutoring_sessions WHERE sessionId = ?;";
+
         PreparedStatement stmt = null;
 
         try {
@@ -471,8 +362,8 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      * @throws NonRecoverableException (see ex.getCause().getErrorCode())
      */
     private boolean exists(String userId, Connection conn) throws NonRecoverableException {
-        final String sql = "SELECT Id FROM TutoringSession WHERE UserId = ?;";
-        
+        final String sql = "SELECT sessionId FROM tutoring_sessions WHERE userId = ?;";
+
         PreparedStatement stmt = null;
 
         try {

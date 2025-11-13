@@ -82,5 +82,15 @@ public interface CourseSvc {
     Task retrieveTask(int courseId, int taskId, Connection conn) 
             throws ObjNotFoundException, NonRecoverableException;
 
+    /**
+     * Find the task that contains the given step id within a course.
+     * @param courseId the course id
+     * @param stepId the step id to locate
+     * @param conn an open connection (not closed by this method)
+     * @return the Task containing the step
+     * @throws ObjNotFoundException if no task contains the given step
+     * @throws NonRecoverableException on DB error
+     */
+    Task findTaskByStepId(int courseId, int stepId, Connection conn)
+            throws ObjNotFoundException, NonRecoverableException;
 }
-

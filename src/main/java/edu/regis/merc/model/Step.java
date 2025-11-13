@@ -21,7 +21,7 @@ import java.util.ArrayList;
  * 
  * As a Step appears within actions/expectations created by an agent,
  * all fields are final so that other malicious agents cannot change them.
- * 
+ *
  * @author rickb
  */
 public class Step extends TitledModel {
@@ -68,11 +68,26 @@ public class Step extends TitledModel {
     private String correctAnswer;
 
     /**
+     * Default JSON state for this step (nullable)
+     */
+    private String defaultState;
+
+    /**
+     * Correct JSON state for this step (nullable)
+     */
+    private String correctState;
+
+    /**
+     * Level required/demonstrated by this step
+     */
+    private int level = 1;
+
+    /**
      * Instantiate this step with the given information.
      * 
-     * @param id
-     * @param sequenceId
-     * @param subType
+     * @param id database id of this step
+     * @param sequenceIndex which position this step has in the parent task
+     * @param subType the subtype describing this step's data/behavior
      */
     public Step(int id, int sequenceIndex, StepSubType subType) {
         super(id);
@@ -188,18 +203,43 @@ public class Step extends TitledModel {
         return this.correctAnswer;
     }
 
-    /**
+    // New accessors for defaultState, correctState, and level
+    public String getDefaultState() {
+        return defaultState;
+    }
+
+    public void setDefaultState(String defaultState) {
+        this.defaultState = defaultState;
+    }
+
+    public String getCorrectState() {
+        return correctState;
+    }
+
+    public void setCorrectState(String correctState) {
+        this.correctState = correctState;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
+    /*
      * Setter method for the user's answer
-     * 
+     *
      * @param userResponse
      */
    // public void setUserAnswer(String userResponse) {
    //     this.userAnswer = userResponse;
    // }
 
-    /**
+    /*
      * Getter method for the user's answer
-     * 
+     *
      * @return
      */
    // public String getUserAnswer() {

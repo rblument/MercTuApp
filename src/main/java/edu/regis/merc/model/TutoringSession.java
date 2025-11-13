@@ -57,12 +57,36 @@ public class TutoringSession {
      * The date and time when this session was initially created.
      */
     private GregorianCalendar startDate;
- 
+
+    /**
+     * The date/time when the session ended (nullable).
+     */
+    private GregorianCalendar endDate;
+
+    /**
+     * The total time spent (in seconds) in this session.
+     */
+    private int timeSpent = 0;
+
+    /**
+     * Points earned in this session.
+     */
+    private int points = 0;
+
+    /**
+     * Maximum possible points for this session.
+     */
+    private int maxPoints = 0;
+
+    /**
+     * Current student level within the session.
+     */
+    private int level = 1;
+
      /**
      * The current task list.
-     * 
      * If there are multiple tasks, the first one is the current task and the
-     * remaining tasks are pending. Multiple tasks occur when a student 
+     * remaining tasks are pending. Multiple tasks occur when a student
      * overrides the task proposed by the tutor.
      */
     private ArrayList<PendingTask> tasks;
@@ -136,11 +160,53 @@ public class TutoringSession {
     public void setStartDate(GregorianCalendar startDate) {
         this.startDate = startDate;
     }
-    
+
+    public GregorianCalendar getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(GregorianCalendar endDate) {
+        this.endDate = endDate;
+    }
+
+    public int getTimeSpent() {
+        return timeSpent;
+    }
+
+    public void setTimeSpent(int timeSpent) {
+        this.timeSpent = timeSpent;
+    }
+
+    public int getPoints() {
+        return points;
+    }
+
+    public void setPoints(int points) {
+        this.points = points;
+    }
+
+    public int getMaxPoints() {
+        return maxPoints;
+    }
+
+    public void setMaxPoints(int maxPoints) {
+        this.maxPoints = maxPoints;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
     public PendingTask currentTask() {
+        if (tasks == null || tasks.isEmpty())
+            return null;
         return tasks.get(0);
     }
-    
+
     public void addTask(PendingTask task) {
         tasks.add(task);
     }
@@ -167,4 +233,3 @@ public class TutoringSession {
                 removeTask(pendingTask);
     }
 }
-
