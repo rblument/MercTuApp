@@ -58,7 +58,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
      */
     @Override
     public Course retrieve(int courseId) throws ObjNotFoundException, NonRecoverableException {
-        final String sql = "SELECT Title,PrimaryPedagogy,Description FROM Course WHERE Id = ?";
+        final String sql = "SELECT title AS Title, pedagogy AS PrimaryPedagogy, description AS Description FROM courses WHERE courseId = ?";
 
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -100,7 +100,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
     public CourseDigest retrieveDigest(int courseId, Connection conn)
             throws ObjNotFoundException, NonRecoverableException {
 
-        final String sql = "SELECT Title,Description FROM Course WHERE Id = ?";
+        final String sql = "SELECT title AS Title, description AS Description FROM courses WHERE courseId = ?";
 
         PreparedStatement stmt = null;
 
@@ -136,7 +136,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
     public UnitDigest retrieveUnitDigest(int courseId, int unitId, Connection conn)
             throws ObjNotFoundException, NonRecoverableException {
 
-        final String sql = "SELECT Title,Description FROM Unit WHERE CourseId = ? AND UnitId = ?";
+        final String sql = "SELECT title AS Title, description AS Description FROM Unit WHERE courseId = ? AND unitId = ?";
 
         PreparedStatement stmt = null;
 
@@ -172,7 +172,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
     @Override
     public Task retrieveTask(int courseId, int taskId, Connection conn)
             throws ObjNotFoundException, NonRecoverableException {
-        final String sql = "SELECT Title,Description,Kind,SequenceIndex,ExampleType,ProblemId FROM Task WHERE CourseId = ? AND TaskId = ?";
+        final String sql = "SELECT title AS Title, description AS Description, taskType AS Kind, sequenceOrder AS SequenceIndex, exampleType AS ExampleType, NULL AS ProblemId FROM tasks WHERE courseId = ? AND taskId = ?";
 
         PreparedStatement stmt = null;
 
@@ -211,18 +211,18 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
     }
 
     /**
-     * Extract child &lt;Outcome> elements from given XML DOM parent element
+     * Extract child <Outcome> elements from given XML DOM parent element
      * adding each as a Outcome to the given Course.
      *
      * @param parent an XML DOM Element containing one or more child
-     *               &lt;Outcome> node elements.
+     *               <Outcome> node elements.
      * @throws ShaTuException a nonrecoverable exception also see getCause()
      * @return a List of KnowledgeComponent outcomes
      */
     private ArrayList<KnowledgeComponent> retrieveKnowledgeComponents(Course course, Connection conn)
             throws NonRecoverableException {
 
-        final String sql = "SELECT Id, Title, Description, BloomLevel, IsDomainFocus, Pedagogy, ExercisingLocations, Granularity FROM KnowledgeComponent WHERE CourseId = ?";
+        final String sql = "SELECT kcId AS Id, title AS Title, description AS Description, bloomLevel AS BloomLevel, isCore AS IsDomainFocus, 'FIXED_SEQUENCE' AS Pedagogy, '' AS ExercisingLocations, 'Course' AS Granularity FROM knowledge_components WHERE courseId = ?";
 
         ArrayList<KnowledgeComponent> outcomes = new ArrayList<>();
 
@@ -266,14 +266,14 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
     }
 
     /**
-     * Return the units in this course from the &lt;Unit> elements.
-     * 
-     * @param parent a &lt;Course> element
+     * Return the units in this course from the <Unit> elements.
+     *
+     * @param parent a <Course> element
      * @return a List of Units
      * @throws NonRecoverableException
      */
     private ArrayList<Unit> retrieveUnits(Course course, Connection conn) throws NonRecoverableException {
-        final String sql = "SELECT UnitId,Title,Description,SequenceIndex,Pedagogy FROM Unit WHERE CourseId = ?";
+        final String sql = "SELECT unitId AS UnitId, title AS Title, description AS Description, sequenceOrder AS SequenceIndex, pedagogy AS Pedagogy FROM Unit WHERE courseId = ?";
 
         ArrayList<Unit> units = new ArrayList<>();
 
@@ -306,14 +306,14 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
     }
 
     /**
-     * Extract and return the tasks in the given &lt;Unit> element
-     * 
-     * @param parent &lt;Unit> // ToDo is this always true?
+     * Extract and return the tasks in the given <Unit> element
+     *
+     * @param parent <Unit> // ToDo is this always true?
      * @return a Task list.
      */
     private ArrayList<Task> retrieveTasks(Course course, Unit unit, Connection conn)
             throws NonRecoverableException {
-        final String sql = "SELECT TaskId,Title,Description,Kind,SequenceIndex,ExampleType,ProblemId FROM Task WHERE CourseId = ? AND UnitId = ?";
+        final String sql = "SELECT taskId AS TaskId, title AS Title, description AS Description, taskType AS Kind, sequenceOrder AS SequenceIndex, exampleType AS ExampleType, NULL AS ProblemId FROM tasks WHERE courseId = ? AND unitId = ?";
 
         ArrayList<Task> tasks = new ArrayList<>();
 
@@ -368,7 +368,16 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
      */
     private ArrayList<Step> retrieveSteps(int courseId, int taskId, Connection conn)
             throws NonRecoverableException {
-        final String sql = "SELECT Id,Title,Description,SequenceIndex,StepSubType,SubTypeId,TimeoutId FROM Step WHERE CourseId = ? AND TaskId = ?";
+        final String sql =
+                "SELECT " +
+                "  ts.stepId AS Id, " +
+                "  ts.title AS Title, " +
+                "  ts.description AS Description, " +
+                "  ts.sequenceOrder AS SequenceIndex, " +
+                "  ts.stepSubtype AS StepSubType, " +
+                "  ts.kcId AS SubTypeId, " +
+                "  COALESCE((SELECT st.timeoutId FROM step_timeouts st WHERE st.durationSeconds = ts.timeoutSeconds LIMIT 1), (SELECT st2.timeoutId FROM step_timeouts st2 ORDER BY st2.timeoutId LIMIT 1)) AS TimeoutId " +
+                "FROM task_steps ts WHERE ts.courseId = ? AND ts.taskId = ?";
 
         ArrayList<Step> steps = new ArrayList<>();
 
@@ -418,7 +427,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
     private ArrayList<Hint> retrieveHints(int stepId, Connection conn)
             throws NonRecoverableException {
 
-        final String sql = "SELECT Id,Text,SequenceIndex FROM Hint WHERE StepId = ?";
+        final String sql = "SELECT hintId AS Id, hintText AS Text, sequenceOrder AS SequenceIndex FROM step_hints WHERE stepId = ?";
 
         ArrayList<Hint> hints = new ArrayList<>();
 
@@ -471,7 +480,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
      * The data is a POJO String object
      */
     private String extractInfoMsgData(int subTypeId, Connection conn) throws NonRecoverableException {
-        final String sql = "SELECT Text FROM InfoMsgStep WHERE SubStepId = ?";
+        final String sql = "SELECT hintText AS Text FROM step_hints WHERE stepId = ? ORDER BY sequenceOrder LIMIT 1";
 
         PreparedStatement stmt = null;
 
@@ -496,7 +505,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
 
     private Timeout retrieveTimeout(int timeoutId, Connection conn)
             throws NonRecoverableException {
-        final String sql = "SELECT TimeoutType,Seconds,Event,Msg FROM Timeout WHERE Id = ?";
+        final String sql = "SELECT timeoutType AS TimeoutType, durationSeconds AS Seconds, eventAction AS Event, messageText AS Msg FROM step_timeouts WHERE timeoutId = ?";
 
         PreparedStatement stmt = null;
 
@@ -523,18 +532,18 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
     }
 
     /**
-     * Extract child &lt;ExercisingLocation> elements from given XML DOM parent
+     * Extract child <ExercisingLocation> elements from given XML DOM parent
      * element and return the list of these locations.
      *
      * @param parent an XML DOM Element containing one or more child
-     *               &lt;ExercisingLocation> node elements.
+     *               <ExercisingLocation> node elements.
      * @throws ShaTuException a nonrecoverable exception also see getCause()
      * @return a List of ExercisingElements
      */
     private ArrayList<ExercisingLocation> retrieveExercisingLocations(int courseId, Connection conn)
             throws NonRecoverableException {
 
-        final String sql = "SELECT Id, UnitId, TaskId, StepId FROM ExercisingLocation WHERE CourseId = ?";
+        final String sql = "SELECT stepId AS Id, unitId AS UnitId, taskId AS TaskId, stepId AS StepId FROM task_steps WHERE courseId = ?";
 
         ArrayList<ExercisingLocation> locations = new ArrayList<>();
 
@@ -563,6 +572,32 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
             throw new NonRecoverableException("CourseDAO-ERR-12" + e.toString(), e);
         } finally {
             close(stmt); // Don't close the connection, retrieve(courseId) will
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Task findTaskByStepId(int courseId, int stepId, Connection conn)
+            throws ObjNotFoundException, NonRecoverableException {
+        final String sql = "SELECT taskId FROM task_steps WHERE courseId = ? AND stepId = ?";
+        PreparedStatement stmt = null;
+        try {
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, courseId);
+            stmt.setInt(2, stepId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                int taskId = rs.getInt(1);
+                return retrieveTask(courseId, taskId, conn);
+            } else {
+                throw new ObjNotFoundException("No task found for stepId:" + stepId);
+            }
+        } catch (SQLException e) {
+            throw new NonRecoverableException("CourseDAO-ERR-findTaskByStepId" + e.toString(), e);
+        } finally {
+            close(stmt);
         }
     }
 }

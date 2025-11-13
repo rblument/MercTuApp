@@ -95,8 +95,8 @@ public class Account {
     */
     public Account(String userId, String password, int securityQuestion,
             String securityAnswer) {
-        this.userId = userId; 
-        this.password = password; 
+        this.userId = userId;
+        this.password = password;
         this.securityQuestion = securityQuestion;
         this.securityAnswer = securityAnswer;
         isStudent = true;

@@ -53,6 +53,11 @@ public class PendingStep {
      */
     protected boolean isCompleted;
 
+    /**
+     * A JSON-encoded representation of the current state for this step (nullable).
+     */
+    private String currentState;
+
     public PendingStep(Step step) {
         this(Model.DEFAULT_ID, step);
     }
@@ -119,5 +124,13 @@ public class PendingStep {
 
     public void setIsCompleted(boolean isCompleted) {
         this.isCompleted = isCompleted;
+    }
+
+    public String getCurrentState() {
+        return currentState;
+    }
+
+    public void setCurrentState(String currentState) {
+        this.currentState = currentState;
     }
 }
