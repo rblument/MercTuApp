@@ -21,18 +21,23 @@ import edu.regis.merc.model.Account;
 import edu.regis.merc.model.Assessment;
 import edu.regis.merc.model.AssessmentLevel;
 import edu.regis.merc.model.Course;
+import edu.regis.merc.model.GuiCtx;
 import edu.regis.merc.model.KnowledgeComponent;
 import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.PendingTask;
+import edu.regis.merc.model.Problem;
+import edu.regis.merc.model.State;
 import edu.regis.merc.model.StepCompletion;
 import edu.regis.merc.model.Student;
 import edu.regis.merc.model.StudentModel;
 import edu.regis.merc.model.Task;
+import edu.regis.merc.model.TuringMachine;
 import edu.regis.merc.model.TutoringSession;
 import edu.regis.merc.model.Unit;
 import edu.regis.merc.util.SHA_256;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.Random;
 import java.util.logging.Level;
@@ -358,6 +363,13 @@ public class MercTutor implements TutorSvc {
                     }
                 }
 
+                
+                // ToDo: tmp remove
+                TuringMachine tm = createTestModel();
+                Problem problem = new Problem();
+                problem.setTuringMachine(tm);
+                session.currentTask().getTask().setProblem(problem);
+                
                 TutorReply reply = new TutorReply("Authenticated");
                 reply.setData(gson.toJson(session));
                 return reply;
@@ -374,7 +386,28 @@ public class MercTutor implements TutorSvc {
             return new TutorReply();
         }
     }
-
+   // ToDo: Temporary
+    public TuringMachine createTestModel() {
+        TuringMachine tm = new TuringMachine();
+        
+        ArrayList<State> states = new ArrayList<>();
+        
+        State state = new State("Q0");
+        
+        GuiCtx ctx = new GuiCtx();
+        ctx.setX(100);
+        ctx.setY(100);
+        ctx.setWidth(30);
+        ctx.setHeight(30);
+        
+        state.setGuiCtx(ctx);
+        
+        states.add(state);
+        
+        tm.setStates(states);
+        
+        return tm;
+    }
 
     /**
      * Returns a hint to the GUI client, if any

@@ -24,7 +24,7 @@ DROP DATABASE IF EXISTS MercTuDB;
 CREATE DATABASE MercTuDB;
 
 -- Create user representing the DICE tutor.
-# CREATE USER 'MercTuTs'@'localhost' IDENTIFIED BY 'MercTu2025';
+-- CREATE USER 'MercTuTs'@'localhost' IDENTIFIED BY 'MercTu2025';
 
 -- Give the ShaTu tutor the following privileges.
 GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP ON MercTuDB.* TO 'MercTuTs'@'localhost';
@@ -253,10 +253,54 @@ CREATE TABLE global_statistics (
     lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+
+CREATE TABLE State (
+    state_id INT AUTO_INCREMENT PRIMARY KEY,
+    machine_id INT NOT NULL,
+    name VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE MuFunction(
+  Id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  Name VARCHAR(64),
+  Lhs VARCHAR(255),
+  Rhs VARCHAR(255)
+);
+
 -- Truncate Table Assessment;
 -- Will delete data, but also reset the next id counter to zero
 
--- Populate tables
+CREATE TABLE TuringMachine (
+    machine_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description varchar(256) NOT NULL,
+    start_state_id INT,
+    accept_state_id INT,
+    reject_state_id INT,
+    CONSTRAINT fk_start FOREIGN KEY (start_state_id) REFERENCES State(state_id),
+    CONSTRAINT fk_accept FOREIGN KEY (accept_state_id) REFERENCES State(state_id),
+    CONSTRAINT fk_reject FOREIGN KEY (reject_state_id) REFERENCES State(state_id)
+);
+
+
+CREATE TABLE alphabets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    machine_id INT,
+    type VARCHAR(50), -- 'input' or 'tape'
+    FOREIGN KEY (machine_id) REFERENCES turingmachine(machine_id) ON DELETE CASCADE
+);
+
+CREATE TABLE alphabet_symbols (
+    alphabet_id INT,
+    symbol CHAR(1),
+    PRIMARY KEY (alphabet_id, symbol),
+    FOREIGN KEY (alphabet_id) REFERENCES alphabets(id) ON DELETE CASCADE
+);
+
+ Truncate Table Assessment;
+-- Will delete data, but also reset the next id counter to zero
+
+ --Populate tables
 
 INSERT INTO courses
 (courseId,
@@ -328,3 +372,40 @@ VALUES
 -- INSERT INTO ExercisingLocation
 -- (Id, CourseId, UnitId, TaskId, StepId)
 -- VALUES (0,1,0,0,0);
+
+INSERT INTO ExercisingLocation
+(Id, CourseId, UnitId, TaskId, StepId)
+VALUES (0,1,0,0,0);
+
+INSERT INTO State
+(state_id, machine_id, name)
+
+VALUES (-1, 0, 'Q-1');
+
+INSERT INTO State
+(state_id, machine_id, name)
+
+VALUES (0, 0, 'Q0');
+
+INSERT INTO State
+(state_id, machine_id, name)
+
+VALUES (0, 0, 'Q1');
+
+INSERT INTO State
+(state_id, machine_id, name)
+
+VALUES (0, 0, 'Q2');
+
+INSERT INTO turingmachine
+(machine_id, name, description, start_state_id, accept_state_id, reject_state_id)
+
+values
+(0, 'The Zero TM', 'The Zero Function', 1, 3, -1);
+
+
+
+
+INSERT INTO MuFunction (Name, Lhs, Rhs)
+VALUES ('add', 'add(x, y)', '(x + y)');
+
