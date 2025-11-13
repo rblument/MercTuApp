@@ -245,22 +245,22 @@ CREATE TABLE alphabet_symbols (
     PRIMARY KEY (alphabet_id, symbol),
     FOREIGN KEY (alphabet_id) REFERENCES alphabets(id) ON DELETE CASCADE
 );
-CREATE TABLE MoveKinds (
-    DirectionID INT PRIMARY KEY AUTO_INCREMENT,
-    direction Enum('LEFT', 'RIGHT') NOT NULL DEFAULT 'RIGHT'
- );
+-- CREATE TABLE MoveKinds (
+--     DirectionID INT PRIMARY KEY AUTO_INCREMENT,
+--     direction Enum('LEFT', 'RIGHT') NOT NULL DEFAULT 'RIGHT'
+--  );
 
 CREATE TABLE Transition (
     transition_id INT AUTO_INCREMENT PRIMARY KEY,
     machine_id INT NOT NULL,
---     current_state_id INT NOT NULL,
     read_symbol CHAR(1) NOT NULL,
     write_symbol CHAR(1) NOT NULL,
-    direction_id INT NOT NULL,
+    current_state_id INT NOT NULL,
     next_state_id INT NOT NULL,
+    direction CHAR(1) CHECK(direction IN ('L', 'R', 'S')) NOT NULL,
     FOREIGN KEY (machine_id) REFERENCES TuringMachine(machine_id) ON DELETE CASCADE,
-    FOREIGN KEY (next_state_id) REFERENCES State(state_id) ON DELETE CASCADE,
-    FOREIGN KEY (direction_id) REFERENCES MoveKinds(DirectionID)
+    FOREIGN KEY (current_state_id) REFERENCES State(state_id) ON DELETE CASCADE,
+    FOREIGN KEY (next_state_id) REFERENCES State(state_id) ON DELETE CASCADE
 );
 
 
@@ -342,26 +342,36 @@ values
 SET @machine_id = LAST_INSERT_ID();
 SET @machine_id = LAST_INSERT_ID();
 
--- Insert all states
+
 INSERT INTO State (machine_id, name)
 VALUES (@machine_id, 'Q-1');
 
-SET @reject_state = LAST_INSERT_ID();  -- This is Q-1
+SET @reject_state = LAST_INSERT_ID();
 
 INSERT INTO State (machine_id, name)
 VALUES (@machine_id, 'Q0');
 
-SET @start_state = LAST_INSERT_ID();  -- This is Q0
+SET @start_state = LAST_INSERT_ID();
+
+INSERT INTO Transition (machine_id, read_symbol, write_symbol, current_state_id, next_state_id, direction)
+VALUES (@machine_id, '1', '0', @reject_state, @start_state, 'L');
+
+INSERT INTO Transition (machine_id, read_symbol, write_symbol, current_state_id, next_state_id, direction)
+VALUES (@machine_id, '1', '0', @start_state, @start_state, 'S');
 
 INSERT INTO State (machine_id, name)
 VALUES (@machine_id, 'Q1');
 
-SET @state_2 = LAST_INSERT_ID();  -- This is Q1
+SET @state_2 = LAST_INSERT_ID();
 
 INSERT INTO State (machine_id, name)
 VALUES (@machine_id, 'Q2');
 
-SET @accept_state = LAST_INSERT_ID();  -- This is Q2
+SET @accept_state = LAST_INSERT_ID();
+
+INSERT INTO Transition (machine_id, read_symbol, write_symbol, current_state_id, next_state_id, direction)
+VALUES (@machine_id, '1', '0', @start_state, @accept_state, 'R');
+
 
 -- Now update the TuringMachine with the correct state references
 UPDATE TuringMachine
