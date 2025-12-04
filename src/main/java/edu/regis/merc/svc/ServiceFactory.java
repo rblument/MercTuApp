@@ -13,6 +13,8 @@
 package edu.regis.merc.svc;
 
 import edu.regis.merc.dao.*;
+import edu.regis.merc.svc.MUSvc; 
+import edu.regis.merc.dao.MUSvcImpl; 
 
 /**
  * A singleton providing a concrete implementation of the service factory used
@@ -71,6 +73,24 @@ public class ServiceFactory {
 
     public static TuringMachingSvc findTuringMachineSvc() {
         return new TuringMachineDAO();
+    }
+
+    /**
+     * Return a reference to the μ-recursive function service.
+     *
+     * @return MuFunctionSvc
+     */
+    public static MuFunctionSvc findMuFunctionSvc() {
+        return new MuFunctionDAO();
+    }
+
+    /**
+     * Return a reference to the μ-recursion tutoring service.
+     *
+     * @return MUSvc
+     */
+    public static MUSvc findMUSvc() {
+        return new MUSvcImpl();
     }
 }
 

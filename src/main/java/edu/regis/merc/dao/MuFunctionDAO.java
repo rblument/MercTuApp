@@ -1,14 +1,16 @@
 // Kristin Ingram
-// last updated: 10/28
+// last updated: 12/2
 package edu.regis.merc.dao;
 
 import java.sql.*;
 import java.util.*;
 
+import edu.regis.merc.model.MuEvaluator;
 import edu.regis.merc.model.MuFunction;
+import edu.regis.merc.svc.MuFunctionSvc;
 
-public class MuFunctionDAO extends MySqlDAO {
-
+public class MuFunctionDAO extends MySqlDAO implements MuFunctionSvc {
+    @Override
     public List<MuFunction> getAllFunctions() {
         List<MuFunction> functions = new ArrayList<>();
         Connection conn = null;
@@ -38,6 +40,7 @@ public class MuFunctionDAO extends MySqlDAO {
         return functions;
     }
 
+    @Override
     public void insertFunction(MuFunction f) {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -55,5 +58,14 @@ public class MuFunctionDAO extends MySqlDAO {
         } finally {
             close(conn, stmt); //
         }
+    }
+    @Override
+    public int evaluate(MuFunction function, int... args){
+        // ... implement evaluator 
+        Map<String, Integer> env = function.getLhs().bindArguments(args); 
+
+        MuEvaluator evaluator = new MuEvaluator(); 
+        return evaluator.eval(function.getRhs(), env); 
+    
     }
 }

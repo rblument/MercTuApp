@@ -7,7 +7,9 @@ public enum MUStepSubType {
     DISPLAY_PARAMETER("Displays parameter"),
     SELECT_PARAMETER("Selects parameter"),
     DISPLAY_RHS_COMPONENT("Display Right Hand Side Component"),
-    SELECT_RHS_COMPONENT("Selects Right Hand Side Component");
+    SELECT_RHS_COMPONENT("Selects Right Hand Side Component"),
+    ERROR("Error");
+     
 
 
     /**
@@ -20,7 +22,7 @@ public enum MUStepSubType {
      *
      * @param subType
      */
-    StepSubType(String subType) {
+    MUStepSubType(String subType) {
         this.subType = subType;
     }
 
@@ -49,8 +51,8 @@ public enum MUStepSubType {
      * @param aTitle
      * @return
      */
-    public static StepSubType findValue(String aTitle) {
-        for (StepSubType kind : values()) {
+    public static MUStepSubType findValue(String aTitle) {
+        for (MUStepSubType kind : values()) {
             if (kind.getSubType().equalsIgnoreCase(aTitle))
                 return kind;
         }
