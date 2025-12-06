@@ -15,13 +15,9 @@ package edu.regis.merc.svc;
 import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
-import edu.regis.merc.model.Account;
 import edu.regis.merc.model.State;
-import edu.regis.merc.model.Transition;
 import edu.regis.merc.model.TuringMachine;
 
-import java.lang.module.Configuration;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -41,45 +37,42 @@ import java.util.List;
  */
 
 public interface TuringMachingSvc {
-
-
-
-    // -------- Turing Machine --------
-
     /**
      * Creates a new Turing Machine.
      *
      * @param machine the machine to create
      * @return the unique identifier of the created machine
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode()
      */
-    int createMachine(TuringMachine machine);
+    int create(TuringMachine machine) throws NonRecoverableException;
 
     /**
-     * Retrieves a Turing Machine by its identifier.
+     * Retrieves a Turing Machine by its identifier from the database.
      *
      * @param id the unique identifier of the machine
      * @return the corresponding {@link TuringMachine}
+     * @throws ObjNotFoundException no Turing Machine with the given id exists
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode()
      */
-    TuringMachine getMachineById(int id);
+    TuringMachine retrieve(int id) throws ObjNotFoundException, NonRecoverableException;
 
     /**
-     * Retrieves all Turing Machines.
+     * Retrieves all Turing Machines from the database.
      *
      * @return a list of all machines
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode()
      */
-    List<TuringMachine> getAllMachines();
+    List<TuringMachine> retrieveAll() throws NonRecoverableException;
 
     /**
      * Deletes a Turing Machine by its identifier.
      *
      * @param id the unique identifier of the machine
      * @return true if the machine was deleted, false otherwise
+     * @throws ObjNotFoundException no Turing Machine with the given id exists
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode()
      */
-    boolean deleteMachine(int id);
-
-
-
-    // -------- States --------
+    boolean delete(int id) throws ObjNotFoundException, NonRecoverableException;
 
     /**
      * Creates a new state for a Turing Machine.
@@ -96,33 +89,4 @@ public interface TuringMachingSvc {
      * @return the unique identifier of the updated state
      */
     int updateState(State state);
-
-    /**
-     * Retrieves all states belonging to a specific Turing Machine.
-     *
-     * @param machineId the unique identifier of the machine
-     * @return a list of states associated with the machine
-     */
-    List<State> getStatesByMachine(int machineId);
-
-
-
-    // -------- Transitions --------
-
-    /**
-     * Creates a new transition for a Turing Machine.
-     *
-     * @param transition the transition to create
-     * @return the unique identifier of the created transition
-     */
-    int createTransition(Transition transition);
-
-    /**
-     * Retrieves all transitions belonging to a specific Turing Machine.
-     *
-     * @param machineId the unique identifier of the machine
-     * @return a list of transitions associated with the machine
-     */
-    List<Transition> getTransitionsByMachine(int machineId);
-
 }

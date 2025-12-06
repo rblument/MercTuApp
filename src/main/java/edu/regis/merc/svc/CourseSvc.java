@@ -67,20 +67,5 @@ public interface CourseSvc {
      */
     UnitDigest retrieveUnitDigest(int courseId, int unitId, Connection conn)
             throws ObjNotFoundException, NonRecoverableException;
-    
-    
-    /**
-     * Retrieve the identified task from the database.
-     * 
-     * @param courseId the id of the course owning the task
-     * @param taskId the db id of the task
-     * @param conn an open connection to the database, which isn't closed.
-     * @return the Task identified by the course and task id
-     * @throws ObjNotFoundException No task with the given id exists in the DB.NonRecoverableException=
-     * @throws NonRecoverableException also see getCause().getErrorCode().
-     */
-    Task retrieveTask(int courseId, int taskId, Connection conn) 
-            throws ObjNotFoundException, NonRecoverableException;
-
 }
 

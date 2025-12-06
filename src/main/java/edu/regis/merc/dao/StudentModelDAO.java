@@ -361,8 +361,9 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
 
         final String sql = "SELECT Id,KnowledgeComponentId,AssessmentLevel,Exposures,Successes,Hints FROM Assessment WHERE UserId = ?";
 
+        // ToDo, don't hard code course id, catch ObjNotFoundException.
         CourseSvc courseSvc = ServiceFactory.findCourseSvc();
-        Course course = courseSvc.retrieve(1); // Note only one course possible.
+        Course course = courseSvc.retrieve(0); // Note only one course possible.
 
         ArrayList<Assessment> assessments = new ArrayList<>();
         PreparedStatement stmt = conn.prepareStatement(sql);

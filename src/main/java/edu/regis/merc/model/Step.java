@@ -29,11 +29,27 @@ public class Step extends TitledModel {
      * The type of this step, which determines the object specified in this
      * step's data along with a potential cont
      */
-    private StepSubType subType;
+    //private StepSubType subType;
+    private StudentActionKind studentAction;
+
     /**
      * Which step this is in the parent task.
      */
     protected int sequenceIndex = 1;
+    
+    /**
+     * A displayable description providing background information for solving
+     * the problem presented by the prompt in this step.
+     */
+    private String context;
+    
+    /**
+     * A displayable description describing what the student needs to perform
+     * in this step.
+     */
+    private String prompt;
+    
+    private ViewConfiguration viewConfiguration;
 
     /**
      * The hints, if any, associated with this step (in order to be given).
@@ -58,26 +74,14 @@ public class Step extends TitledModel {
     private String data;
 
     /**
-     * Current question for student to answer.
-     */
-    public String question;
-
-    /**
-     * Correct answer to the presented question. Checked against userAnswer
-     */
-    private String correctAnswer;
-
-    /**
      * Instantiate this step with the given information.
      * 
      * @param id
      * @param sequenceId
      * @param subType
      */
-    public Step(int id, int sequenceIndex, StepSubType subType) {
+    public Step(int id) {
         super(id);
-
-        this.sequenceIndex = sequenceIndex;
 
         timeout = null;
 
@@ -85,19 +89,51 @@ public class Step extends TitledModel {
 
         hints = new ArrayList<>();
 
-        this.subType = subType;
+        //this.subType = subType;
 
     }
 
-    public StepSubType getSubType() {
-        return subType;
+    public StudentActionKind getStudentAction() {
+        return studentAction;
     }
 
-    public void setSubType(StepSubType subType) {
-        System.out.println("Sub type set: " + subType); // Error checking
-
-        this.subType = subType;
+    public void setStudentAction(StudentActionKind studentAction) {
+        this.studentAction = studentAction;
     }
+
+    public String getContext() {
+        return context;
+    }
+
+    public void setContext(String context) {
+        this.context = context;
+    }
+
+    public String getPrompt() {
+        return prompt;
+    }
+
+    public void setPrompt(String prompt) {
+        this.prompt = prompt;
+    }
+
+    public ViewConfiguration getViewConfiguration() {
+        return viewConfiguration;
+    }
+
+    public void setViewConfiguration(ViewConfiguration viewConfiguration) {
+        this.viewConfiguration = viewConfiguration;
+    }    
+
+  //  public StepSubType getSubType() {
+   //     return subType;
+   // }
+
+  //  public void setSubType(StepSubType subType) {
+   //     System.out.println("Sub type set: " + subType); // Error checking
+
+   //     this.subType = subType;
+   // }
 
     public ArrayList<Hint> getHints() {
         return hints;
@@ -117,6 +153,10 @@ public class Step extends TitledModel {
 
     public int getSequenceIndex() {
         return sequenceIndex;
+    }
+    
+    public void setSequenceIndex(int seqeunceIndex) {
+       this.sequenceIndex = sequenceIndex;
     }
 
     public Timeout getTimeout() {
@@ -151,59 +191,5 @@ public class Step extends TitledModel {
     public void setData(String data) {
         this.data = data;
     }
-
-    /**
-     * Setter method for the question
-     * 
-     * @param question
-     */
-    public void setQuestion(String question) {
-        this.question = question;
-    }
-
-    /**
-     * Getter method for the question
-     * 
-     * @return
-     */
-    public String getQuestion() {
-        return this.question;
-    }
-
-    /**
-     * Setter method for the correct answer
-     * 
-     * @param newResult
-     */
-    public void setResult(String newResult) {
-        this.correctAnswer = newResult;
-    }
-
-    /**
-     * Getter method for the correct answer
-     * 
-     * @return
-     */
-    public String getResult() {
-        return this.correctAnswer;
-    }
-
-    /**
-     * Setter method for the user's answer
-     * 
-     * @param userResponse
-     */
-   // public void setUserAnswer(String userResponse) {
-   //     this.userAnswer = userResponse;
-   // }
-
-    /**
-     * Getter method for the user's answer
-     * 
-     * @return
-     */
-   // public String getUserAnswer() {
-   //     return this.userAnswer;
-   // }
 }
 

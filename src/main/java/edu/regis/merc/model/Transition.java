@@ -21,7 +21,20 @@ public class Transition extends Edge {
     private char read; // Symbol under the head
     private char write; // Symbol to overwrite in current cell
     private MoveKind direction; // Move left or right
-    private State nextState; // Next state after applying transition
+    private State toState; // Next state after applying transition
+    private State fromState;
+    
+    public Transition() {
+        this(DEFAULT_ID);
+    }
+    
+    public Transition(int id) {
+        super(id);
+        
+        read = TuringMachine.BLANK;
+        write = TuringMachine.BLANK;
+        direction = MoveKind.RIGHT;
+    }
 
     // Default constructor method for Transition class
     public Transition(char read, char write, MoveKind direction, State nextState) {
@@ -30,21 +43,50 @@ public class Transition extends Edge {
         this.read = read;
         this.write = write;
         this.direction = direction;
-        this.nextState = nextState;
+        this.toState = nextState;
     }
 
     // Getter methods
     public char getRead() {
         return read;
     }
+    
+    public void setRead(char read) {
+        this.read = read;
+    }
+    
     public char getWrite() {
         return write;
     }
+    
+    public void setWrite(char write) {
+        this.write = write;
+    }
+    
     public MoveKind getDirection() {
         return direction;
     }
-    public State getNextState() {
-        return nextState;
+    
+    public void setDirection(MoveKind direction) {
+        this.direction = direction;
     }
+    
+    public State getToState() {
+        return toState;
+    }
+    
+    public void setToState(State toState) {
+        this.toState = toState;
+    }
+
+    public State getFromState() {
+        return fromState;
+    }
+
+    public void setFromState(State fromState) {
+        this.fromState = fromState;
+    }
+    
+    
 
 }

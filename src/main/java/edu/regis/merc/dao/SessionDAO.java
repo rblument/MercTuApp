@@ -25,6 +25,7 @@ import edu.regis.merc.model.Task;
 import edu.regis.merc.model.TutoringSession;
 import edu.regis.merc.model.UnitDigest;
 import edu.regis.merc.svc.CourseSvc;
+import edu.regis.merc.svc.ProblemSvc;
 import edu.regis.merc.svc.ServiceFactory;
 import edu.regis.merc.svc.SessionSvc;
 import java.io.File;
@@ -55,7 +56,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     @Override
     public void create(TutoringSession session) throws IllegalArgException, NonRecoverableException {
-        final String sql = "INSERT INTO TutoringSession (UserId, SecurityToken, IsActive, StartDate, CourseId, UnitId) VALUES (?,?,?,?,?,?)";
+        final String sql = "INSERT INTO TutoringSession (UserId, SecurityToken, IsActive, StartDate, CourseId, UnitId, ProblemId) VALUES (?,?,?,?,?,?,?)";
 
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -77,6 +78,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             stmt.setTimestamp(4, new Timestamp(session.getStartDate().getTimeInMillis()));
             stmt.setInt(5, session.getCourse().getId());
             stmt.setInt(6, 0); // Start with Unit 0
+            stmt.setInt(7, session.getProblem().getId());
 
             stmt.executeUpdate();
 
@@ -101,7 +103,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     @Override
     public TutoringSession retrieve(String userId) throws ObjNotFoundException, NonRecoverableException {
-        final String sql = "SELECT Id,SecurityToken,IsActive,StartDate,CourseId,UnitId FROM TutoringSession WHERE UserId = ?";
+        final String sql = "SELECT Id,SecurityToken,IsActive,StartDate,CourseId,UnitId,ProblemId FROM TutoringSession WHERE UserId = ?";
 
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -118,6 +120,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             // Just don't know how else to return a tutoring session when you need a
             // Student object to make a TutoringSession, but then in turn need an Account
             // object to make a student.
+            // The account has the security token and the student the student model!
             AccountDAO accDao = new AccountDAO();
             Account acc = accDao.retrieve(userId);
             Student stu = new Student(acc);
@@ -154,6 +157,15 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
                     throw new NonRecoverableException(errMsg);
                 }
 
+                ProblemSvc problemSvc = ServiceFactory.findProbelmSvc();
+                int problemId = rs.getInt("ProblemId");
+                try {
+                    session.setProblem(problemSvc.retrieve(problemId,conn));
+                } catch (ObjNotFoundException ex) {
+                    String errMsg = "SessionDAO-ERR-103 problem " + problemId + " not found in session for " + userId;
+                    throw new NonRecoverableException(errMsg);
+                }
+                
                 session.setTasks(retrievePendingTasks(session, conn));
 
                 return session;
@@ -376,12 +388,13 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
 
             ResultSet rs = stmt.executeQuery();
 
-            CourseSvc courseSvc = ServiceFactory.findCourseSvc();
+           // CourseSvc courseSvc = ServiceFactory.findCourseSvc();
 
             while (rs.next()) {
                 taskId = rs.getInt(1);
-
-                Task task = courseSvc.retrieveTask(session.getCourse().getId(), taskId, conn);
+                
+                // Task task = courseSvc.retrieveTask(session.getCourse().getId(), taskId, conn);
+                Task task = session.getProblem().findTaskById(taskId);
 
                 PendingTask pTask = new PendingTask(task);
 
@@ -394,9 +407,9 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
 
             return pendingTasks;
 
-        } catch (ObjNotFoundException ex) {
-            String errMsg = "Task not found in pending task" + taskId;
-            throw new NonRecoverableException("SessionDAO-ERR-10", new InconsistentDBException(errMsg));
+       // } catch (ObjNotFoundException ex) {
+       //     String errMsg = "Task not found in pending task" + taskId;
+         //   throw new NonRecoverableException("SessionDAO-ERR-10", new InconsistentDBException(errMsg));
         } catch (SQLException e) {
             throw new NonRecoverableException("SessionDAO-ERR-11", e);
 

@@ -1,5 +1,9 @@
 package edu.regis.merc.model;
 
+/**
+ * 
+ * @author oscar
+ */
 public enum LCStepSubType {
 
     DISPLAY_ALL("Display All"),
@@ -27,7 +31,7 @@ public enum LCStepSubType {
      *
      * @param subType
      */
-    StepSubType(String subType) {
+    LCStepSubType(String subType) {
         this.subType = subType;
     }
 
@@ -49,22 +53,6 @@ public enum LCStepSubType {
     public String toString() {
         return subType;
     }
-
-    /**
-     * Return the enum value for the given title.
-     *
-     * @param aTitle
-     * @return
-     */
-    public static StepSubType findValue(String aTitle) {
-        for (StepSubType kind : values()) {
-            if (kind.getSubType().equalsIgnoreCase(aTitle))
-                return kind;
-        }
-
-        return ERROR;
-    }
-
 }
 
 
