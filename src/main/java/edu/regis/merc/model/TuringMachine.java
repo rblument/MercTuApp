@@ -12,6 +12,7 @@
  */
 package edu.regis.merc.model;
 
+import edu.regis.merc.err.ObjNotFoundException;
 import java.util.*;
 
 /**
@@ -20,6 +21,12 @@ import java.util.*;
  * @author Michael Nguyen
  */
 public class TuringMachine extends GraphicalComponent {
+    /**
+     * Default character representing a blank on the tape.
+     */
+    public static final char BLANK = '-';
+    
+    
     /**
      * The sates in this Turing Machine.
      */
@@ -33,10 +40,10 @@ public class TuringMachine extends GraphicalComponent {
     private State currentState; // Current state of machine
     private int head; // Current index of tape
 
-    private Map<State, List<Transition>> transitions = new HashMap<>(); // Rules grouped by state they apply to
+    private ArrayList<Transition> transitions = new ArrayList<>(); // Rules grouped by state they apply to
 
     private HashSet<Transition> cachedTransitions;
-    private static final char BLANK = '_'; // Default blank symbol
+
 
     public TuringMachine() {
         this(DEFAULT_ID);
@@ -91,6 +98,26 @@ public class TuringMachine extends GraphicalComponent {
 
     public void addState(State state) {
         states.add(state);
+    }
+    
+    public State findState(int id) throws ObjNotFoundException {
+        for (State state : states) {
+            if (state.getId() == id) {
+                return state;
+            }
+        }
+
+        throw new ObjNotFoundException("State " + id + " not found in TM " + this.id);
+    }
+    
+    public State findState(String name) throws ObjNotFoundException {
+        for (State state : states) {
+            if (state.getName().equalsIgnoreCase(name)) {
+                return state;
+            }
+        }
+        
+        throw new ObjNotFoundException("State " + name + " not found in TM " + this.id);
     }
 
     public ArrayList<State> getStates() {
@@ -181,13 +208,13 @@ public class TuringMachine extends GraphicalComponent {
 
     // Add transition rule
     public void addTransition(State from, Transition transition) {
-        transitions.computeIfAbsent(from, k -> new ArrayList<>()).add(transition);
-
+       // transitions.computeIfAbsent(from, k -> new ArrayList<>()).add(transition);
+       transitions.add(transition);
         if (!cachedTransitions.contains(transition))
             cachedTransitions.add(transition);
     }
 
-    public Map<State, List<Transition>> getTransitions() {
+    public ArrayList<Transition> getTransitions() {
         return transitions;
     }
 
@@ -195,13 +222,16 @@ public class TuringMachine extends GraphicalComponent {
         return cachedTransitions;
     }
 
-    public void setTransitions(Map<State, List<Transition>> transitions) {
+    public void setTransitions(ArrayList<Transition> transitions) {
         this.transitions = transitions;
+        
+        for (Transition transition : transitions)
+            cachedTransitions.add(transition);
 
-        for (List<Transition> fromTransitions : transitions.values()) {
-            for (Transition transition : fromTransitions)
-                cachedTransitions.add(transition);
-        }
+        //for (List<Transition> fromTransitions : transitions) {
+          //  for (Transition transition : fromTransitions)
+            //    cachedTransitions.add(transition);
+       // }
     }
 
     // Load input string into tape
@@ -233,12 +263,12 @@ public class TuringMachine extends GraphicalComponent {
             return;
         }
         char currentSymbol = tape.get(head);
-        List<Transition> possible = transitions.getOrDefault(currentState, Collections.emptyList());
-
+       // List<Transition> possible = transitions.getOrDefault(currentState, Collections.emptyList());
+        List<Transition> possible = transitions;
         for (Transition transition : possible) {
             if (transition.getRead() == currentSymbol) {
                 tape.set(head, transition.getWrite());
-                currentState = transition.getNextState();
+                currentState = transition.getToState();
                 if (transition.getDirection() == MoveKind.LEFT) {
                     head--;
                     if (head < 0) {

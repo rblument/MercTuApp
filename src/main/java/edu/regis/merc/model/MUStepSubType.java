@@ -20,7 +20,7 @@ public enum MUStepSubType {
      *
      * @param subType
      */
-    StepSubType(String subType) {
+    MUStepSubType(String subType) {
         this.subType = subType;
     }
 
@@ -42,20 +42,4 @@ public enum MUStepSubType {
     public String toString() {
         return subType;
     }
-
-    /**
-     * Return the enum value for the given title.
-     *
-     * @param aTitle
-     * @return
-     */
-    public static StepSubType findValue(String aTitle) {
-        for (StepSubType kind : values()) {
-            if (kind.getSubType().equalsIgnoreCase(aTitle))
-                return kind;
-        }
-
-        return ERROR;
-    }
-
 }

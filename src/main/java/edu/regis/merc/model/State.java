@@ -22,17 +22,16 @@ public class State extends Node {
      * The name of this state.
      */
     private String name;
-    private int stateId;
+    private int tmId;
 
     // Default constructor for State class
-    public State(String name) {
-        this.name = name;
+    public State() {
+        this(DEFAULT_ID);
     }
 
-    public State(int stateId, int machineId, String name) {
-        this.name = name;
-        this.stateId = stateId;
-        setId(machineId);
+    public State(int id) {
+        super(id);
+        this.name = "";
     }
 
     // Getter and setter methods
@@ -43,11 +42,11 @@ public class State extends Node {
         this.name = name;
     }
 
-    public int getStateId() {
-        return stateId;
+    public int getTmId() {
+        return tmId;
     }
-    public void setStateId(int stateId) {
-        this.stateId = stateId;
+    public void setTmId(int tmId) {
+        this.tmId = tmId;
     }
 
     // Override equals() method for State comparison
