@@ -10,40 +10,48 @@ public class MuTest {
     public static void main(String[] args) {
 
         // Test 1: Zero function Z(x) = 0
-
         LeftHandSide lhsZ = new LeftHandSide("Z");
         lhsZ.addParameter("x");
+        MuExpression rhsZ = new MuExpression(0);
+        MuFunction fZ = new MuFunction(1, lhsZ, rhsZ);
 
-        MuExpression rhsZ = new MuExpression(0);   // constant 0
+        System.out.println("Test 1: Zero Function");
+        System.out.println("Expected: Z([x]) = 0");
+        System.out.println("Actual:   " + fZ);
+        System.out.println("Status:   " + (fZ.toString().equals("Z([x]) = 0") ? "PASS" : "FAIL"));
+        System.out.println();
 
-        MuFunction z = new MuFunction(100, lhsZ, rhsZ);
-
-        System.out.println("Zero Function: " + z);
-
+        
 
         // Test 2: Successor function S(x) = x + 1
-
         LeftHandSide lhsS = new LeftHandSide("S");
         lhsS.addParameter("x");
 
-        MuExpression rhsS = new MuExpression(OpKind.ADD, "x", new MuExpression(1));
+        MuExpression rhsS = new MuExpression(OpKind.ADD, new MuExpression("x"), new MuExpression(1));
+        MuFunction fS = new MuFunction(2, lhsS, rhsS);
 
-        MuFunction s = new MuFunction(101, lhsS, rhsS);
+        System.out.println("Test 2: Successor Function");
+        System.out.println("Expected: S([x]) = (x + 1)");
+        System.out.println("Actual:   " + fS);
+        System.out.println("Status:   " + (fS.toString().equals("S([x]) = (x + 1)") ? "PASS" : "FAIL"));
+        System.out.println();
 
-        System.out.println("Successor Function: " + s);
 
 
         // Test 3: Nested add: addDouble(x, y) = (x + y) * 2
+        LeftHandSide lhsAD = new LeftHandSide("addDouble");
+        lhsAD.addParameter("x");
+        lhsAD.addParameter("y");
 
-        LeftHandSide lhsAddDouble = new LeftHandSide("addDouble");
-        lhsAddDouble.addParameter("x");
-        lhsAddDouble.addParameter("y");
+        MuExpression add = new MuExpression(OpKind.ADD, new MuExpression("x"), new MuExpression("y"));
+        MuExpression rhsAD = new MuExpression(OpKind.MUL, add, new MuExpression(2));
+        MuFunction fAD = new MuFunction(3, lhsAD, rhsAD);
 
-        MuExpression innerAdd = new MuExpression(OpKind.ADD, "x", "y");
-        MuExpression rhsAddDouble = new MuExpression(OpKind.MUL, innerAdd, new MuExpression(2));
-
-        MuFunction addDouble = new MuFunction(102, lhsAddDouble, rhsAddDouble);
-
-        System.out.println("AddDouble Function: " + addDouble);
+        System.out.println("Test 3: AddDouble Function");
+        System.out.println("Expected: addDouble([x, y]) = ((x + y) * 2)");
+        System.out.println("Actual:   " + fAD);
+        System.out.println("Status:   " + (fAD.toString().equals("addDouble([x, y]) = ((x + y) * 2)") ? "PASS" : "FAIL"));
+        System.out.println();
     }
 }
+        
