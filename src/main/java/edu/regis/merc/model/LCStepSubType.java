@@ -56,25 +56,6 @@ public enum LCStepSubType {
     public String toString() {
         return subType;
     }
-<<<<<<< HEAD
-
-    /**
-     * Return the enum value for the given title.
-     *
-     * @param aTitle
-     * @return
-     */
-    public static LCStepSubType findValue(String aTitle) {
-        for (LCStepSubType kind : values()) {
-            if (kind.getSubType().equalsIgnoreCase(aTitle))
-                return kind;
-        }
-
-        return ERROR;
-    }
-
-=======
->>>>>>> origin/development
 }
 
 
