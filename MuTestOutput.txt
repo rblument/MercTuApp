@@ -1,0 +1,3 @@
+Zero Function: Z([x]) = 0
+Successor Function: S([x]) = (x + 1)
+AddDouble Function: addDouble([x, y]) = ((x + y) * 2)
