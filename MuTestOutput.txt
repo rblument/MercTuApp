@@ -1,3 +1,18 @@
-Zero Function: Z([x]) = 0
-Successor Function: S([x]) = (x + 1)
-AddDouble Function: addDouble([x, y]) = ((x + y) * 2)
+Test Results: 
+
+Test 1: Zero Function
+Expected: Z([x]) = 0
+Actual:   Z([x]) = 0
+Status:   PASS
+
+Test 2: Successor Function
+Definition: S(x) = x + 1
+Expected: S([x]) = (x + 1)
+Actual:   S([x]) = (x + 1)
+Status:   PASS
+
+Test 3: Add & Double Function
+Definition: addDouble(x, y) = (x + y) * 2
+Expected: addDouble([x, y]) = ((x + y) * 2)
+Actual:   addDouble([x, y]) = ((x + y) * 2)
+Status:   PASS
