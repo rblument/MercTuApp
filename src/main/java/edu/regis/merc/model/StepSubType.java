@@ -32,9 +32,9 @@ public enum StepSubType {
 
     LC_DESCRIPTION("Lambda Calculus Description"),
 
-    MU_DESCRIPTION("MU Recursive Function Description");
+    MU_DESCRIPTION("MU Recursive Function Description"),
     
-//    ERROR("Error");
+    ERROR("Error");
     
     /**
      * The name used by the server to identify this request.

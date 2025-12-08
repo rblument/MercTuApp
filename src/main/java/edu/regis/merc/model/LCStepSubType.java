@@ -14,7 +14,8 @@ public enum LCStepSubType {
     DISPLAY_APPLICATION("Display Application"),
     SELECT_APPLICATION("Select Application"),
     DISPLAY_ARG("Display Arguments"),
-    SELECT_ARG("Select Arguments");
+    SELECT_ARG("Select Arguments"),
+    ERROR("Error"); 
 
 
     /**
@@ -27,8 +28,8 @@ public enum LCStepSubType {
      *
      * @param subType
      */
-    StepSubType(String subType) {
-        this.subType = subType;
+    LCStepSubType(String subType){
+        this.subType = subType; 
     }
 
     /**
@@ -56,8 +57,8 @@ public enum LCStepSubType {
      * @param aTitle
      * @return
      */
-    public static StepSubType findValue(String aTitle) {
-        for (StepSubType kind : values()) {
+    public static LCStepSubType findValue(String aTitle) {
+        for (LCStepSubType kind : values()) {
             if (kind.getSubType().equalsIgnoreCase(aTitle))
                 return kind;
         }

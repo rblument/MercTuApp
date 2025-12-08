@@ -8,7 +8,10 @@ public enum OpKind {
     ADD("+"),
     SUB("-"),
     MUL("*"),
-    DIV("/");
+    DIV("/"),
+    ZERO("0"), 
+    SUCCESSOR("S"), 
+    PROJECTION("P"); 
 
     private final String symbol;
 
