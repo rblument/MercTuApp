@@ -45,19 +45,4 @@ public enum MUStepSubType {
         return subType;
     }
 
-    /**
-     * Return the enum value for the given title.
-     *
-     * @param aTitle
-     * @return
-     */
-    public static MUStepSubType findValue(String aTitle) {
-        for (MUStepSubType kind : values()) {
-            if (kind.getSubType().equalsIgnoreCase(aTitle))
-                return kind;
-        }
-
-        return ERROR;
-    }
-
 }

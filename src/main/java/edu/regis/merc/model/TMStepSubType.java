@@ -74,14 +74,14 @@ public enum TMStepSubType {
      * @param aTitle
      * @return
      */
-    public static TMStepSubType findValue(String aTitle) {
-        for (TMStepSubType kind : values()) {
-            if (kind.getSubType().equalsIgnoreCase(aTitle))
-                return kind;
-        }
+    //public static TMStepSubType findValue(String aTitle) {
+     //   for (TMStepSubType kind : values()) {
+       //     if (kind.getSubType().equalsIgnoreCase(aTitle))
+         //       return kind;
+        //}
 
-        throw new IllegalArgumentException("Invalid TMStepSubType: " + aTitle);
-    }
+       // throw new IllegalArgumentException("Invalid TMStepSubType: " + aTitle);
+   // }
 
 
 

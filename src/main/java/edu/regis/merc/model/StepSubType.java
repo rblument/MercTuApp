@@ -27,6 +27,8 @@ public enum StepSubType {
     INFO_MESSAGE("Information Message"),
     
     REQUEST_HINT("Request Hint"),
+    
+    DISPLAY_ALL("Display All"),
 
     TM_DESCRIPTION("Turing Machine Description"),
 
@@ -67,20 +69,5 @@ public enum StepSubType {
     @Override
     public String toString() {
         return subType;
-    }
-    
-    /**
-     * Return the enum value for the given title.
-     * 
-     * @param aTitle
-     * @return 
-     */
-    public static StepSubType findValue(String aTitle) {
-        for (StepSubType kind : values()) {
-            if (kind.getSubType().equalsIgnoreCase(aTitle))
-                return kind;
-        }
-        
-        return ERROR;
     }
 }

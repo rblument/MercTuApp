@@ -1,5 +1,9 @@
 package edu.regis.merc.model;
 
+/**
+ * 
+ * @author oscar
+ */
 public enum LCStepSubType {
 
     DISPLAY_ALL("Display All"),
@@ -28,9 +32,11 @@ public enum LCStepSubType {
      *
      * @param subType
      */
-    LCStepSubType(String subType){
-        this.subType = subType; 
-    }
+    LCStepSubType(String subType) {
+    this.subType = subType;
+}
+
+
 
     /**
      * Return the request name that is used by the server.
@@ -50,6 +56,7 @@ public enum LCStepSubType {
     public String toString() {
         return subType;
     }
+<<<<<<< HEAD
 
     /**
      * Return the enum value for the given title.
@@ -66,6 +73,8 @@ public enum LCStepSubType {
         return ERROR;
     }
 
+=======
+>>>>>>> origin/development
 }
 
 

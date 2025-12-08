@@ -53,6 +53,15 @@ public class ServiceFactory {
     public static SessionSvc findSessionSvc() {
         return new SessionDAO();
     }
+    
+    /**
+     * Return a reference to the problem service.
+     * 
+     * @return ProblemSvc
+     */
+    public static ProblemSvc findProbelmSvc() {
+        return new ProblemDAO();
+    }
 
     /**
      * Return a reference to the student model service.

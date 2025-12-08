@@ -47,6 +47,11 @@ public class TutoringSession {
      */
     private UnitDigest unit;
     
+    /**
+     * The current problem being solved by the student in this session.
+     */
+    private Problem problem;
+    
      /**
      * True, if the session is currently active (though the student may not
      * be currently signed-in).
@@ -115,6 +120,14 @@ public class TutoringSession {
 
     public void setUnit(UnitDigest unit) {
         this.unit = unit;
+    }
+
+    public Problem getProblem() {
+        return problem;
+    }
+
+    public void setProblem(Problem problem) {
+        this.problem = problem;
     }
     
     public boolean isActive() {

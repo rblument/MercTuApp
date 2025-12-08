@@ -3,13 +3,17 @@ package edu.regis.merc.view;
 import edu.regis.merc.model.GuiCtx;
 import edu.regis.merc.model.State;
 import edu.regis.merc.model.TuringMachine;
+import edu.regis.merc.model.TutoringSession;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 
 public class TuringMachineView extends GPanel {
+    private TutoringSession model;
     
-    private TuringMachine model;
+    private TuringMachine tm;
+    
+   
     
     private TuringMachineCanvas canvas;
 
@@ -18,14 +22,18 @@ public class TuringMachineView extends GPanel {
         layoutComponents();
     }
 
-    public TuringMachine getModel() {
+    public TutoringSession getModel() {
         return model;
     }
 
-    public void setModel(TuringMachine model) {
+    public void setModel(TutoringSession model) {
         this.model = model;
         
-        canvas.setModel(model);
+        tm = model.getProblem().getTuringMachine();
+        
+        System.out.println("Turing Machine: " + tm);
+        
+        canvas.setModel(tm);
     }
     
     private void initializeComponents() {

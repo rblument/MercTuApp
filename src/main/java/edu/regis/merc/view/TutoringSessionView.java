@@ -112,7 +112,8 @@ public class TutoringSessionView extends GPanel {
         
         PendingTask pTask = model.currentTask();
         
-        turingMachineView.setModel(pTask.getTask().getProblem().getTuringMachine());
+       // turingMachineView.setModel(pTask.getTask().getProblem().getTuringMachine());
+       turingMachineView.setModel(model);
         
         //PendingStep pStep = pTask.getCurrentStep();
     }

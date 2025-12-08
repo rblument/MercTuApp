@@ -19,7 +19,7 @@ import java.awt.Font;
  *
  * @author Rickb
  */
-public class GuiCtx {
+public class GuiCtx extends Model {
     private int x = 0;
     private int y = 0;
     private int width = 0;
@@ -37,6 +37,11 @@ public class GuiCtx {
     protected boolean isSelected = false;
 
     public GuiCtx() {
+        this(DEFAULT_ID);
+    }
+    
+    public GuiCtx(int id) {
+        super(id);
     }
 
     public boolean getIsSelected() {

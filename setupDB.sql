@@ -50,7 +50,8 @@ CREATE TABLE TutoringSession (
     IsActive tinyint DEFAULT 0,
     StartDate TIMESTAMP NOT NULL,
     CourseId int NOT NULL,
-    UnitId int NOT NULL
+    UnitId int NOT NULL,
+    ProblemId int NOT NULL
 );
 
 CREATE TABLE PendingTask (
@@ -81,80 +82,70 @@ CREATE TABLE StudentModel (
 );
 
 CREATE TABLE Course (
-  Id int NOT NULL DEFAULT '0',
+  Id int NOT NULL DEFAULT -1,
   Title varchar(255) DEFAULT NULL,
+  Description varchar(255) DEFAULT NULL,
   PrimaryPedagogy ENUM(
       'STUDENT_CHOICE',
       'FIXED_SEQUENCE',
       'MASTERY_LEARNING',
-      'MICROADAPTATION',
-      'OTHER',
-      'ERROR'
+      'MICROADAPTATION'
    ),
-  Description varchar(255) DEFAULT NULL,
   PRIMARY KEY (Id));
 
 CREATE TABLE Unit (
-  UnitId int NOT NULL DEFAULT '0',
+  Id int NOT NULL DEFAULT '-1',
   CourseId int DEFAULT NULL,
   Title varchar(255) DEFAULT NULL,
   Description varchar(255) DEFAULT NULL,
   SequenceIndex int DEFAULT NULL,
-     Pedagogy ENUM(
-      'STUDENT_CHOICE',
-      'FIXED_SEQUENCE',
-      'MASTERY_LEARNING',
-      'MICROADAPTATION',
-      'OTHER',
-      'ERROR'
+  Pedagogy ENUM(
+    'STUDENT_CHOICE',
+    'FIXED_SEQUENCE',
+    'MASTERY_LEARNING',
+    'MICROADAPTATION'
    ),
-  PRIMARY KEY (UnitId));
+  PRIMARY KEY (Id));
 
-# A static description of a task to complete within a course unit.
-CREATE TABLE Task (
-  TaskId int NOT NULL DEFAULT 0,
-  CourseId int NOT NULL DEFAULT 1,
-  UnitId int DEFAULT NULL,
+CREATE TABLE Problem (
+  Id INT NOT NULL DEFAULT -1,
   Title varchar(256) NOT NULL,
   Description varchar(256) NOT NULL,
-  Kind ENUM(
-      'MESSAGE',
-      'PROBLEM',
-      'USAGE',
-      'ERROR'
-   ),
-  SequenceIndex int,
-  ExampleType ENUM(
-      'MESSAGE',
-      'PROBLEM',
-      'USAGE',
-      'N_A',
-      'ERROR'
-   ),
-  ProblemId int,
-  PRIMARY KEY (TaskId));
-
---   When StepSubType is DISPLAY_ALL, Step's SubTypeId is a comma delimited list. tmId, lcId, muId.... nevermind?:ignore for now
-CREATE TABLE Step (
-  Id int NOT NULL,
-  CourseId int NOT NULL,
-  UnitId int NOT NULL,
-  TaskId int NOT NULL,
-  Title varchar(256) DEFAULT NULL,
-  Description varchar(256) DEFAULT NULL,
-  SequenceIndex int DEFAULT NULL,
-  ExercisedComponentId int,
-  StepSubType ENUM(
-        'INFO_MESSAGE',
-        'DISPLAY_ALL',
-        'TM_DESCRIPTION',
-        'LC_DESCRIPTION',
-        'MU_DESCRIPTION',
-        'REQUEST_HINT'),
-  SubTypeId int,
+  UnitId INT NOT NULL,
+  SequenceIndex INT NOT NULL,
   TuringMachineId int,
   LambdaCalculusId int,
   MuRecursiveFunctionId int,
+  PRIMARY KEY (Id)
+);
+
+# A static description of a task to complete within a course unit.
+CREATE TABLE Task (
+  Id int NOT NULL DEFAULT 0,
+  ProblemId int NOT NULL DEFAULT 1,
+  SequenceIndex int DEFAULT NULL,
+  Title varchar(256) NOT NULL,
+  Description varchar(256) NOT NULL,
+  ExercisedComponentId int,
+  PRIMARY KEY (Id));
+
+--   When StepType is MODEL_REQUET, the ActionId is an index (id) 
+--     into the RequestConfiguration table
+CREATE TABLE Step (
+  Id int NOT NULL DEFAULT -1,
+  TaskId INT NOT NULL DEFAULT -1,
+  Title VARCHAR(256) DEFAULT '<unknown>',
+  Description VARCHAR(256) DEFAULT '',
+  Context VARCHAR(2056) DEFAULT '',
+  Prompt VARCHAR(1024) DEFAULT '',
+  SequenceIndex int DEFAULT -1,
+  ExercisedComponentId int,
+  ViewConfigId INT NOT NULL,
+  StudentAction ENUM(
+        'INFORMATION_MESSAGE',
+        'HINT_REQUEST',
+        'MODEL_REQUEST'),
+  ActionId INT,
   TimeoutId int,
   PRIMARY KEY (Id));
 
@@ -162,6 +153,61 @@ CREATE TABLE InfoMsgStep (
   SubStepId int NOT NULL,
   Text varchar(4096),
   PRIMARY KEY(SubStepId));
+
+CREATE TABLE ViewConfiguration (
+  Id INT NOT NULL,
+  TmViewConfigId INT,
+  LCViewConfigId INT,
+  MuViewConfigId INT,
+  PRIMARY KEY(Id)
+);
+
+CREATE TABLE TmViewConfiguration (
+  Id INT NOT NULL,
+  StateIds VARCHAR(256),
+  TransitionIds VARCHAR(256),
+  TapeCellIds VARCHAR(256),
+  AcceptStateIndicatorIds VARCHAR(256),
+  RejectStateIndicatorIds VARCHAR(256),
+  DisplayStartIndicator TINYINT DEFAULT 0,
+  DisplayTapeHead TINYINT DEFAULT 0,
+  PRIMARY KEY(Id)
+);
+
+--  No underscore characters allows since it's MySQL Wildcard
+CREATE TABLE TapeConfiguration (
+  Id INT NOT NULL,
+  CellId INT NOT NULL,
+  Content CHAR(1),
+  PRIMARY KEY(Id, CellId)
+);
+
+-- Highlights?
+CREATE TABLE LCViewConfiguration (
+  Id INT NOT NULL,
+  ParameterIds VARCHAR(256),
+  BodyIds VARCHAR(256),
+  ArgumentIds VARCHAR(256),
+  PRIMARY KEY(Id)
+);
+
+-- Highlights? 
+CREATE TABLE MuViewConfiguration (
+  Id INT NOT NULL,
+  HighlightName TINYINT DEFAULT 0,
+  ParameterIds VARCHAR(256),
+  RhsIds VARCHAR(256),
+  ArgumentIds VARCHAR(256),
+  PRIMARY KEY(Id)
+);
+
+CREATE TABLE RequestConfiguration (
+  Id INT NOT NULL,
+  TmRequestConfigId INT,
+  LCRequestConfigId INT,
+  MuRequestConfigId INT,
+  PRIMARY KEY(Id)
+);
 
 CREATE TABLE TMDescription (
     Id INT NOT NULL,
@@ -272,13 +318,6 @@ CREATE TABLE Assessment (
    Hints INT
 );
 
-
-CREATE TABLE State (
-    state_id INT PRIMARY KEY,
-    machine_id INT NOT NULL,
-    name VARCHAR(50) NOT NULL
-);
-
 CREATE TABLE MuFunction(
   Id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   Name VARCHAR(64),
@@ -289,37 +328,68 @@ CREATE TABLE MuFunction(
 -- Truncate Table Assessment;
 -- Will delete data, but also reset the next id counter to zero
 
--- CREATE TABLE State (
---     state_id INT AUTO_INCREMENT PRIMARY KEY,
---     machine_id INT NOT NULL,
---     name VARCHAR(50) NOT NULL
--- );
+-- A state in a turing machine
+CREATE TABLE TmState (
+    Id INT PRIMARY KEY,
+    TmId INT NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    GuiCtxId INT
+);
+
+CREATE TABLE TmTransition (
+   Id INT NOT NULL PRIMARY KEY,
+   TmId INT NOT NULL,
+   FromStateId INT,
+   ToStateId INT,
+   ReadSymbol CHAR(1),
+   WriteSymbol CHAR(1),
+   Direction ENUM (
+      'LEFT',
+      'RIGHT'
+   ),
+   GuiCtxId INT
+  );
+
+CREATE TABLE GuiCtx (
+  Id INT NOT NULL PRIMARY KEY,
+  X INT,
+  Y INT,
+  Width INT,
+  Height INT,
+  X2 INT,
+  Y2 INT
+);
 
 CREATE TABLE TuringMachine (
-    machine_id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description varchar(256) NOT NULL,
-    start_state_id INT,
-    accept_state_id INT,
-    reject_state_id INT,
-    CONSTRAINT fk_start FOREIGN KEY (start_state_id) REFERENCES State(state_id),
-    CONSTRAINT fk_accept FOREIGN KEY (accept_state_id) REFERENCES State(state_id),
-    CONSTRAINT fk_reject FOREIGN KEY (reject_state_id) REFERENCES State(state_id)
+    StartStateId INT,
+    AcceptStateId INT,
+    RejectStateId INT
+   -- CONSTRAINT fk_start FOREIGN KEY (start_state_id) REFERENCES State(state_id),
+   -- CONSTRAINT fk_accept FOREIGN KEY (accept_state_id) REFERENCES State(state_id),
+   -- CONSTRAINT fk_reject FOREIGN KEY (reject_state_id) REFERENCES State(state_id)
 );
 
 
-CREATE TABLE alphabets (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    machine_id INT,
-    type VARCHAR(50), -- 'input' or 'tape'
-    FOREIGN KEY (machine_id) REFERENCES turingmachine(machine_id) ON DELETE CASCADE
+CREATE TABLE Alphabet (
+    Id INT PRIMARY KEY,
+    TmId INT,
+    Type ENUM(
+      'INPUT',
+      'TAPE'
+   )
+    -- FOREIGN KEY (machine_id) REFERENCES turingmachine(machine_id) ON DELETE CASCADE
 );
 
-CREATE TABLE alphabet_symbols (
-    alphabet_id INT,
+CREATE TABLE AlphabetSymbol (
+    id INT NOT NULL,
+    alphabetId INT NOT NULL,
     symbol CHAR(1),
-    PRIMARY KEY (alphabet_id, symbol),
-    FOREIGN KEY (alphabet_id) REFERENCES alphabets(id) ON DELETE CASCADE
+   --  PRIMARY KEY (alphabet_id, symbol),
+    -- FOREIGN KEY (alphabet_id) REFERENCES alphabets(id) ON DELETE CASCADE
+    PRIMARY KEY (id)
 );
 
 --  Truncate Table Assessment;
@@ -328,175 +398,66 @@ CREATE TABLE alphabet_symbols (
 -- Populate tables
 
 INSERT INTO Course
-(Id,
- Title,
- PrimaryPedagogy,
- Description)
-VALUES
-(1,'Multiple External Representation of Computing Tutor', 'FIXED_SEQUENCE',
-  'Familiarizes students with the Turing Machines, Mu-Recursive Functions,
-     Lambda Calculus, and the relations among these computational models.');
+  (Id, Title, PrimaryPedagogy, Description)
+ VALUES
+  (0,'Multiple External Representation of Computing Tutor', 'FIXED_SEQUENCE',
+  'Familiarizes students with the Turing Machine, Mu-Recursive Function and
+     Lambda Calculus computational models, and the relations among these .');
 
 
 INSERT INTO Unit
-(UnitId,
-CourseId,
-Title,
-Description,
-SequenceIndex,
-Pedagogy)
-VALUES
-(0, 1, 'MERC: See One',
-  'In this unit, the student will see an example of how each computational model.',
+ (Id, CourseId, Title, Description, SequenceIndex, Pedagogy)
+ VALUES
+ (0, 0, 'MERC: See One',
+  'In this unit, the student will see examples of each computational model and their components.',
     0, 'FIXED_SEQUENCE');
 
+INSERT INTO Problem
+  (Id, Title, Description, UnitId, SequenceIndex, TuringMachineId, LambdaCalculusId, MuRecursiveFunctionId)
+ VALUES
+  (0, 'Zero Function Overview', 'In this problem, the student acknowledges seeing the various computational models and their components.',
+   0, 0, 0, 0, 0);
 
 INSERT INTO Task
-(TaskId, CourseId, UnitId, Title, Description, Kind, SequenceIndex,
-ExampleType, ProblemId)
-VALUES
-(0, 1, 0, 'Welcome', 'Let''s get started', 'USAGE', 0, 'N_A', -1);
+  (Id, ProblemId, SequenceIndex, Title, Description, ExercisedComponentId)
+ VALUES
+  (10, 0, 0, 'Initial Zero Function Overview', 'Displays each of the computational models for the zero function', -1);
 
 INSERT INTO Step
-(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex, ExercisedComponentId, StepSubType,
- SubTypeId, TuringMachineId, LambdaCalculusId, MuRecursiveFunctionId, TimeoutId)
-VALUES
-(50, 1, 0,0, 'See All!', 'Displays all components of TMs, LCs, MUs', 0, -1,
- 'DISPLAY_ALL', 50, 0, 0, 0, 0);
+  (Id, TaskId, SequenceIndex, Title, Description, Prompt, Context, 
+   ExercisedComponentId, ViewConfigId, StudentAction, ActionId, TimeoutId)
+ VALUES
+ (50, 10, 0, 'Initial Zero Function Display', 'Displays all computational models corresponding to the zero function',
+  'The three equivalent computational models corresponding to the Zero function are being displayed.',
+  'In this step, you simply have to acknowledge that you''ve seen these three models by selecting ''Complete Step''.', 
+   -1, 10, 'INFORMATION_MESSAGE', -1, 0);
 
-INSERT INTO TMDescription
-(Id, TuringMachineId, SubType, ComponentId, DataId)
-VALUES
-(50, 0, 'DISPLAY_ALL', 0, -1);
+INSERT INTO ViewConfiguration 
+  (Id, TmViewConfigId, LCViewConfigId, MuViewConfigId)
+ VALUES
+  (10, 10, 10, 10);
 
-INSERT INTO LCDescription
-(Id, LambdaCalculusId, SubType, ComponentId, DataId)
-VALUES
-(50, 0, 'DISPLAY_ALL', 0, -1);
+INSERT INTO TmViewConfiguration
+  (Id, StateIds, TransitionIds, TapeCellIds, AcceptStateIndicatorIds,
+   RejectStateIndicatorIds, DisplayStartIndicator, DisplayTapeHead)
+ VALUES
+  (10, '0,1,2', '0,1,2', '', '2', '', 1, 1);
 
-INSERT INTO MUDescription
-(Id, MuRecursiveFunctionId, SubType, ComponentId, DataId)
-VALUES
-(50, 0, 'DISPLAY_ALL', 0, -1)
+CREATE TABLE TapeConfiguration (
+  Id INT NOT NULL,
+  CellId INT NOT NULL,
+  Content CHAR(1),
+  PRIMARY KEY(Id, CellId)
+);
 
-INSERT INTO Task
-(TaskId, CourseId, UnitId, Title, Description, Kind, SequenceIndex,
-ExampleType, ProblemId)
-VALUES
-(1, 1, 0, 'See a Turing Machine description', 'As our first real task, we''re going to show you the components of a Turing machine',
-'PROBLEM', 1, 'PROBLEM', 0);
+INSERT INTO TapeConfiguration (Id, CellId, Content) VALUES (10, 0, '1');
+INSERT INTO TapeConfiguration (Id, CellId, Content) VALUES (10, 1, '0');
 
-INSERT INTO Step
-(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex,
- ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
-VALUES
-(100, 1, 0, 1, 'Show a student a state',
- 'Showing an example state in turing machine', 0, -1, 'TM_DESCRIPTION', 100, 0);
+INSERT INTO LCViewConfiguration (Id, ParameterIds, BodyIds, ArgumentIds)
+ VALUES (10, '', '', '');
 
-INSERT INTO TMDescription
-(Id, TuringMachineId, SubType, ComponentId, DataId)
-VALUES
-(100, 1, 'DISPLAY_STATE', 0, -1);
-
-
-INSERT INTO Step
-(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex,
- ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
-VALUES
-(101, 1, 0, 1, 'Show a student an initial state',
-'The turing machine has a starting state, otherwise known as an INITIAL STATE', 1, -1,
-'TM_DESCRIPTION', 101, 0);
-
-INSERT INTO TMDescription
-(Id, TuringMachineId, SubType, ComponentId, DataId)
-VALUES
-(101, 1, 'DISPLAY_INITIAL_STATE', 0, -1);
-
-
--- TO DO: work on description
-INSERT INTO Step
-(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex,
- ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
-VALUES
-(102, 1, 0, 1, 'Show a student an accept state',
-'These state(s) allows for acceptance. Note: Accept states are usually shown through a double circle', 2, -1, 'TM_DESCRIPTION',
-102, 0);
-
-INSERT INTO TMDescription
-(Id, TuringMachineId, SubType, ComponentId, DataId)
-VALUES
-(102, 1, 'DISPLAY_ACCEPT_STATE', 0, -1);
-
-
-INSERT INTO Step
-(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex,
- ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
-VALUES
-(103, 1, 0, 1, 'Show a a reject state.',
-'A reject state rejects the current state of tape.',
- 3, -1, 'TM_DESCRIPTION', 103, 0);
-
-INSERT INTO TMDescription
-(Id, TuringMachineId, SubType, ComponentId, DataId)
-VALUES
-(103, 1, 'DISPLAY_REJECT_STATE', 0, -1);
-
-
-INSERT INTO Step
-(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex,
- ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
-VALUES
-(104, 1, 0, 1, 'Show a tape.',
-'A tape is where you can read, write, and move around.',
- 4, -1, 'TM_DESCRIPTION', 104, 0);
-
-INSERT INTO TMDescription
-(Id, TuringMachineId, SubType, ComponentId, DataId)
-VALUES
-(104, 1, 'HIGHLIGHT_TAPE_CELL', 0, -1);
-
-
-INSERT INTO Step
-(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex,
- ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
-VALUES
-(105, 1, 0, 1, 'Show tape alphabet',
-'The tape contains symbols from a specific alphabet such as {0, 1, blank}',
- 5, -1, 'TM_DESCRIPTION', 105, 0);
-
-INSERT INTO TMDescription
-(Id, TuringMachineId, SubType, ComponentId, DataId)
-VALUES
-(105, 1, 'TAPE_ALPHABET', 0, -1);
-
-
--- INSERT INTO Step
--- (Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex,
---  ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
--- VALUES
--- (106, 1, 0, 1, 'Turing Machine Configuration Example',
--- 'Here is a sample configuration showing the tape contents, head position, and
--- current state.',
---  6, -1, 'TM_DESCRIPTION', 100, 0);
---
--- INSERT INTO TMDescription
---     VALUES
---     (106, 1, 'CONFIGURATION', 0);
-
-INSERT INTO Step
-(Id, CourseId, UnitId, TaskId, Title, Description, SequenceIndex,
- ExercisedComponentId, StepSubType, SubTypeId, TimeoutId)
-VALUES
-(106, 1, 0, 1, 'Show transitions.',
-'Transitions tell the machine what symbol to write, how to move the head (Left or Right),
-and which state to go to next.',
- 6, -1, 'TM_DESCRIPTION', 106, 0);
-
-INSERT INTO TMDescription
-(Id, TuringMachineId, SubType, ComponentId, DataId)
-VALUES
-(106, 1, 'DISPLAY_TRANSITION', 0, -1);
-
+INSERT INTO MuViewConfiguration (Id, HighlightName, ParameterIds, RhsIds, ArgumentIds)
+ VALUES (10, 0, '', '', '');
 
 
 
@@ -522,30 +483,83 @@ INSERT INTO KnowledgeComponent
  Description,
  BloomLevel, IsDomainFocus, Pedagogy, ExercisingLocations, Granularity)
 VALUES
-(0, 1, 'Information Message Acknowledgement',
+(0, 0, 'Information Message Acknowledgement',
  'Student has appropriately demonstrated acknowleding information messages presented by the tutor.',
  'Application', 0, 'Other', '0', 'Knowledge Component');
 
 INSERT INTO ExercisingLocation
 (Id, CourseId, UnitId, TaskId, StepId)
-VALUES (0,1,0,0,0);
+VALUES (0,0,0,0,0);
 
-INSERT INTO State
-(state_id, machine_id, name)
-VALUES
-(-1, 0, 'Q-1'),
- (1, 0, 'Q0'),
- (2, 0, 'Q1'),
- (3, 0, 'Q2');
+INSERT INTO TmState
+  (Id, TmId, Name, GuiCtxId)
+ VALUES
+  (0, 1, 'Q0', 10),
+  (1, 1, 'Q1', 11),
+  (2, 1, 'Q2', 12);
 
-INSERT INTO turingmachine
-(machine_id, name, description, start_state_id, accept_state_id, reject_state_id)
+INSERT INTO TmTransition
+  (Id, TmId, FromStateId, ToStateId, ReadSymbol, WriteSymbol, Direction, GuiCtxId)
+ VALUES
+  (1, 1, 0, 0, '1', '-', 'RIGHT', 20),
+  (2, 1, 0, 1, '-', '0', 'RIGHT', 21),
+  (3, 1, 1, 2, '-', '-', 'LEFT', 22);
 
-values
-(0, 'The Zero TM', 'The Zero Function', 1, 3, -1);
+INSERT INTO Alphabet 
+  (Id, TmId, Type)
+ VALUES
+  (0, 1, 'INPUT'),
+  (1, 1, 'TAPE');
+
+INSERT INTO AlphabetSymbol 
+  (Id, AlphabetId, Symbol)
+ VALUES
+  (0, 0, '-'),
+  (1, 0, '0'),
+  (2, 0, '1');
 
 
 
+-- TM: 0, State 0
+INSERT INTO GuiCtx
+  (Id, X, Y, Width, Height, X2, Y2)
+ VALUES
+  (10, 200, 100, 30, 30, -1, -1);
+
+-- TM: 0, State 1
+INSERT INTO GuiCtx
+  (Id, X, Y, Width, Height, X2, Y2)
+ VALUES
+  (11, 300, 100, 30, 30, -1, -1);
+
+-- TM: 0, State 2
+INSERT INTO GuiCtx
+  (Id, X, Y, Width, Height, X2, Y2)
+ VALUES
+  (12, 400, 100, 30, 30, -1, -1);
+
+-- TM: 0, Transition 1
+INSERT INTO GuiCtx
+  (Id, X, Y, Width, Height, X2, Y2)
+ VALUES
+  (20, 230, 115, 30, 30, 300, 115);
+
+-- TM: 0, Transition 2
+INSERT INTO GuiCtx
+  (Id, X, Y, Width, Height, X2, Y2)
+ VALUES
+  (21, 330, 115, 30, 30, 400, 115);
+
+-- TM: 0, Transition 3
+INSERT INTO GuiCtx
+  (Id, X, Y, Width, Height, X2, Y2)
+ VALUES
+  (22, 430, 115, 30, 30, 500, 115);
+
+INSERT INTO TuringMachine
+  (Id, Name, Description, StartStateId, AcceptStateId, RejectStateId)
+ VALUES
+  (1, 'The Zero TM', 'A Turing Machine that computes the Zero function', 0, 2, -1);
 
 INSERT INTO MuFunction (Name, Lhs, Rhs)
 VALUES ('add', 'add(x, y)', '(x + y)');

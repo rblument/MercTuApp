@@ -10,9 +10,12 @@
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
  */
-
 package edu.regis.merc.dao;
 
+import edu.regis.merc.err.NonRecoverableException;
+import edu.regis.merc.err.ObjNotFoundException;
+import edu.regis.merc.model.GuiCtx;
+import edu.regis.merc.model.Model;
 import edu.regis.merc.model.MoveKind;
 import edu.regis.merc.model.State;
 import edu.regis.merc.model.Transition;
@@ -23,22 +26,31 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A Data Access Object implementing {@link TuringMachine} CRUD behaviors.
+ * 
+ * @author PK
+ * @author rickb
+ */
 public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
+    /**
+     * Initialize a default DAO.
+     */
     public TuringMachineDAO() {
         super();
     }
 
-    ///
-    /// Machine Methods
-    ///
-
+   /**
+     * {@inheritDoc}
+     */
     @Override
-    public int createMachine(TuringMachine machine) {
-        final String sql =  "INSERT INTO TuringMachine(name, description, start_state_id, " +
-                "accept_state_id, reject_state_id) VALUES (?, ?, ?, ?, ?)";
+    public int create(TuringMachine machine) throws NonRecoverableException {
+        // ToDo: Not Tested
+        final String sql = "INSERT INTO TuringMachine(Name, Description, StartStateId, "
+                + "AcceptStateId, RejectSstateId) VALUES (?, ?, ?, ?, ?)";
 
-        Connection conn = null;
-        PreparedStatement stmt = null;
+        Connection conn;
+        PreparedStatement stmt;
 
         try {
             conn = DriverManager.getConnection(URL);
@@ -63,8 +75,8 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
                     machine.setId(machineId);
 
                     // 3. Save alphabets (linking to the new machine ID)
-                    saveAlphabet(conn, machineId, "input", machine.getInputAlphabet());
-                    saveAlphabet(conn, machineId, "tape", machine.getTapeAlphabet());
+                    //saveAlphabet(conn, machineId, "input", machine.getInputAlphabet());
+                    //saveAlphabet(conn, machineId, "tape", machine.getTapeAlphabet());
 
                     for (State s : machine.getStates()) {
                         if (s != machine.getStartState() && s != machine.getAcceptState() && s != machine.getRejectState()) {
@@ -83,85 +95,78 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
                 }
             }
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new NonRecoverableException("TMDAO-ERR-1", e);
         }
 
         return 0;
     }
 
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public TuringMachine getMachineById(int id) {
+    public TuringMachine retrieve(int id) throws ObjNotFoundException, NonRecoverableException {
         Connection conn = null;
         PreparedStatement stmt = null;
-        String query = "Select machine_id, name, description, start_state_id, accept_state_id, reject_state_id FROM TuringMachine WHERE machine_id = ?";
 
         try {
             conn = DriverManager.getConnection(URL);
-            stmt = conn.prepareStatement(query);
-            stmt.setInt(1, id);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        String name = rs.getString("name");
-                        String description = rs.getString("description");
-
-                        State start = getStateById(conn, rs.getInt("start_state_id"));
-                        State accept = getStateById(conn, rs.getInt("accept_state_id"));
-                        State reject = getStateById(conn, rs.getInt("reject_state_id"));
-
-                        ArrayList<Character> inputAlphabet = getAlphabet(conn, id, "input");
-                        ArrayList<Character> tapeAlphabet = getAlphabet(conn, id, "tape");
-
-                        return new TuringMachine(id, name, description, inputAlphabet, tapeAlphabet, start, accept, reject);
-                    }
-            }catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-
+            
+            return retrieve(id, conn);
+            
         } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }finally {
+            throw new NonRecoverableException("TMDAO-ERR-4", e);
+        } finally {
             close(conn, stmt);
         }
-
-
-        return null;
     }
 
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public List<TuringMachine> getAllMachines() {
+    public List<TuringMachine> retrieveAll() throws NonRecoverableException {
+        // ToDo: Not Tested
+        final String sql = "SELECT Id from TuringMachine";
+        
         List<TuringMachine> machines = new ArrayList<>();
-        final String sql = "SELECT id FROM TuringMachine";
-
-        try (Connection conn = DriverManager.getConnection(URL);
-             Statement stmt = conn.createStatement();
-
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                TuringMachine tm = getMachineById(rs.getInt("id"));
-                if (tm != null) machines.add(tm);
-            }
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return machines;
-    }
-
-
-    @Override
-    public boolean deleteMachine(int id) {
+         
         Connection conn = null;
         PreparedStatement stmt = null;
-        String sql = "DELETE FROM TuringMachine WHERE machine_id=?";
 
         try {
             conn = DriverManager.getConnection(URL);
             stmt = conn.prepareStatement(sql);
 
+            ResultSet rs = stmt.executeQuery();
+  
+            while (rs.next()) {
+                machines.add(retrieve(rs.getInt("Id"), conn));
+            }
+            
+            return machines;
+        } catch (ObjNotFoundException e) {
+            throw new NonRecoverableException("TMDAO-ERR-6 Should not occur since we retrieved ids");
+        } catch (SQLException e) {
+            throw new NonRecoverableException("TMDAO-ERR-8", e);
+        } finally {
+            close(conn, stmt);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean delete(int id) throws ObjNotFoundException, NonRecoverableException {
+        // ToDo: Not Tested
+        Connection conn;
+        PreparedStatement stmt;
+        String sql = "DELETE FROM TuringMachine WHERE Id = ?";
+
+        try {
+            conn = DriverManager.getConnection(URL);
+            stmt = conn.prepareStatement(sql);
 
             try {
                 stmt.setInt(1, id);
@@ -170,24 +175,20 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
                 throw new RuntimeException(e);
             }
 
-
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new NonRecoverableException("TMDAO-ERR-10", e);
         }
-
     }
 
-
-
-    ///
-    /// State Methods
-    ///
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int createState(State state) {
+        // ToDo: Not Tested
         Connection conn = null;
         PreparedStatement stmt = null;
-        final String sql = "INSERT INTO State(machine_id, name, is_start, is_accept) VALUES (?, ?, ?, ?)";
+        final String sql = "INSERT INTO State(TmId, Name, GuiCtxId) VALUES (?, ?, ?)";
 
         try {
             conn = DriverManager.getConnection(URL);
@@ -197,11 +198,15 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
             stmt.setString(2, state.getName());
 
             int affected = stmt.executeUpdate();
-            if (affected == 0) return 0;
+            if (affected == 0) {
+                return 0;
+            }
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) return rs.getInt(1);
-            }catch (SQLException e) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            } catch (SQLException e) {
                 throw new RuntimeException("Error creating state", e);
             }
         } catch (SQLException e) {
@@ -212,27 +217,260 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
 
     @Override
     public int updateState(State state) {
+        // ToDo, 
         Connection conn = null;
         PreparedStatement stmt = null;
-        final String sql = "UPDATE State SET name = ?, is_start = ?, is_accept = ? WHERE state_id = ?";
-
+        final String sql = "UPDATE State SET Name = ? WHERE Id = ?";
 
         try {
             conn = DriverManager.getConnection(URL);
-            stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-
+           stmt = conn.prepareStatement(sql);
+   
             stmt.setString(1, state.getName());
-//            stmt.setInt(4, state.getStateId());
+            stmt.setInt(2, state.getId());
 
             return stmt.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error updating state", e);
         }
     }
+    
+        
+    /**
+     * Retrieved the identified Turing Machine from the database4.     * 
+     * 
+     * @param id the unique identifier of the machine
+     * @param conn an open connection to the DB, which is not closed
+     * @return the corresponding {@link TuringMachine}
+     * @throws ObjNotFoundException no Turing Machine with the given id exists
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode()
+     */
+    public TuringMachine retrieve(int id, Connection conn) throws ObjNotFoundException, NonRecoverableException {
+        final String query = "Select Name, Description, StartStateId, AcceptStateId, RejectStateId FROM TuringMachine WHERE Id = ?";
+  
+        PreparedStatement stmt = null;
+
+        try {
+            stmt = conn.prepareStatement(query);
+    
+            stmt.setInt(1, id);
+
+            try {
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+   
+                    TuringMachine tm = new TuringMachine(id);
+                    tm.setTitle(rs.getString("Name"));
+                    tm.setDescription(rs.getString("Description"));
+  
+                    tm.setStates(retrieveStates(id, conn));
+
+                    // Assumes there must be a start state in the TM
+                    tm.setStartState(tm.findState(rs.getInt("StartStateId")));
+ 
+                    // Assumes there must be an accept state in the TM
+                    tm.setAcceptState(tm.findState(rs.getInt("AcceptStateId")));
+    
+                    // We do not assume the TM has a Reject state.
+                    int rejectStateId = rs.getInt("RejectStateId");
+                    if (rejectStateId != Model.DEFAULT_ID) {
+                        tm.setRejectState(tm.findState(rejectStateId));
+                    }
+                   
+                    tm.setTransitions(retrieveTransitions(tm, conn));
+
+                    String type = "INPUT";
+                    try {
+                        tm.setInputAlphabet(retrieveAlphabet(id, type, conn));
+                        type = "TAPE";
+                        tm.setTapeAlphabet(retrieveAlphabet(id, type, conn));
+                        
+                    } catch (ObjNotFoundException ex) {
+                        throw new NonRecoverableException("TMDAO-ERR-43 see cause", ex);
+                    }
+
+                    return tm;
+                } else {
+                    throw new ObjNotFoundException("Tm doesn't exist in DB " + id);
+                            }
+            } catch (SQLException e) {
+                throw new NonRecoverableException("TMDAO-ERR-44");
+            }
+
+        } catch (SQLException e) {
+           throw new NonRecoverableException("TMDAO-ERR-46");
+        } finally {
+            close(stmt);
+        }
+    }
+    
+    /**
+     * Retrieve the states for the given Turing Machine id by loading them from
+     * the database.
+     * 
+     * @param tmId int id of the Turing Machine whose states are returned.
+     * @param conn an open connection to the DB, which is not closed.
+     * @return a List of States for the given Turing Machine id
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode()
+     */
+    private ArrayList<State> retrieveStates(int tmId, Connection conn) throws NonRecoverableException {
+        final String query = "SELECT Id,Name,GuiCtxId FROM TmState WHERE TmId = ?";
+
+        ArrayList<State> states = new ArrayList<>();
+        
+        PreparedStatement stmt = null;
+        
+        int guiCtxId = Model.DEFAULT_ID;
+        
+        try {
+            stmt = conn.prepareStatement(query);
+            
+            stmt.setInt(1, tmId);
+   
+            ResultSet rs = stmt.executeQuery();
+                    
+            while (rs.next()) {
+                State state = new State(rs.getInt("Id"));
+                state.setName(rs.getString("Name"));
+                guiCtxId = rs.getInt("GuiCtxId");
+                state.setGuiCtx(retrieveGuiCtx(guiCtxId, conn));
+                
+                states.add(state);
+            }
+            
+            return states;
+                    
+        } catch (ObjNotFoundException e) {
+            throw new NonRecoverableException("TMDAO-ERR-50 InconsistentDB GuiCtx " + guiCtxId + " not found for tmId: " + tmId);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            close(stmt);
+        } 
+    }
+    
+    /**
+     * Retrieve the transitions for the given Turing Machine by loading them
+     * from the database (see note).
+     * 
+     * Note: Assumes the states of the Turing Machine have already been loaded 
+     *       into the machine.
+     * 
+     * @param tm the Turing Machine whose transitions are retrieved
+     * @param conn an open connection to the DB, which is not closed
+     * @return a List of Transitions for the specified Turing Machine
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode()
+     */
+    private ArrayList<Transition> retrieveTransitions(TuringMachine tm, Connection conn) throws NonRecoverableException {
+        final String query = "SELECT Id,FromStateId,ToStateId,ReadSymbol,WriteSymbol,Direction,GuiCtxId FROM TmTransition WHERE TmId = ?";
+
+        ArrayList<Transition> transitions = new ArrayList<>();
+        
+        PreparedStatement stmt = null;
+        
+        int guiCtxId = Model.DEFAULT_ID;
+        
+        int tmId = tm.getId();
+        
+        try {
+            stmt = conn.prepareStatement(query);
+            
+            stmt.setInt(1, tmId);
+   
+            ResultSet rs = stmt.executeQuery();
+                    
+            while (rs.next()) {
+                Transition transition = new Transition(rs.getInt("Id"));
+       
+                int fromStateId = rs.getInt("FromStateId");
+                try {
+                    transition.setFromState(tm.findState(fromStateId));
+                } catch (ObjNotFoundException ex) {
+                    throw new NonRecoverableException("TMDAO-ERR-60 InconsistentDB FromState " + fromStateId + " not found in transition: " + rs.getInt("Id"));
+                }
+                
+                int toStateId = rs.getInt("FromStateId");
+                try {
+                    transition.setToState(tm.findState(toStateId));
+                } catch (ObjNotFoundException ex) {
+                    throw new NonRecoverableException("TMDAO-ERR-61 InconsistentDB ToState " + toStateId + " not found in transition: " + rs.getInt("Id"));
+                }
+                
+                transition.setRead(rs.getString("ReadSymbol").charAt(0));
+                transition.setWrite(rs.getString("WriteSymbol").charAt(0));
+                
+                transition.setDirection(MoveKind.valueOf(rs.getString("Direction")));
+                
+                // We don't assume a Transition has a GuiCtx since they can be
+                // positioned to connect to State anchors.
+                guiCtxId = rs.getInt("GuiCtxId");
+                if (guiCtxId != Model.DEFAULT_ID) {
+                    transition.setGuiCtx(retrieveGuiCtx(guiCtxId, conn));
+                }
+                
+                transitions.add(transition);
+            }
+            
+            return transitions;
+                    
+        } catch (ObjNotFoundException e) {
+            throw new NonRecoverableException("TMDAO-ERR-50 InconsistentDB GuiCtx " + guiCtxId + " not found for tmId: " + tmId);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            close(stmt);
+        }  
+    }
+    
+    /**
+     * Retrieve the identified GUI Context by loading it from the DB>
+     * 
+     * @param guiCtxId the id of the GUI context to retrieve
+     * @param conn an open connection to the DB, which is not closed.
+     * @return  the GuiCtx with the given id
+     * @throws ObjNotFoundException the identified GuiCtx doesn't exist in the DB.
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode()
+     */
+    private GuiCtx retrieveGuiCtx(int guiCtxId, Connection conn) throws ObjNotFoundException, NonRecoverableException {
+        final String query = "SELECT X,Y,Width,Height,X2,Y2 FROM GuiCtx WHERE Id = ?";
+        
+        PreparedStatement stmt = null;
+        
+        try {
+            stmt = conn.prepareStatement(query);
+            
+            stmt.setInt(1, guiCtxId);
+   
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                GuiCtx guiCtx = new GuiCtx(guiCtxId);
+                
+                guiCtx.setX(rs.getInt("X"));
+                guiCtx.setY(rs.getInt("Y"));
+                guiCtx.setWidth(rs.getInt("Width"));
+                guiCtx.setHeight(rs.getInt("Height"));
+                guiCtx.setX2(rs.getInt("X2"));
+                guiCtx.setY2(rs.getInt("Y2"));
+                
+                return guiCtx;
+            } else {
+                throw new ObjNotFoundException("GuiCtx not found in DB: " + guiCtxId);
+            }
+            
+        } catch (SQLException e) {
+            throw new NonRecoverableException("TMDAO-ERR-60", e);
+        } finally {
+            close(stmt);
+        }
+    }
 
     private int saveState(Connection conn, int machineId, State state) throws SQLException {
-        if (state == null) return 0;
-        final String sql = "INSERT INTO State(machine_id, name) VALUES (?, ?)";
+        if (state == null) {
+            return 0;
+        }
+        final String sql = "INSERT INTO State(TmId, name) VALUES (?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setInt(1, machineId);
@@ -240,72 +478,28 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
             stmt.executeUpdate();
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) { int id = rs.getInt(1);
-                    state.setId(id); return id;
+                if (rs.next()) {
+                    int id = rs.getInt(1);
+                    state.setId(id);
+                    return id;
                 }
             }
         }
         return 0;
     }
 
-    public List<State> getStatesByMachine(int machineId) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        final String query = "SELECT * FROM State WHERE machine_id = ?";
-        List<State> states = new ArrayList<>();
-
-        try {
-            conn = DriverManager.getConnection(URL);
-            stmt = conn.prepareStatement(query);
-
-            stmt.setInt(1, machineId);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    states.add(new State(
-                            rs.getInt("state_id"),
-                            rs.getInt("machine_id"),
-                            rs.getString("name"))
-
-
-                    );
-
-                }
-            }
-        }catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return states;
-    }
-
-    private State getStateById(Connection conn, int stateId) throws SQLException {
-        final String sql = "SELECT * FROM State WHERE id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, stateId);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                State s = new State(rs.getString("name"));
-                s.setId(rs.getInt("id"));
-                return s;
-            }
-            //else throw inconsistent db error
-
-        }
-        return null;
-    }
-
-
 
     ///
     ///  Transition Methods
     ///
 
+    /*
     @Override
     public int createTransition(Transition transition) {
         Connection conn = null;
         PreparedStatement stmt = null;
-        final String sql = "INSERT INTO Transition(machine_id, from_state_id, to_state_id, read_symbol, " +
-                "write_symbol, move_direction) VALUES (?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO Transition(machine_id, from_state_id, to_state_id, read_symbol, "
+                + "write_symbol, move_direction) VALUES (?, ?, ?, ?, ?, ?)";
 
         try {
             conn = DriverManager.getConnection(URL);
@@ -317,10 +511,14 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
             stmt.setString(4, transition.getNextState().getName());
 
             int affected = stmt.executeUpdate();
-            if (affected == 0) return 0;
+            if (affected == 0) {
+                return 0;
+            }
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) return rs.getInt(1);
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
             }
 
         } catch (SQLException e) {
@@ -328,15 +526,16 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         }
         return 0;
     }
-
-
+*/
+    
+  
+/*
     @Override
     public List<Transition> getTransitionsByMachine(int machineId) {
         Connection conn = null;
         PreparedStatement stmt = null;
         final String query = "SELECT * FROM Transition WHERE machine_id = ?";
         List<Transition> transitions = new ArrayList<>();
-
 
 //        try {
 //            conn = DriverManager.getConnection(URL);
@@ -358,16 +557,17 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
 //        }
         return transitions;
     }
-
-
+    
+    */
 
     ///
     ///  Helper Classes
     ///
 
     private int saveState(Connection conn, State state) throws SQLException {
+        // Not Test
         // Logic to insert a State into the `states` table and return its ID
-        String sql = "INSERT INTO state (name, is_start, is_accept, is_reject) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO state (Name, TmId, GuiCtxId) VALUES (?, ?, ?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             // Set parameters based on the State object
             pstmt.setString(1, state.getName());
@@ -381,42 +581,66 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         throw new SQLException("Failed to save state.");
     }
 
-    private ArrayList<Character> getAlphabet(Connection conn, int machineId, String type) throws SQLException {
+    /**
+     * Return the specified alphabet for the specified Turing Machine id.
+     * 
+     * @param tmId int id of the TuringMachine, whose alphabe is returned.
+     * @param type the alphabet type INPUT or TAPE // ToDo Change to an enum
+     * @param conn an open connection to the DB, which isn't closed
+     * @return a List of chars
+     * @throws ObjNotFoundException no alphabet for the tm and type exists
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode()
+     */
+    private ArrayList<Character> retrieveAlphabet(int tmId, String type, Connection conn) throws ObjNotFoundException, NonRecoverableException {
+        final String sqlAlphabet = "SELECT Id FROM Alphabet WHERE TmId = ? AND type = ?";
+        final String sqlSymbols = "SELECT Symbol FROM AlphabetSymbol WHERE AlphabetId = ?";
+         
         ArrayList<Character> alphabet = new ArrayList<>();
-        // 1. Find the alphabet_id from the alphabets table
-        final String sqlAlphabetId = "SELECT id FROM alphabets WHERE machine_id = ? AND type = ?";
+        
         int alphabetId = 0;
 
-        try (PreparedStatement pstmtAlphabetId = conn.prepareStatement(sqlAlphabetId)) {
-            pstmtAlphabetId.setInt(1, machineId);
-            pstmtAlphabetId.setString(2, type);
-            try (ResultSet rsId = pstmtAlphabetId.executeQuery()) {
-                if (rsId.next()) {
-                    alphabetId = rsId.getInt("id");
-                }
-            }
-        }
-
-        // 2. Retrieve symbols using the alphabet_id
-        if (alphabetId > 0) {
-            final String sqlSymbols = "SELECT symbol FROM alphabet_symbols WHERE alphabet_id = ?";
-            try (PreparedStatement pstmtSymbols = conn.prepareStatement(sqlSymbols)) {
-                pstmtSymbols.setInt(1, alphabetId);
-                try (ResultSet rsSymbols = pstmtSymbols.executeQuery()) {
-                    while (rsSymbols.next()) {
-                        String symbolStr = rsSymbols.getString("symbol");
-                        // Assuming the symbol is a single character
-                        if (symbolStr != null && symbolStr.length() == 1) {
-                            alphabet.add(symbolStr.charAt(0));
+        try {
+            PreparedStatement stmt = conn.prepareStatement(sqlAlphabet);
+            
+            stmt.setInt(1, tmId);
+            stmt.setString(2, type);
+            
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                alphabetId = rs.getInt("id");
+                
+                if (alphabetId != Model.DEFAULT_ID) {
+                
+                    try {
+                        PreparedStatement stmt2 = conn.prepareStatement(sqlSymbols);
+                        stmt2.setInt(1, alphabetId);
+                
+                        rs = stmt2.executeQuery();
+                
+                        while (rs.next()) {
+                            alphabet.add(rs.getString("Symbol").charAt(0));
                         }
+                
+                    } catch (SQLException ex) {
+                       throw new NonRecoverableException("TMDAO-ERR-100", ex);
                     }
-                }
+                    
+                    return alphabet;
+                    
+                } else {
+                     throw new ObjNotFoundException("TMDAO-ERR-101 InconsistentDB alphabet id " + alphabetId + " not found for tmId " + tmId + " type" + type);
+                }          
+                   
+            } else {
+                throw new ObjNotFoundException("TMDAO-ERR-102 InconsistentDB alphabet does not exist for TmId: " + tmId + " type " + type);
             }
-        }
-
-        return alphabet;
+        } catch (SQLException e) {
+            throw new NonRecoverableException("TMDAO-ERR-106 ", e);
+        } 
     }
 
+    /*
     private void saveAlphabet(Connection conn, int machineId, String type, ArrayList<Character> symbols) throws SQLException {
         // Logic to save symbols to the `alphabets` and `alphabet_symbols` tables
         String sqlAlphabet = "INSERT INTO alphabets (machine_id, type) VALUES (?, ?)";
@@ -439,4 +663,5 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
             }
         }
     }
+*/
 }

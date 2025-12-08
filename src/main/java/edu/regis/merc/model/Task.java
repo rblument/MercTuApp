@@ -36,7 +36,7 @@ public class Task extends TitledModel {
      * being presented in this task, which can be used to determin the view
      * to display.
      */
-    private ProblemType type;
+    //private ProblemType type;
 
     /**
      * The sequence in which this task is performed in its problem.
@@ -95,13 +95,13 @@ public class Task extends TitledModel {
         this.kind = kind;
     }
 
-    public ProblemType getType() {
-        return type;
-    }
+    //public ProblemType getType() {
+    //    return type;
+    //}
 
-    public void setType(ProblemType type) {
-        this.type = type;
-    }
+    //public void setType(ProblemType type) {
+    //    this.type = type;
+    //}
 
     public TaskState getState() {
         return state;
