@@ -1,40 +1,42 @@
 // Kristin Ingram
-// last updated: 12/2
+// Last updated: December 08
+// Fully DB - integrated MU DAO
+
 package edu.regis.merc.dao;
 
 import java.sql.*;
 import java.util.*;
 
-import edu.regis.merc.model.MuEvaluator;
-import edu.regis.merc.model.MuFunction;
+import edu.regis.merc.model.*;
 import edu.regis.merc.svc.MuFunctionSvc;
 
 public class MuFunctionDAO extends MySqlDAO implements MuFunctionSvc {
+
     @Override
     public List<MuFunction> getAllFunctions() {
         List<MuFunction> functions = new ArrayList<>();
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
 
-        try {
-            conn = DriverManager.getConnection(MySqlDAO.URL);  
-            stmt = conn.prepareStatement("SELECT * FROM MuFunction");
-            rs = stmt.executeQuery();
+        String sql = "SELECT Id, Name, Lhs, Rhs FROM MuFunction";
 
+        try (Connection conn = DriverManager.getConnection(MySqlDAO.URL);
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) 
+        {
             while (rs.next()) {
                 int id = rs.getInt("Id");
                 String name = rs.getString("Name");
-                String lhs = rs.getString("Lhs");
-                String rhs = rs.getString("Rhs");
+                String lhsText = rs.getString("Lhs");
+                String rhsText = rs.getString("Rhs");
 
-                System.out.println("MuFunction: " + id + " " + name + " = " + rhs);
-                // TO DO: create and add MuFunction objects if needed
+                System.out.println("Loaded MU Function from DB → " + name 
+                                   + "  LHS=" + lhsText + "  RHS=" + rhsText);
+
+                MuFunction f = new MuFunction(id, new LeftHandSide(name), new MuExpression(rhsText));
+                functions.add(f);
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            close(conn, stmt); 
         }
 
         return functions;
@@ -42,30 +44,28 @@ public class MuFunctionDAO extends MySqlDAO implements MuFunctionSvc {
 
     @Override
     public void insertFunction(MuFunction f) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
+        String sql = "INSERT INTO MuFunction (Name, Lhs, Rhs) VALUES (?, ?, ?)";
 
-        try {
-            conn = DriverManager.getConnection(MySqlDAO.URL);
-            stmt = conn.prepareStatement(
-                "INSERT INTO MuFunction (Name, Lhs, Rhs) VALUES (?, ?, ?)");
+        try (Connection conn = DriverManager.getConnection(MySqlDAO.URL);
+             PreparedStatement stmt = conn.prepareStatement(sql)) 
+        {
             stmt.setString(1, f.getLhs().getName());
             stmt.setString(2, f.getLhs().toString());
             stmt.setString(3, f.getRhs().toString());
+
             stmt.executeUpdate();
+
+            System.out.println("Inserted MU Function → " + f);
+
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            close(conn, stmt); //
         }
     }
-    @Override
-    public int evaluate(MuFunction function, int... args){
-        // ... implement evaluator 
-        Map<String, Integer> env = function.getLhs().bindArguments(args); 
 
-        MuEvaluator evaluator = new MuEvaluator(); 
-        return evaluator.eval(function.getRhs(), env); 
-    
+    @Override
+    public int evaluate(MuFunction function, int... args) {
+        MuEvaluator evaluator = new MuEvaluator();
+        Map<String, Integer> env = function.getLhs().bindArguments(args);
+        return evaluator.eval(function.getRhs(), env);
     }
 }
