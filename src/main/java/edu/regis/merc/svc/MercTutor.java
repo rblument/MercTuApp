@@ -17,23 +17,7 @@ import com.google.gson.GsonBuilder;
 import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
-import edu.regis.merc.model.Account;
-import edu.regis.merc.model.Assessment;
-import edu.regis.merc.model.AssessmentLevel;
-import edu.regis.merc.model.Course;
-import edu.regis.merc.model.GuiCtx;
-import edu.regis.merc.model.KnowledgeComponent;
-import edu.regis.merc.model.PendingStep;
-import edu.regis.merc.model.PendingTask;
-import edu.regis.merc.model.Problem;
-import edu.regis.merc.model.State;
-import edu.regis.merc.model.StepCompletion;
-import edu.regis.merc.model.Student;
-import edu.regis.merc.model.StudentModel;
-import edu.regis.merc.model.Task;
-import edu.regis.merc.model.TuringMachine;
-import edu.regis.merc.model.TutoringSession;
-import edu.regis.merc.model.Unit;
+import edu.regis.merc.model.*;
 import edu.regis.merc.util.SHA_256;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -328,8 +312,12 @@ public class MercTutor implements TutorSvc {
      */
     public TutorReply signIn(String jsonUser) {
         System.out.println("Received sign in: " + jsonUser);
-        Account requestAcct = gson.fromJson(jsonUser, Account.class);
-
+        Account requestAcct;
+        try {
+            requestAcct = gson.fromJson(jsonUser, Account.class);
+        } catch (Exception ex) {
+            return createError("Expecting JSON account class in sign in", ex);
+        }
         try {
             Account dbAcct = ServiceFactory.findAccountSvc().retrieve(requestAcct.getUserId());
 
@@ -349,13 +337,14 @@ public class MercTutor implements TutorSvc {
                 }
 
                 SessionSvc svc = ServiceFactory.findSessionSvc();
-                TutoringSession session = svc.retrieve(student.getAccount().getUserId());
-
-                
+                Account a = student.getAccount();
+                String userID = a.getUserId();
+                TutoringSession session = svc.retrieve(userID);
+               // TutoringSession session = svc.retrieve(student.getAccount().getUserId());
                 // ToDo: tmp remove
-                TuringMachine tm = createTestModel();
+                //TuringMachine tm = TuringMachineFactory.createTuringMachine(0);
                 Problem problem = new Problem();
-                problem.setTuringMachine(tm);
+                problem.setTuringMachine(session.getTuringMachine());
                 session.currentTask().getTask().setProblem(problem);
                 
                 TutorReply reply = new TutorReply("Authenticated");
@@ -373,7 +362,13 @@ public class MercTutor implements TutorSvc {
         } catch (NonRecoverableException ex) {
             Logger.getLogger(MercTutor.class
                     .getName()).log(Level.SEVERE, null, ex);
-            return new TutorReply();
+            //return new TutorReply();
+            return createError("Unexpected error", ex);
+        } catch (Exception e) {
+            return createError("Unexpected error", e);
+        } catch (Error err) {
+            System.out.println(err.getMessage());
+            return null;
         }
     }
    // ToDo: Temporary

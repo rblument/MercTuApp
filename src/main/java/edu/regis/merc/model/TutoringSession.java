@@ -67,6 +67,12 @@ public class TutoringSession {
      */
     private ArrayList<PendingTask> tasks;
 
+    private TuringMachine turingMachine;
+
+    private MuFunction muFunction;
+
+    private LCExpression expression;
+
     /**
      * Initialize this session with default information.
      * 
@@ -166,5 +172,21 @@ public class TutoringSession {
             if (pendingTask.getTask().getId() == taskId)
                 removeTask(pendingTask);
     }
+
+    public TuringMachine getTuringMachine() { return turingMachine; }
+
+    public void setTuringMachine(TuringMachine turingMachine) { this.turingMachine = turingMachine; }
+
+    public MuFunction getMuFunction() {
+        return muFunction;
+    }
+
+    public void setMuFunction(MuFunction muFunction) {
+        this.muFunction = muFunction;
+    }
+
+    public LCExpression getExpression() { return expression; }
+
+    public void setExpression(LCExpression expression) { this.expression = expression; }
 }
 

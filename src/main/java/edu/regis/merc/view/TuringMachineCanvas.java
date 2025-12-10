@@ -183,18 +183,47 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
      * TransitionView that can be displayed in this canvas.     * 
      */
     private void buildEdgeViews() {
-	ArrayList<TransitionView> views = new ArrayList<>();
- 
-	HashSet<Transition> transitions = model.getCachedTransitions();
+    ArrayList<Transition> transitions = model.getCachedTransitions();
+
+    Insets insets = getInsets();
+
+    int maxW = 0;
+    int maxH = 0;
 
 	for (Transition transition : transitions) {
 	    TransitionView view = new TransitionView(transition);
 	    view.addSelectionChangeListener(this);
 
-	    views.add(view);
-            
-            // ToDo: Mimic buildNodeViews as needed.
-	}
+        if (transition.getGuiCtx().getIsSelected()) {
+            selection = view;
+        }
+
+        GuiCtx gCtx = transition.getGuiCtx();
+        int x1 = gCtx.getX();
+        int y1 = gCtx.getY();
+        int x2 = gCtx.getX2();
+        int y2 = gCtx.getY2();
+
+        int minX = Math.min(x1, x2);
+        int minY = Math.min(y1, y2);
+        int width = Math.max(Math.abs(x2 - x1), 2) * 2;
+        int height = Math.max(Math.abs(y2 - y1), 2) * 2;
+
+        minX += insets.left;
+        minY += insets.top;
+
+        view.setBounds(minX, minY, width, height);
+        add(view);
+
+        if ((minX + width) > maxW) maxW = minX + width;
+        if ((minY + height) > maxH) maxH = minY + height;
+    }
+
+    int padding = BORDER_PADDING * 2;
+    model.getGuiCtx().setWidth(maxW + padding);
+    model.getGuiCtx().setHeight(maxH + padding);
+    setSize(model.getGuiCtx().getWidth(), model.getGuiCtx().getHeight());
+
     }
 
     @Override

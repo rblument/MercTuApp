@@ -33,9 +33,10 @@ public class TuringMachine extends GraphicalComponent {
     private State currentState; // Current state of machine
     private int head; // Current index of tape
 
-    private Map<State, List<Transition>> transitions = new HashMap<>(); // Rules grouped by state they apply to
+    private ArrayList<Transition> transitions = new ArrayList<>(); // Rules grouped by state they apply to
 
-    private HashSet<Transition> cachedTransitions;
+    //private HashSet<Transition> cachedTransitions;
+    private ArrayList<Transition> cachedTransitions = new ArrayList<>();
     private static final char BLANK = '_'; // Default blank symbol
 
     public TuringMachine() {
@@ -46,7 +47,7 @@ public class TuringMachine extends GraphicalComponent {
         super(id);
 
         states = new ArrayList<>();
-        cachedTransitions = new HashSet<>();
+        cachedTransitions = new ArrayList<>();
 
         tape = new LinkedList<>();
         inputTape = new LinkedList<>();
@@ -65,7 +66,7 @@ public class TuringMachine extends GraphicalComponent {
         this.inputTape = new LinkedList<>();
         states = new ArrayList<>();
 
-        cachedTransitions = new HashSet<>();
+        cachedTransitions = new ArrayList<>();
 
         reset();
     }
@@ -83,7 +84,7 @@ public class TuringMachine extends GraphicalComponent {
         this.inputTape = new LinkedList<>();
         states = new ArrayList<>();
 
-        cachedTransitions = new HashSet<>();
+        cachedTransitions = new ArrayList<>();
 
         reset();
     }
@@ -181,27 +182,33 @@ public class TuringMachine extends GraphicalComponent {
 
     // Add transition rule
     public void addTransition(State from, Transition transition) {
-        transitions.computeIfAbsent(from, k -> new ArrayList<>()).add(transition);
+        //transitions.computeIfAbsent(from, k -> new ArrayList<>()).add(transition);
+        if (!transitions.contains(transition))
+            transitions.add(transition);
 
         if (!cachedTransitions.contains(transition))
             cachedTransitions.add(transition);
     }
 
-    public Map<State, List<Transition>> getTransitions() {
+    public ArrayList<Transition> getTransitions() {
         return transitions;
     }
 
-    public HashSet<Transition> getCachedTransitions() {
+    public ArrayList<Transition> getCachedTransitions() {
         return cachedTransitions;
     }
 
-    public void setTransitions(Map<State, List<Transition>> transitions) {
+    public void setTransitions(ArrayList<Transition> transitions) {
         this.transitions = transitions;
 
-        for (List<Transition> fromTransitions : transitions.values()) {
-            for (Transition transition : fromTransitions)
-                cachedTransitions.add(transition);
+        for (Transition transition : transitions) {
+            cachedTransitions.add(transition);
         }
+
+//        for (List<Transition> fromTransitions : transitions.values()) {
+//            for (Transition transition : fromTransitions)
+//                cachedTransitions.add(transition);
+//        }
     }
 
     // Load input string into tape
@@ -233,7 +240,8 @@ public class TuringMachine extends GraphicalComponent {
             return;
         }
         char currentSymbol = tape.get(head);
-        List<Transition> possible = transitions.getOrDefault(currentState, Collections.emptyList());
+        //List<Transition> possible = transitions.getOrDefault(currentState, Collections.emptyList());
+        List<Transition> possible = transitions;
 
         for (Transition transition : possible) {
             if (transition.getRead() == currentSymbol) {

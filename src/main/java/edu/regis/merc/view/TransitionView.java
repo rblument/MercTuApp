@@ -165,7 +165,7 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
 	FontMetrics metrics = getFontMetrics(getFont());
 	int fontH = metrics.getHeight();
 
-	Dimension d = getPreferredSize();
+	Dimension d = getSize();
 
 	paintBackground(g);
 
@@ -173,7 +173,8 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
 	g.setColor(Color.black);
 	if (ctx.getX() == ctx.getX2()) {              // vertical line
 	    //System.out.println("height: " + d.height);
-	    g.drawLine(6, 0, 6, d.height-1);
+        int centerX = d.height / 2;
+	    g.drawLine(centerX, 0, centerX, d.height-1);
 	    // TBD upside down line
 
 	    int baseline = 2;
@@ -186,24 +187,25 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
 		g.drawLine(6, d.height-1, 0, d.height-6);  // larrowhead
 	    }
 
-	    if (model.getType().equals("yes"))
-		g.drawString("yes", 7, baseline);
-	    if (model.getType().equals("no"))
-		g.drawString("no",  7, baseline);
+//	    if (model.getType().equals("yes"))
+//		g.drawString("yes", 7, baseline);
+//	    if (model.getType().equals("no"))
+//		g.drawString("no",  7, baseline);
 		
 
 	} else {                                      // horizontal
+        int centerY = d.height / 2;
 	    int baseline = fontH + 1;
-	    g.drawLine(0, baseline, d.width-1, baseline);
+	    g.drawLine(0, centerY, d.width-1, centerY);
 
 	    // TBD backgrounds sline
-	    g.drawLine(d.width-1, baseline, d.width-6 , baseline - 6); // arrow
-	    g.drawLine(d.width-1, baseline, d.width-6 , baseline + 6); // arrow
+//	    g.drawLine(d.width-1, baseline, d.width-6 , baseline - 6); // arrow
+//	    g.drawLine(d.width-1, baseline, d.width-6 , baseline + 6); // arrow
 
-	    if (model.getType().equals("yes"))
-		g.drawString("yes", 4, fontH);
-	    else if (model.getType().equals("no"))
-		g.drawString("no", 4, fontH);
+//	    if (model.getType().equals("yes"))
+//		g.drawString("yes", 4, fontH);
+//	    else if (model.getType().equals("no"))
+//		g.drawString("no", 4, fontH);
 	}
     }
 

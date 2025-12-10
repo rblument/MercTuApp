@@ -18,6 +18,7 @@ import edu.regis.merc.model.State;
 import edu.regis.merc.model.Transition;
 import edu.regis.merc.model.TuringMachine;
 import edu.regis.merc.svc.TuringMachingSvc;
+import edu.regis.merc.util.TuringMachineFactory;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -92,41 +93,42 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
 
     @Override
     public TuringMachine getMachineById(int id) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        String query = "Select machine_id, name, description, start_state_id, accept_state_id, reject_state_id FROM TuringMachine WHERE machine_id = ?";
-
-        try {
-            conn = DriverManager.getConnection(URL);
-            stmt = conn.prepareStatement(query);
-            stmt.setInt(1, id);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        String name = rs.getString("name");
-                        String description = rs.getString("description");
-
-                        State start = getStateById(conn, rs.getInt("start_state_id"));
-                        State accept = getStateById(conn, rs.getInt("accept_state_id"));
-                        State reject = getStateById(conn, rs.getInt("reject_state_id"));
-
-                        ArrayList<Character> inputAlphabet = getAlphabet(conn, id, "input");
-                        ArrayList<Character> tapeAlphabet = getAlphabet(conn, id, "tape");
-
-                        return new TuringMachine(id, name, description, inputAlphabet, tapeAlphabet, start, accept, reject);
-                    }
-            }catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }finally {
-            close(conn, stmt);
-        }
-
-
-        return null;
+        return TuringMachineFactory.createTuringMachine(0);
+//        Connection conn = null;
+//        PreparedStatement stmt = null;
+//        String query = "Select machine_id, name, description, start_state_id, accept_state_id, reject_state_id FROM TuringMachine WHERE machine_id = ?";
+//
+//        try {
+//            conn = DriverManager.getConnection(URL);
+//            stmt = conn.prepareStatement(query);
+//            stmt.setInt(1, id);
+//
+//            try (ResultSet rs = stmt.executeQuery()) {
+//                    if (rs.next()) {
+//                        String name = rs.getString("name");
+//                        String description = rs.getString("description");
+//
+//                        State start = getStateById(conn, rs.getInt("start_state_id"));
+//                        State accept = getStateById(conn, rs.getInt("accept_state_id"));
+//                        State reject = getStateById(conn, rs.getInt("reject_state_id"));
+//
+//                        ArrayList<Character> inputAlphabet = getAlphabet(conn, id, "input");
+//                        ArrayList<Character> tapeAlphabet = getAlphabet(conn, id, "tape");
+//
+//                        return new TuringMachine(id, name, description, inputAlphabet, tapeAlphabet, start, accept, reject);
+//                    }
+//            }catch (SQLException e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//        } catch (SQLException e) {
+//            throw new RuntimeException(e);
+//        }finally {
+//            close(conn, stmt);
+//        }
+//
+//
+//        return null;
     }
 
 

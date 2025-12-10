@@ -16,17 +16,11 @@ import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.InconsistentDBException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
-import edu.regis.merc.model.Account;
-import edu.regis.merc.model.CourseDigest;
-import edu.regis.merc.model.PendingStep;
-import edu.regis.merc.model.PendingTask;
-import edu.regis.merc.model.Student;
-import edu.regis.merc.model.Task;
-import edu.regis.merc.model.TutoringSession;
-import edu.regis.merc.model.UnitDigest;
+import edu.regis.merc.model.*;
 import edu.regis.merc.svc.CourseSvc;
 import edu.regis.merc.svc.ServiceFactory;
 import edu.regis.merc.svc.SessionSvc;
+import edu.regis.merc.svc.TuringMachingSvc;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -388,7 +382,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
                 PendingStep pStep = retrievePendingStep(rs.getInt(2), sessionId, task, conn);
 
                 pTask.setCurrentStep(pStep);
-
+                loadComputationalModels(session, conn);
                 pendingTasks.add(pTask);
             }
 
@@ -437,6 +431,15 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         } finally {
             close(stmt);
         }
+    }
+
+    private void loadComputationalModels(TutoringSession session, Connection conn) throws SQLException {
+        TuringMachingSvc svc = ServiceFactory.findTuringMachineSvc();
+
+        // ToDo: need a big switch on TaskSubType
+        // ToDo: from the pending task, get the tmid
+        TuringMachine tm = svc.getMachineById(0);
+        session.setTuringMachine(tm);
     }
 
     /**
