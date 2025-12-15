@@ -564,3 +564,45 @@ INSERT INTO TuringMachine
 INSERT INTO MuFunction (Name, Lhs, Rhs)
 VALUES ('add', 'add(x, y)', '(x + y)');
 
+
+-- Lambda Calculus tables - Ellis 
+
+-- primary table
+CREATE TABLE LC_EXPRESSION (
+    Id INT PRIMARY KEY,
+    ExprType VARCHAR(10) -- possibles values are 'VAR', 'ABS', 'APP'
+);
+
+-- variable table 
+CREATE TABLE LC_VARIABLE (
+    Id INT PRIMARY KEY,
+    Name VARCHAR(50),
+    FOREIGN KEY (Id) REFERENCES LC_EXPRESSION(Id)
+);
+
+-- abstraction table
+CREATE TABLE LC_ABSTRACTION (
+    Id INT PRIMARY KEY,
+    IsCurried BOOLEAN,
+    FOREIGN KEY (Id) REFERENCES LC_EXPRESSION(Id)
+);
+
+-- table for abstraction's parameters
+CREATE TABLE LC_ABS_PARAMS (
+    AbsId INT,
+    VarId INT,
+    SeqIndex INT,
+    PRIMARY KEY (AbsId, SeqIndex),
+    FOREIGN KEY (AbsId) REFERENCES LC_ABSTRACTION(Id),
+    FOREIGN KEY (VarId) REFERENCES LC_VARIABLE(Id)
+);
+
+-- application table 
+CREATE TABLE LC_APPLICATION (
+    Id INT PRIMARY KEY,
+    FuncAbsId INT, 
+    ArgExprId INT, 
+    FOREIGN KEY (Id) REFERENCES LC_EXPRESSION(Id),
+    FOREIGN KEY (FuncAbsId) REFERENCES LC_ABSTRACTION(Id),
+    FOREIGN KEY (ArgExprId) REFERENCES LC_EXPRESSION(Id)
+);
