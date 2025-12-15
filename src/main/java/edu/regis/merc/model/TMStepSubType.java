@@ -32,9 +32,8 @@ public enum TMStepSubType {
     DISPLAY_CONFIGURATION("Display Configuration (TBD)"),
     SELECT_CONFIGURATION("Select Configuration (TBD)"),
     INPUT_ALPHABET("Input Alphabet"),
-    TAPE_ALPHABET("Tape Alphabet");
-
-//    ERROR("Error");
+    TAPE_ALPHABET("Tape Alphabet"),
+    ERROR("Error");
 
     /**
      * The name used by the server to identify this request.

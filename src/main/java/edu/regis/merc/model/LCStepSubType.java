@@ -18,7 +18,8 @@ public enum LCStepSubType {
     DISPLAY_APPLICATION("Display Application"),
     SELECT_APPLICATION("Select Application"),
     DISPLAY_ARG("Display Arguments"),
-    SELECT_ARG("Select Arguments");
+    SELECT_ARG("Select Arguments"),
+    ERROR("Error"); 
 
 
     /**
@@ -32,8 +33,10 @@ public enum LCStepSubType {
      * @param subType
      */
     LCStepSubType(String subType) {
-        this.subType = subType;
-    }
+    this.subType = subType;
+}
+
+
 
     /**
      * Return the request name that is used by the server.

@@ -7,7 +7,9 @@ public enum MUStepSubType {
     DISPLAY_PARAMETER("Displays parameter"),
     SELECT_PARAMETER("Selects parameter"),
     DISPLAY_RHS_COMPONENT("Display Right Hand Side Component"),
-    SELECT_RHS_COMPONENT("Selects Right Hand Side Component");
+    SELECT_RHS_COMPONENT("Selects Right Hand Side Component"),
+    ERROR("Error");
+     
 
 
     /**
@@ -42,4 +44,5 @@ public enum MUStepSubType {
     public String toString() {
         return subType;
     }
+
 }
