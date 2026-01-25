@@ -116,4 +116,6 @@ public class MercApp {
             Logger.getLogger(MercApp.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+    //test comment from Sophie Holland for sprint 1! (1/25/2026)
 }
