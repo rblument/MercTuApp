@@ -83,7 +83,7 @@ public class ServiceFactory {
     public static TuringMachingSvc findTuringMachineSvc() {
         return new TuringMachineDAO();
     }
-
+    
     /**
      * Return a reference to the μ-recursive function service.
      *
@@ -100,6 +100,15 @@ public class ServiceFactory {
      */
     public static MUSvc findMUSvc() {
         return new MUSvcImpl();
+    }
+    
+        /**
+     * Return a reference to the Lambda Calculus service.
+     * 
+     * @return 
+     */
+    public static LCSvc findLCSvc() {
+        return new LCDAO();
     }
 }
 

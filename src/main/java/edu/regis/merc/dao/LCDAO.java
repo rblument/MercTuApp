@@ -90,6 +90,7 @@ public class LCDAO extends MySqlDAO implements LCSvc{
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 type = rs.getString("ExprType");
+                System.out.println("LCDAO: Found ID " + exprId + " type: " + type);
             } else {
                 throw new ObjNotFoundException("LCExpression Id: " + exprId);
             }

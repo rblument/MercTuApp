@@ -24,25 +24,26 @@ public class LCAbstraction extends LCExpression {
     /**
      * If true, this Abstraction allows Curried parameters.
      */
-    private boolean isCurried = false;
+    //private boolean isCurried = false;
     
     /**
      * The parameters in this Abstraction as a list of Lambda Calculus variables.
      */
-    private ArrayList<LCVariable> parameters;
+    //private ArrayList<LCVariable> parameters;
     
     /**
      * The body of this Abstraction as a list of Lambda Calculus expressions.
      */
-    private ArrayList<LCExpression> body;
+    //private ArrayList<LCExpression> body;
     
     /**
      * Initialize this Lambda Calculus Abstraction with an empty parameter list
      * and an empty body.
      */
     public LCAbstraction(){
-        this.parameters = new ArrayList<>();
-        this.body = new ArrayList<>();
+        super();
+//        this.parameters = new ArrayList<>();
+//        this.body = new ArrayList<>();
         
     }
     

@@ -19,10 +19,6 @@ package edu.regis.merc.model;
  * @author rickb
  */
 public class LCVariable extends LCExpression {
-    /**
-     * The symbolic name of this variable. 
-     */
-    private String name;
     
     /**
      * Initialize this Lambda Calculus variable with the given symbolic name.
@@ -30,13 +26,15 @@ public class LCVariable extends LCExpression {
      * @param name an alphabetic name
      */
     public LCVariable(String name){
-        this.name = name;
+        this.name = name; // uses protected field from LCExpression
     }
     
+    @Override
     public void setName(String name){
         this.name = name;
     }
     
+    @Override
     public String getName(){
         return name;
     }
