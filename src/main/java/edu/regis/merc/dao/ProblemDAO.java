@@ -27,6 +27,7 @@ import edu.regis.merc.model.Timeout;
 import edu.regis.merc.model.TmViewConfiguration;
 import edu.regis.merc.model.TuringMachine;
 import edu.regis.merc.model.ViewConfiguration;
+import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.svc.ProblemSvc;
 import edu.regis.merc.svc.ServiceFactory;
 import java.sql.Connection;
@@ -137,6 +138,18 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                  
                 } catch (ObjNotFoundException ex) {
                     throw new NonRecoverableException("Inconsistent DB TmId in Problem wasn't in the DB" + tmId);
+                }
+                
+                int lcId = rs.getInt("LambdaCalculusId");
+                if (lcId > 0) {
+                    try {
+                        LCExpression expr = ServiceFactory.findLCSvc().retrieve(lcId);
+                        System.out.println("Found LC Expression: " + expr); // Debug log
+                        problem.setExpression(expr);
+                    } catch (ObjNotFoundException ex) {
+                        // Log it but don't crash if the equation is missing
+                        System.out.println("Warning: LC Expression " + lcId + " listed in Problem but not found in DB.");
+                    }
                 }
                 
                 return problem;
@@ -372,7 +385,12 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
 
             if (rs.next()) {
                 LCViewConfiguration lcViewConfig = new LCViewConfiguration(lcViewConfigId);
-
+                
+                // Setting LC data
+                lcViewConfig.setParameterIds((rs.getString("ParameterIds")));
+                lcViewConfig.setBodyIds((rs.getString("BodyIds")));
+                lcViewConfig.setArgumentIds((rs.getString("ArgumentIds")));
+                
                 return lcViewConfig;
 
             } else {

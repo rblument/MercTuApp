@@ -26,4 +26,13 @@ import java.sql.Connection;
  */
 public interface LCSvc {
     
+    /**
+     * Retrieve the LC Expression using the given ID.
+     * 
+     * @param exprId
+     * @return the fully loaded LCExpression object tree
+     * @throws ObjNotFoundException if the ID does not exist
+     * @throws NonRecoverableException if a database error occurs
+     */
+    LCExpression retrieve(int exprId) throws ObjNotFoundException, NonRecoverableException;
 }

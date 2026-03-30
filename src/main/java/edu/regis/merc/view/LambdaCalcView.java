@@ -24,6 +24,14 @@ public class LambdaCalcView extends GPanel {
     
     public void setModel(LCExpression model){
         this.model = model;
+        
+        if (model != null) {
+            System.out.println("View received: " + model.toString()); // Debug log
+            expressionLabel.setText(model.toString());
+        } else {
+            System.out.println("View received NULL model"); // Debug log
+            expressionLabel.setText("No Equation Data");
+        }
     }
     
     public JLabel getExpressionLabel(){
