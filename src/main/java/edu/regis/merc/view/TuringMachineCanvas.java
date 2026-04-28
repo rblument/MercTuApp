@@ -45,7 +45,7 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
      * Component views should never appear within this many pixels of the border.
      */
     private static final int BORDER_PADDING = 5;
-    
+
     /**
      * The Turing Machine model displayed in this canvas (view).
      */
@@ -60,13 +60,13 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
      * Initialize the canvas
      */
     public TuringMachineCanvas() {
-	setPreferredSize(new Dimension(475,450));
+        setPreferredSize(new Dimension(475, 450));
 
-	setLayout(null);
-        
+        setLayout(null);
+
         addMouseListener(this);
 
-	setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        setBorder(BorderFactory.createLineBorder(Color.BLACK));
     }
 
     /**
@@ -75,16 +75,23 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
      * @param model a Turing Machine whose state control model is displayed.
      */
     public void setModel(TuringMachine model) {
-	removeAll();
+        removeAll();
 
-	this.model = model;
+        this.model = model;
 
-	updateViews();
+        // added this because the other check i added is preventing this from logging in
+        // - Elis
+        if (this.model == null) {
+            repaint();
+            return;
+        }
+
+        updateViews();
     }
 
     /**
      * Select the given state and display this selection in the corresponding
-     * StateView for the given state. 
+     * StateView for the given state.
      * 
      * @param node a state to select
      */
@@ -94,7 +101,7 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
                 stateView.deselect();
             }
         }
-        
+
         if (node != null) {
             Component[] components = getComponents();
 
@@ -103,7 +110,7 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
                     StateView stateView = (StateView) components[i];
                     if (stateView.getModel() == node) {
                         stateView.select();
-                    
+
                         selection = stateView;
                     }
                 }
@@ -118,11 +125,11 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
      *         currently selected.
      */
     public int selectedNodeId() {
-	if (selection == null) {
-	    return Model.DEFAULT_ID;
-	} else {
-	    return ((StateView) selection).getModel().getId();
-	}
+        if (selection == null) {
+            return Model.DEFAULT_ID;
+        } else {
+            return ((StateView) selection).getModel().getId();
+        }
     }
 
     /**
@@ -130,57 +137,57 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
      * the current Turing Machine model (used during a call to setModel).
      */
     private void updateViews() {
-	buildNodeViews();
-	buildEdgeViews();
+        buildNodeViews();
+        buildEdgeViews();
 
-	repaint();
+        repaint();
     }
 
     /**
      * For each state in the Turing Machine model, create a corresponding
-     * StateView that can be displayed in this canvas.     * 
+     * StateView that can be displayed in this canvas. *
      */
     private void buildNodeViews() {
         Insets insets = getInsets();
 
-	int maxW = 0;
-	int maxH = 0;
+        int maxW = 0;
+        int maxH = 0;
 
         for (State state : model.getStates()) {
-	    StateView view = new StateView(state);
-	    view.addSelectionChangeListener(this);
+            StateView view = new StateView(state);
+            view.addSelectionChangeListener(this);
 
-	    if (state.getGuiCtx().getIsSelected())
-		selection = view;
-            
+            if (state.getGuiCtx().getIsSelected())
+                selection = view;
+
             GuiCtx gCtx = view.getModel().getGuiCtx();
-	    int x = gCtx.getX();
-	    int y = gCtx.getY();
+            int x = gCtx.getX();
+            int y = gCtx.getY();
             int w = gCtx.getWidth();
             int h = gCtx.getHeight();
-            
+
             view.setLocation(new Point(x, y));
-	    view.setBounds(x + insets.left, y + insets.top, w, h);
-            
-	    if ((x + w) > maxW)
-		maxW = w;
-	    
-	    if ((y + h) > maxH)
-		maxH = h;
-             
+            view.setBounds(x + insets.left, y + insets.top, w, h);
+
+            if ((x + w) > maxW)
+                maxW = w;
+
+            if ((y + h) > maxH)
+                maxH = h;
+
             add(view);
-	}
-        
+        }
+
         int padding = BORDER_PADDING * 2;
         model.getGuiCtx().setWidth(maxW + padding); // BORDER_PADDING on ach side
-	model.getGuiCtx().setHeight(maxH + padding);
-        
+        model.getGuiCtx().setHeight(maxH + padding);
+
         setSize(model.getGuiCtx().getWidth(), model.getGuiCtx().getHeight());
     }
 
     /**
      * For each transition in the Turing Machine model, create a corresponding
-     * TransitionView that can be displayed in this canvas.     * 
+     * TransitionView that can be displayed in this canvas. *
      */
     private void buildEdgeViews() {
         ArrayList<TransitionView> views = new ArrayList<>();
@@ -204,7 +211,6 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
             int x2 = gCtx.getX2();
             int y2 = gCtx.getY2();
 
-
             int minX = Math.min(x1, x2);
             int minY = Math.min(y1, y2);
             int width = Math.abs(x2 - x1);
@@ -224,50 +230,50 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
 
         int padding = BORDER_PADDING * 2;
         model.getGuiCtx().setWidth(maxW + padding);
-	    model.getGuiCtx().setHeight(maxH + padding);
+        model.getGuiCtx().setHeight(maxH + padding);
 
         setSize(model.getGuiCtx().getWidth(), model.getGuiCtx().getHeight());
     }
 
     @Override
     public Dimension getPreferredSize() {
-	return getMinimumSize();
+        return getMinimumSize();
     }
-    
+
     @Override
     public Dimension getMinimumSize() {
-	if (model == null) {
-            return new Dimension(200,200);
-            
-        } else {
-	    //size = new Dimension();
-            Dimension d = getSize();
-	    d.width = model.getGuiCtx().getWidth();
-	    d.height = model.getGuiCtx().getHeight();
-	 
-	    Insets insets = getInsets();
-	    d.width += insets.left + insets.right + (BORDER_PADDING * 2);
-	    d.height += insets.top + insets.bottom + (BORDER_PADDING * 2);
+        if (model == null) {
+            return new Dimension(200, 200);
 
-	    return d;
+        } else {
+            // size = new Dimension();
+            Dimension d = getSize();
+            d.width = model.getGuiCtx().getWidth();
+            d.height = model.getGuiCtx().getHeight();
+
+            Insets insets = getInsets();
+            d.width += insets.left + insets.right + (BORDER_PADDING * 2);
+            d.height += insets.top + insets.bottom + (BORDER_PADDING * 2);
+
+            return d;
         }
     }
 
     @Override
     public void selectionChange(Selectable source) {
-	if (source == selection) {
-	    if (!source.isSelected()){
-		selection = null;
-	    }
-	} else {
-	    if (selection != null) {
-		selection.deselect();
-	    }
+        if (source == selection) {
+            if (!source.isSelected()) {
+                selection = null;
+            }
+        } else {
+            if (selection != null) {
+                selection.deselect();
+            }
 
-	    selection = source;
-	}
+            selection = source;
+        }
 
-	repaint();
+        repaint();
     }
 
     @Override
@@ -280,39 +286,38 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
     public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
         int cellSize = 50; // model.getCellSize();
         double scrollPos = 0;
-        if(orientation == SwingConstants.HORIZONTAL) {
-            //scrolling left
-            if(direction < 0) {
+        if (orientation == SwingConstants.HORIZONTAL) {
+            // scrolling left
+            if (direction < 0) {
                 scrollPos = visibleRect.getMinX();
-               
+
             }
-            //scrolling right
+            // scrolling right
             else if (direction > 0) {
                 scrollPos = visibleRect.getMaxX();
             }
         } else {
-            //scrolling up
-            if(direction < 0) {
+            // scrolling up
+            if (direction < 0) {
                 scrollPos = visibleRect.getMinY();
             }
-            //scrolling down
+            // scrolling down
             else if (direction > 0) {
                 scrollPos = visibleRect.getMaxY();
             }
         }
         int increment = Math.abs((int) Math.IEEEremainder(scrollPos, cellSize));
-        if(increment == 0) {
+        if (increment == 0) {
             increment = cellSize;
         }
-      
-        return  increment;
+
+        return increment;
     }
 
     @Override
-    public int getScrollableBlockIncrement(Rectangle visibleRect, 
-					   int orientation, int direction)
-    {
-         return getScrollableUnitIncrement(visibleRect, orientation, direction);
+    public int getScrollableBlockIncrement(Rectangle visibleRect,
+            int orientation, int direction) {
+        return getScrollableUnitIncrement(visibleRect, orientation, direction);
     }
 
     @Override
@@ -328,7 +333,7 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
     @Override
     public void mouseClicked(MouseEvent e) {
         // This will be called if no StateView was clicked on.
-        select(null); 
+        select(null);
     }
 
     @Override
@@ -345,5 +350,5 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
 
     @Override
     public void mouseExited(MouseEvent e) {
-    }    
+    }
 }

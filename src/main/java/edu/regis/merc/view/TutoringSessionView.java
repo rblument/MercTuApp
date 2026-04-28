@@ -21,7 +21,7 @@ import javax.swing.*;
 /**
  * Displays a tutoring session that allows a student to practice.
  *
- * The "Do One" view that allows either a student to select a task to practice 
+ * The "Do One" view that allows either a student to select a task to practice
  * or the tutor selects a task based on the current student model.
  * 
  * Various aspects of the tutoring session are displayed in the child components
@@ -30,6 +30,7 @@ import javax.swing.*;
  * @author rickb
  */
 public class TutoringSessionView extends GPanel {
+    private TutorView tutorView;
     private TuringMachineView turingMachineView;
     private MuRecView muRecView;
     private LambdaCalcView lambdaCalcView;
@@ -47,15 +48,15 @@ public class TutoringSessionView extends GPanel {
      * Universal button for returning to the dashboard.
      */
     private JButton dashboardButton;
-    
+
     /*
-     * Universal button for logging off. 
-     */    
+     * Universal button for logging off.
+     */
     private JButton logoutButton;
     /**
      * The tutoring session model displayed in this view.
      */
-    
+
     private TutoringSession model;
 
     /**
@@ -109,17 +110,17 @@ public class TutoringSessionView extends GPanel {
      */
     public void setModel(TutoringSession model) {
         this.model = model;
-        
-        PendingTask pTask = model.currentTask();
-        
-        // turingMachineView.setModel(pTask.getTask().getProblem().getTuringMachine());
-        turingMachineView.setModel(model);
-       
+
+        // update the lambda view
         if (model.getProblem() != null) {
-             lambdaCalcView.setModel(model.getProblem().getExpression());
+            lambdaCalcView.setModel(model.getProblem().getExpression());
         }
-        
-        //PendingStep pStep = pTask.getCurrentStep();
+
+        // update the tutor view with instructions from session
+        tutorView.setInstructions(model.getCurrentInstructions());
+
+        // update turing machien view
+        turingMachineView.setModel(model);
     }
 
     private void initCoreViews() {
@@ -129,13 +130,11 @@ public class TutoringSessionView extends GPanel {
     }
 
     private void initMercTutorPanel() {
-        mercTutorPanel = new JPanel(new BorderLayout());
-        mercTutorPanel.setBorder(BorderFactory.createTitledBorder("Merc Tutor"));
 
-        JLabel placeholder = new JLabel(" Placeholder content (to be implemented) ");
-        JPanel placeholderHolder = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 8));
-        placeholderHolder.add(placeholder);
-        mercTutorPanel.add(placeholderHolder, BorderLayout.NORTH);
+        tutorView = new TutorView();
+
+        mercTutorPanel = new JPanel(new BorderLayout());
+        mercTutorPanel.add(tutorView, BorderLayout.CENTER);
 
         hintButton = new JButton("Hint");
         submitButton = new JButton("Submit");
@@ -146,7 +145,7 @@ public class TutoringSessionView extends GPanel {
         int h = Math.max(p1.height, p2.height);
         Dimension uniform = new Dimension(w, h);
 
-        for (JButton b : new JButton[]{hintButton, submitButton}) {
+        for (JButton b : new JButton[] { hintButton, submitButton }) {
             b.setPreferredSize(uniform);
             b.setMinimumSize(uniform);
             b.setMaximumSize(uniform);
@@ -163,6 +162,15 @@ public class TutoringSessionView extends GPanel {
         buttonColumn.add(Box.createVerticalGlue());
 
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
+
+        submitButton.addActionListener(e -> {
+            if (lambdaCalcView.getSelectedLabel() != null) {
+                System.out.println("Submitting selection: " + lambdaCalcView.getSelectedLabel().getText());
+                // todo: create a ClientRequest with ServerRequestType.COMPLETED_STEP
+            } else {
+                JOptionPane.showMessageDialog(this, "Please select a component first.");
+            }
+        });
     }
 
     private void initSplits() {
@@ -213,4 +221,3 @@ public class TutoringSessionView extends GPanel {
         SplashFrame.instance().logout();
     }
 }
-
