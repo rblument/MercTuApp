@@ -224,7 +224,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
      */
     private ArrayList<Step> retrieveSteps(int taskId, Connection conn)
             throws NonRecoverableException {
-        final String sql = "SELECT Id,Title,Description,SequenceIndex,Context,Prompt,ExercisedComponentId,ViewConfigId,StudentAction,ActionId,TimeoutId FROM Step WHERE TaskId = ?";
+        final String sql = "SELECT Id,Title,Description,SequenceIndex,Context,Prompt,Data,ExercisedComponentId,ViewConfigId,StudentAction,ActionId,TimeoutId FROM Step WHERE TaskId = ?";
 
         ArrayList<Step> steps = new ArrayList<>();
         PreparedStatement stmt = null;
@@ -243,6 +243,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                 step.setSequenceIndex(rs.getInt("SequenceIndex"));
                 step.setContext(rs.getString("Context"));
                 step.setPrompt(rs.getString("Prompt"));
+                step.setData(rs.getString("Data"));
                 step.setStudentAction(StudentActionKind.valueOf(rs.getString("StudentAction")));
 
                 step.setViewConfiguration(retrieveViewConfiguration(rs.getInt("ViewConfigId"), conn));

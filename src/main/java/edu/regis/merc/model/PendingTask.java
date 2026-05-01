@@ -71,4 +71,34 @@ public class PendingTask {
         // ToDo: all steps handled?
         return currentStep.isCompleted();
     }
+
+    /**
+     * Advances the current step to the next step in the task sequence.
+     * 
+     * @return true if successfully advanced, false if there are no more steps.
+     */
+    public boolean advanceStep() {
+        if (task == null || task.getSteps() == null) {
+            return false;
+        }
+
+        java.util.ArrayList<Step> steps = task.getSteps();
+        int currentIndex = -1;
+
+        // find the index of the step the student is currently on
+        for (int i = 0; i < steps.size(); i++) {
+            if (steps.get(i).getId() == currentStep.getStep().getId()) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        // if it was found, and it's not the last step in the list, advance forward
+        if (currentIndex != -1 && currentIndex < steps.size() - 1) {
+            Step nextStep = steps.get(currentIndex + 1);
+            this.setCurrentStep(new PendingStep(nextStep));
+            return true;
+        }
+        return false;
+    }
 }

@@ -15,12 +15,17 @@ public class LambdaCalcView extends GPanel {
     private LCExpression model;
     private JPanel expressionContainer;
     private JLabel selectedLabel = null; // used to track the piece currently selected
+    private LCExpression selectedExpression = null;
 
     public LambdaCalcView() {
 
         setBorder(BorderFactory.createTitledBorder("Lambda Calculus"));
         initializeComponents();
         layoutComponents();
+    }
+
+    public LCExpression getSelectedExpression() {
+        return selectedExpression;
     }
 
     public LCExpression getModel() {
@@ -30,6 +35,7 @@ public class LambdaCalcView extends GPanel {
     public void setModel(LCExpression model) {
         this.model = model;
         selectedLabel = null; // reset selection when a new problem loads
+        selectedExpression = null;
         expressionContainer.removeAll(); // Clear old equation
 
         if (model != null) {
@@ -65,22 +71,20 @@ public class LambdaCalcView extends GPanel {
         System.out.println("Trying to draw class: " + expr.getClass().getSimpleName());
 
         if (expr instanceof LCVariable) {
-            System.out.println("Matched: variable");
             LCVariable var = (LCVariable) expr;
-            parent.add(createClickableLabel(var.getName()));
+            parent.add(createClickableLabel(var.getName(), expr));
 
         } else if (expr instanceof LCAbstraction) {
-            System.out.println("Matched: Abstraction");
             LCAbstraction abs = (LCAbstraction) expr;
             // Lambda symbol todo: make enums or global variables for symbol IDs
-            parent.add(createClickableLabel("\u03BB"));
+            parent.add(createClickableLabel("\u03BB", expr));
 
             // Add the parameters
             for (LCVariable param : abs.getParameters()) {
                 buildInteractiveEquation(param, parent);
             }
 
-            parent.add(createClickableLabel("."));
+            parent.add(createClickableLabel(".", expr));
 
             // add the body parts
             for (LCExpression bodyPart : abs.getBody()) {
@@ -90,15 +94,15 @@ public class LambdaCalcView extends GPanel {
         } else if (expr instanceof LCApplication) {
             System.out.println("Matched: Application");
             LCApplication app = (LCApplication) expr;
-            parent.add(createClickableLabel("("));
+            parent.add(createClickableLabel("(", expr));
             buildInteractiveEquation(app.getFunction(), parent);
-            parent.add(createClickableLabel(" ")); // space between func and arg
+            parent.add(createClickableLabel(" ", expr)); // space between func and arg
             buildInteractiveEquation(app.getArg(), parent);
-            parent.add(createClickableLabel(")"));
+            parent.add(createClickableLabel(")", expr));
         }
     }
 
-    private JLabel createClickableLabel(String text) {
+    private JLabel createClickableLabel(String text, LCExpression expr) {
         JLabel label = new JLabel(text);
         label.setFont(new Font("Monospaced", Font.BOLD, 18));
         label.setCursor(new Cursor(Cursor.HAND_CURSOR)); // make it look like it's clickable
@@ -133,9 +137,9 @@ public class LambdaCalcView extends GPanel {
 
                 // set the new selection
                 selectedLabel = label;
+                selectedExpression = expr;
                 label.setBackground(new Color(173, 216, 230));
-                System.out.println("Student clicked on: " + text);
-                // todo: tell the tutor the student clicked on this component
+                System.out.println("Student selected: " + text + " (ID: " + expr.getId() + ")");
             }
         });
 

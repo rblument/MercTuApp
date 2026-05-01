@@ -28,57 +28,57 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-
 /**
- * This is a data access object for loading recursive Lambda Calculus 
+ * This is a data access object for loading recursive Lambda Calculus
  * Expressions from the database.
+ * 
  * @author Ellis Langham
  */
-public class LCDAO extends MySqlDAO implements LCSvc{
-    
+public class LCDAO extends MySqlDAO implements LCSvc {
+
     /**
-     * Instantiates this LC DAO with default values 
+     * Instantiates this LC DAO with default values
      */
-    public LCDAO(){
+    public LCDAO() {
         super();
     }
-    
-   
+
     /**
      * Retrieve the LC Expression using the given ID from the database.
-     * This method manages the database connection and initiates the loading of 
-     * the expression tree. 
+     * This method manages the database connection and initiates the loading of
+     * the expression tree.
      * 
      * @param exprId - the unique ID fo the expression to be loaded
      * @return - fully loaded LCExpression object tree
-     * @throws ObjNotFoundException - the the expression ID does not exist
-     * @throws NonRecoverableException - if a database error occurs 
+     * @throws ObjNotFoundException    - the the expression ID does not exist
+     * @throws NonRecoverableException - if a database error occurs
      */
     public LCExpression retrieve(int exprId) throws ObjNotFoundException, NonRecoverableException {
         Connection conn = null;
-        try{
+        try {
             conn = DriverManager.getConnection(URL);
             return retrieveExpressionRecursive(exprId, conn);
-        }catch (SQLException e){
+        } catch (SQLException e) {
             throw new NonRecoverableException("LCDAO_ERR-1: " + e.toString(), e);
-        }finally {
+        } finally {
             close(conn);
         }
     }
-    
+
     /**
-     * Recursively determines the type of expression and delegate to the 
+     * Recursively determines the type of expression and delegate to the
      * specific loader.
+     * 
      * @param exprId - id of the expression to load
-     * @param conn - database connection
-     * @return - the specific subclass of LCExpression (Variable, 
-     * Abstraction, or Application).
+     * @param conn   - database connection
+     * @return - the specific subclass of LCExpression (Variable,
+     *         Abstraction, or Application).
      * @throws SQLException
      * @throws ObjNotFoundException
-     * @throws NonRecoverableException 
+     * @throws NonRecoverableException
      */
-    private LCExpression retrieveExpressionRecursive(int exprId, Connection conn) 
-                throws SQLException, ObjNotFoundException, NonRecoverableException {
+    private LCExpression retrieveExpressionRecursive(int exprId, Connection conn)
+            throws SQLException, ObjNotFoundException, NonRecoverableException {
 
         String sql = "SELECT ExprType FROM LC_EXPRESSION WHERE Id = ?";
         PreparedStatement stmt = null;
@@ -97,27 +97,28 @@ public class LCDAO extends MySqlDAO implements LCSvc{
         } finally {
             close(stmt);
         }
-        
+
         // Delegate to the specific loader based on the type that's found
         switch (type) {
-            case "VAR": 
+            case "VAR":
                 return retrieveVariable(exprId, conn);
-            case "ABS": 
+            case "ABS":
                 return retrieveAbstraction(exprId, conn);
-            case "APP": 
+            case "APP":
                 return retrieveApplication(exprId, conn);
-            default: 
+            default:
                 throw new NonRecoverableException("Unknown ExprType: " + type);
         }
     }
-    
+
     /**
      * Helper method to load an LCVariable from the database
-     * @param id - id of the Variable
+     * 
+     * @param id   - id of the Variable
      * @param conn
      * @return
      * @throws SQLException
-     * @throws ObjNotFoundException 
+     * @throws ObjNotFoundException
      */
     private LCVariable retrieveVariable(int id, Connection conn) throws SQLException, ObjNotFoundException {
         String sql = "SELECT Name FROM LC_VARIABLE WHERE Id = ?";
@@ -126,43 +127,48 @@ public class LCDAO extends MySqlDAO implements LCSvc{
             stmt = conn.prepareStatement(sql);
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
-            if(rs.next()){
-                return new LCVariable(rs.getString("Name"));
-            }else { 
+            if (rs.next()) {
+                LCVariable var = new LCVariable(rs.getString("Name"));
+                var.setId(id);
+                return var;
+            } else {
                 throw new ObjNotFoundException("LCVariable Id: " + id);
             }
-        }finally {
+        } finally {
             close(stmt);
         }
     }
-    
+
     /**
-     * Helper method to load an LCAbstraction along with its parameter list and body list. 
-     * @param id - id of the abstraction 
+     * Helper method to load an LCAbstraction along with its parameter list and body
+     * list.
+     * 
+     * @param id   - id of the abstraction
      * @param conn
      * @return
      * @throws SQLException
      * @throws ObjNotFoundException
-     * @throws NonRecoverableException 
+     * @throws NonRecoverableException
      */
-    private LCAbstraction retrieveAbstraction(int id, Connection conn) 
+    private LCAbstraction retrieveAbstraction(int id, Connection conn)
             throws SQLException, ObjNotFoundException, NonRecoverableException {
-        
+
         LCAbstraction abs = new LCAbstraction();
-        
+        abs.setId(id);
+
         // 1. Load the main properties (IsCurried)
         String mainSQL = "SELECT IsCurried FROM LC_ABSTRACTION WHERE Id = ?";
-        try(PreparedStatement stmt = conn.prepareStatement(mainSQL)) {
+        try (PreparedStatement stmt = conn.prepareStatement(mainSQL)) {
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
-            if(rs.next()){
+            if (rs.next()) {
                 abs.setIsCurried(rs.getBoolean("IsCurried"));
-            }else {
+            } else {
                 throw new ObjNotFoundException("LCAbstraction Id: " + id);
             }
         }
-        
-        // 2. load the parameters 
+
+        // 2. load the parameters
         String paramSql = "SELECT VarId FROM LC_ABS_PARAMS WHERE AbsId = ? ORDER BY SeqIndex ASC";
         try (PreparedStatement stmt = conn.prepareStatement(paramSql)) {
             stmt.setInt(1, id);
@@ -170,10 +176,10 @@ public class LCDAO extends MySqlDAO implements LCSvc{
             while (rs.next()) {
                 int varId = rs.getInt("VarId");
                 LCVariable param = retrieveVariable(varId, conn);
-                abs.addParameter(param); // Uses your addParameter method
+                abs.addParameter(param);
             }
         }
-        
+
         // 3. load the list of body parts
         String bodySql = "SELECT BodyExprId FROM LC_ABS_BODY WHERE AbsId = ? ORDER BY SeqIndex ASC";
         try (PreparedStatement stmt = conn.prepareStatement(bodySql)) {
@@ -182,27 +188,28 @@ public class LCDAO extends MySqlDAO implements LCSvc{
             while (rs.next()) {
                 int bodyId = rs.getInt("BodyExprId");
                 LCExpression bodyPart = retrieveExpressionRecursive(bodyId, conn);
-                abs.addBodyPart(bodyPart); // Uses your addBodyPart method
+                abs.addBodyPart(bodyPart);
             }
         }
 
         return abs;
-        
-        
+
     }
-    
+
     /**
-     * Helper method to load an LCApplication, recursively loading its function and argument
-     * @param id - id of the application 
+     * Helper method to load an LCApplication, recursively loading its function and
+     * argument
+     * 
+     * @param id   - id of the application
      * @param conn
      * @return
      * @throws SQLException
      * @throws ObjNotFoundException
-     * @throws NonRecoverableException 
+     * @throws NonRecoverableException
      */
-    private LCApplication retrieveApplication(int id, Connection conn) 
+    private LCApplication retrieveApplication(int id, Connection conn)
             throws SQLException, ObjNotFoundException, NonRecoverableException {
-            
+
         String sql = "SELECT FuncAbsId, ArgExprId FROM LC_APPLICATION WHERE Id = ?";
         PreparedStatement stmt = null;
         try {
@@ -214,9 +221,10 @@ public class LCDAO extends MySqlDAO implements LCSvc{
                 int argId = rs.getInt("ArgExprId");
 
                 LCApplication app = new LCApplication();
+                app.setId(id);
                 app.setFunction(retrieveAbstraction(funcId, conn));
                 app.setArg(retrieveExpressionRecursive(argId, conn));
-                
+
                 return app;
             } else {
                 throw new ObjNotFoundException("LCApplication Id: " + id);
@@ -225,5 +233,5 @@ public class LCDAO extends MySqlDAO implements LCSvc{
             close(stmt);
         }
     }
-    
+
 }
