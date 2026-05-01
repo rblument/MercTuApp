@@ -20,54 +20,54 @@ import java.util.GregorianCalendar;
  * 
  * @author rickb
  */
-public class TutoringSession { 
+public class TutoringSession {
     /**
      * The id of this session in the database.
      */
     private int id;
-    
+
     /**
      * An SHA-256 encrypted security token that must be communicated to the
      * tutor/server in all subsequent requests after signing in.
      */
     private String securityToken = "";
-    
+
     /**
      * The student being tutored in this session.
      */
     private Student student;
-    
+
     /**
      * A summary of the course currently being taught in this session.
      */
     private CourseDigest course;
-    
+
     /**
      * A summary of the unit currently being taught in this session.
      */
     private UnitDigest unit;
-    
+
     /**
      * The current problem being solved by the student in this session.
      */
     private Problem problem;
-    
-     /**
+
+    /**
      * True, if the session is currently active (though the student may not
      * be currently signed-in).
      */
     private boolean isActive = true;
-    
+
     /**
      * The date and time when this session was initially created.
      */
     private GregorianCalendar startDate;
- 
-     /**
+
+    /**
      * The current task list.
      * 
      * If there are multiple tasks, the first one is the current task and the
-     * remaining tasks are pending. Multiple tasks occur when a student 
+     * remaining tasks are pending. Multiple tasks occur when a student
      * overrides the task proposed by the tutor.
      */
     private ArrayList<PendingTask> tasks;
@@ -129,12 +129,12 @@ public class TutoringSession {
     public void setProblem(Problem problem) {
         this.problem = problem;
     }
-    
+
     public boolean isActive() {
         return isActive;
     }
-    
-    public boolean getIsActive(){
+
+    public boolean getIsActive() {
         return isActive;
     }
 
@@ -149,15 +149,15 @@ public class TutoringSession {
     public void setStartDate(GregorianCalendar startDate) {
         this.startDate = startDate;
     }
-    
+
     public PendingTask currentTask() {
         return tasks.get(0);
     }
-    
+
     public void addTask(PendingTask task) {
         tasks.add(task);
     }
-    
+
     public void addCurrentTask(PendingTask task) {
         tasks.add(0, task);
     }
@@ -169,15 +169,27 @@ public class TutoringSession {
     public void setTasks(ArrayList<PendingTask> tasks) {
         this.tasks = tasks;
     }
-    
+
     public void removeTask(PendingTask task) {
         tasks.remove(task);
     }
-    
+
     public void removeTask(int taskId) {
-        for (PendingTask pendingTask : tasks) 
+        for (PendingTask pendingTask : tasks)
             if (pendingTask.getTask().getId() == taskId)
                 removeTask(pendingTask);
     }
-}
 
+    public String getCurrentInstructions() {
+        if (tasks != null && !tasks.isEmpty()) {
+            PendingStep currentStep = tasks.get(0).getCurrentStep();
+            if (currentStep != null && currentStep.getStep() != null) {
+                String prompt = currentStep.getStep().getPrompt();
+                String context = currentStep.getStep().getContext();
+                return prompt + "\n\n" + context;
+            }
+        }
+        return "Please follow the instructions on the screen to proceed.";
+    }
+
+}

@@ -94,7 +94,8 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
             return problems;
 
         } catch (ObjNotFoundException e) {
-            InconsistentDBException ex = new InconsistentDBException("Problem not found in unit " + unitId + " for problem id: " + problemId);
+            InconsistentDBException ex = new InconsistentDBException(
+                    "Problem not found in unit " + unitId + " for problem id: " + problemId);
             throw new NonRecoverableException("InconsistentDB see internal exception", ex);
         } catch (SQLException e) {
             throw new NonRecoverableException("ProblemDAO-ERR-2" + e.toString(), e);
@@ -131,15 +132,19 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                 problem.setTasks(retrieveTasks(id, conn));
 
                 int tmId = rs.getInt("TuringMachineId");
-                try {
-                    TuringMachine tm = ServiceFactory.findTuringMachineSvc().retrieve(tmId);
-                    System.out.println("Found TM: " + tm);
-                    problem.setTuringMachine(tm);
-                 
-                } catch (ObjNotFoundException ex) {
-                    throw new NonRecoverableException("Inconsistent DB TmId in Problem wasn't in the DB" + tmId);
+
+                // if statement to allow a log in when a problem's id is null
+                if (tmId > 0) {
+                    try {
+                        TuringMachine tm = ServiceFactory.findTuringMachineSvc().retrieve(tmId);
+                        System.out.println("Found TM: " + tm);
+                        problem.setTuringMachine(tm);
+
+                    } catch (ObjNotFoundException ex) {
+                        throw new NonRecoverableException("Inconsistent DB TmId in Problem wasn't in the DB" + tmId);
+                    }
                 }
-                
+
                 int lcId = rs.getInt("LambdaCalculusId");
                 if (lcId > 0) {
                     try {
@@ -148,10 +153,11 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                         problem.setExpression(expr);
                     } catch (ObjNotFoundException ex) {
                         // Log it but don't crash if the equation is missing
-                        System.out.println("Warning: LC Expression " + lcId + " listed in Problem but not found in DB.");
+                        System.out
+                                .println("Warning: LC Expression " + lcId + " listed in Problem but not found in DB.");
                     }
                 }
-                
+
                 return problem;
             } else {
                 throw new ObjNotFoundException("No problem with given id exists: " + id);
@@ -212,8 +218,8 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
      *
      * @param courseId
      * @param taskId
-     * @param conn an open connection to the DB, which isn't closed by this
-     * method.
+     * @param conn     an open connection to the DB, which isn't closed by this
+     *                 method.
      * @return a List of Step elements, may be empty.
      */
     private ArrayList<Step> retrieveSteps(int taskId, Connection conn)
@@ -245,7 +251,8 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                 step.setHints(retrieveHints(step.getId(), conn));
                 step.setTimeout(retrieveTimeout(rs.getInt("TimeoutId"), conn));
 
-                // extractStepSubTypeData(step, subType, subTypeId, conn); //passing extracted ID, not resultSet
+                // extractStepSubTypeData(step, subType, subTypeId, conn); //passing extracted
+                // ID, not resultSet
                 // ToDo retrieve exercising locations
                 steps.add(step);
 
@@ -264,7 +271,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
      *
      *
      * @param conn an open connection to the DB, which isn't closed by this
-     * method.
+     *             method.
      * @return an ArrayList of Hint
      */
     private ArrayList<Hint> retrieveHints(int stepId, Connection conn)
@@ -316,9 +323,12 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
             if (rs.next()) {
                 ViewConfiguration viewConfiguration = new ViewConfiguration(viewConfigId);
 
-                viewConfiguration.setTmViewConfiguration(retrieveTmViewConfiguration(rs.getInt("TmViewConfigId"), conn));
-                viewConfiguration.setLcViewConfiguration(retrieveLcViewConfiguration(rs.getInt("LCViewConfigId"), conn));
-                viewConfiguration.setMuViewConfiguration(retrieveMuViewConfiguration(rs.getInt("MuViewConfigId"), conn));
+                viewConfiguration
+                        .setTmViewConfiguration(retrieveTmViewConfiguration(rs.getInt("TmViewConfigId"), conn));
+                viewConfiguration
+                        .setLcViewConfiguration(retrieveLcViewConfiguration(rs.getInt("LCViewConfigId"), conn));
+                viewConfiguration
+                        .setMuViewConfiguration(retrieveMuViewConfiguration(rs.getInt("MuViewConfigId"), conn));
 
                 return viewConfiguration;
 
@@ -360,7 +370,8 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                 return tmViewConfig;
 
             } else {
-                throw new InconsistentDBException("ProblemDAO-Err-20, TmViewConfiguration not found: " + tmViewConfigId);
+                throw new InconsistentDBException(
+                        "ProblemDAO-Err-20, TmViewConfiguration not found: " + tmViewConfigId);
             }
 
         } catch (SQLException e) {
@@ -385,16 +396,17 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
 
             if (rs.next()) {
                 LCViewConfiguration lcViewConfig = new LCViewConfiguration(lcViewConfigId);
-                
+
                 // Setting LC data
                 lcViewConfig.setParameterIds((rs.getString("ParameterIds")));
                 lcViewConfig.setBodyIds((rs.getString("BodyIds")));
                 lcViewConfig.setArgumentIds((rs.getString("ArgumentIds")));
-                
+
                 return lcViewConfig;
 
             } else {
-                throw new InconsistentDBException("ProblemDAO-Err-40, LcViewConfiguration not found: " + lcViewConfigId);
+                throw new InconsistentDBException(
+                        "ProblemDAO-Err-40, LcViewConfiguration not found: " + lcViewConfigId);
             }
 
         } catch (SQLException e) {
@@ -423,7 +435,8 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                 return muViewConfig;
 
             } else {
-                throw new InconsistentDBException("ProblemDAO-Err-50, MuViewConfiguration not found: " + muViewConfigId);
+                throw new InconsistentDBException(
+                        "ProblemDAO-Err-50, MuViewConfiguration not found: " + muViewConfigId);
             }
 
         } catch (SQLException e) {
@@ -440,117 +453,129 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
      * @return
      */
     /*
-    private void extractStepSubTypeData(Step step, StepSubType subType, int subTypeId, Connection conn)
-            throws NonRecoverableException {
-        switch (subType) {
-            case INFO_MESSAGE:
-                //ToDo: the returned data doesn't appear to be used.
-                extractInfoMsgData(subTypeId, conn);          
-            case REQUEST_HINT:
-                // ToDo:
-                break;
-            case DISPLAY_ALL:
-                 retrieveTMDescription(step, subTypeId, conn);
-                 retrieveLCDescription(step, subTypeId, conn);
-                 retrieveMUDescription(step,subTypeId, conn);
-                break;
-            case TM_DESCRIPTION:
-                retrieveTMDescription(step, subTypeId, conn);
-                break;
-            case LC_DESCRIPTION:
-                retrieveLCDescription(step, subTypeId, conn);
-                break;
-            case MU_DESCRIPTION:
-                retrieveMUDescription(step,subTypeId, conn);
-                break;
-            default:
-                System.out.println("Why HERE in extractStepSubTypeData");
-        }
-    }
-
-    private void retrieveTMDescription(Step step,int id, Connection conn) throws NonRecoverableException {
-        final String sql = "SELECT Id,TuringMachineId,SubType,ComponentId, DataId FROM TMDescription WHERE Id = ?";
-        PreparedStatement stmt = null;
-
-        try {
-//            int id = rs.getInt("SubTypeId");
-            stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                TMStepSubType tmStepSubType = TMStepSubType.valueOf(rs.getString("SubType"));
-
-                TMDescription tmDescription = new TMDescription(id, TMStepSubType.valueOf(rs.getString("SubType")));
-                tmDescription.setTmId(rs.getInt("TuringMachineId"));
-                tmDescription.setComponentId(rs.getInt("ComponentId"));
-//                tmDescription.setDataId(rs.getInt("DataId")); // uncomment if model has this field
-
-                Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                step.setData(gson.toJson(tmDescription));
-                }
-        } catch (SQLException e) {
-            throw new NonRecoverableException("CourseDAO-ERR-8" + e.toString(), e);
-        } finally {
-            close(stmt); // Don't close the connection, retrieve(courseId) will
-        }
-
-
-    }
-
-    // ADDED retrieveLCDescription method
-    private void retrieveLCDescription(Step step, int id, Connection conn) throws NonRecoverableException {
-        final String sql = "SELECT LambdaCalculusId, SubType, ComponentId, DataId FROM LCDescription WHERE Id = ?";
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                LCStepSubType lcSubType = LCStepSubType.valueOf(rs.getString("SubType"));
-
-                LCDescription lcDescription = new LCDescription(id, lcSubType);
-                lcDescription.setLcID(rs.getInt("LambdaCalculusId"));
-                lcDescription.setComponentID(rs.getInt("ComponentId"));
-
-                Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                step.setData(gson.toJson(lcDescription));
-            }
-        } catch (SQLException e) {
-            throw new NonRecoverableException("CourseDAO-ERR-LC " + e.toString(), e);
-        } finally {
-            close(stmt);
-        }
-    }
-
-    // ADDED retrieveMUDescription method
-    private void retrieveMUDescription(Step step, int id, Connection conn) throws NonRecoverableException {
-        final String sql = "SELECT MuRecursiveFunctionId, SubType, ComponentId, DataId FROM MUDescription WHERE Id = ?";
-        PreparedStatement stmt = null;
-
-        try {
-            stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                MUStepSubType muSubType = MUStepSubType.valueOf(rs.getString("SubType"));
-
-                MUDescription muDescription = new MUDescription(id, muSubType);
-                muDescription.setMuID(rs.getInt("MuRecursiveFunctionId"));
-                muDescription.setComponentID(rs.getInt("ComponentId"));
-
-                Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                step.setData(gson.toJson(muDescription));
-            }
-        } catch (SQLException e) {
-            throw new NonRecoverableException("CourseDAO-ERR-MU " + e.toString(), e);
-        } finally {
-            close(stmt);
-        }
-    }
+     * private void extractStepSubTypeData(Step step, StepSubType subType, int
+     * subTypeId, Connection conn)
+     * throws NonRecoverableException {
+     * switch (subType) {
+     * case INFO_MESSAGE:
+     * //ToDo: the returned data doesn't appear to be used.
+     * extractInfoMsgData(subTypeId, conn);
+     * case REQUEST_HINT:
+     * // ToDo:
+     * break;
+     * case DISPLAY_ALL:
+     * retrieveTMDescription(step, subTypeId, conn);
+     * retrieveLCDescription(step, subTypeId, conn);
+     * retrieveMUDescription(step,subTypeId, conn);
+     * break;
+     * case TM_DESCRIPTION:
+     * retrieveTMDescription(step, subTypeId, conn);
+     * break;
+     * case LC_DESCRIPTION:
+     * retrieveLCDescription(step, subTypeId, conn);
+     * break;
+     * case MU_DESCRIPTION:
+     * retrieveMUDescription(step,subTypeId, conn);
+     * break;
+     * default:
+     * System.out.println("Why HERE in extractStepSubTypeData");
+     * }
+     * }
+     * 
+     * private void retrieveTMDescription(Step step,int id, Connection conn) throws
+     * NonRecoverableException {
+     * final String sql =
+     * "SELECT Id,TuringMachineId,SubType,ComponentId, DataId FROM TMDescription WHERE Id = ?"
+     * ;
+     * PreparedStatement stmt = null;
+     * 
+     * try {
+     * // int id = rs.getInt("SubTypeId");
+     * stmt = conn.prepareStatement(sql);
+     * stmt.setInt(1, id);
+     * ResultSet rs = stmt.executeQuery();
+     * 
+     * if (rs.next()) {
+     * TMStepSubType tmStepSubType = TMStepSubType.valueOf(rs.getString("SubType"));
+     * 
+     * TMDescription tmDescription = new TMDescription(id,
+     * TMStepSubType.valueOf(rs.getString("SubType")));
+     * tmDescription.setTmId(rs.getInt("TuringMachineId"));
+     * tmDescription.setComponentId(rs.getInt("ComponentId"));
+     * // tmDescription.setDataId(rs.getInt("DataId")); // uncomment if model has
+     * this field
+     * 
+     * Gson gson = new GsonBuilder().setPrettyPrinting().create();
+     * step.setData(gson.toJson(tmDescription));
+     * }
+     * } catch (SQLException e) {
+     * throw new NonRecoverableException("CourseDAO-ERR-8" + e.toString(), e);
+     * } finally {
+     * close(stmt); // Don't close the connection, retrieve(courseId) will
+     * }
+     * 
+     * 
+     * }
+     * 
+     * // ADDED retrieveLCDescription method
+     * private void retrieveLCDescription(Step step, int id, Connection conn) throws
+     * NonRecoverableException {
+     * final String sql =
+     * "SELECT LambdaCalculusId, SubType, ComponentId, DataId FROM LCDescription WHERE Id = ?"
+     * ;
+     * PreparedStatement stmt = null;
+     * 
+     * try {
+     * stmt = conn.prepareStatement(sql);
+     * stmt.setInt(1, id);
+     * ResultSet rs = stmt.executeQuery();
+     * 
+     * if (rs.next()) {
+     * LCStepSubType lcSubType = LCStepSubType.valueOf(rs.getString("SubType"));
+     * 
+     * LCDescription lcDescription = new LCDescription(id, lcSubType);
+     * lcDescription.setLcID(rs.getInt("LambdaCalculusId"));
+     * lcDescription.setComponentID(rs.getInt("ComponentId"));
+     * 
+     * Gson gson = new GsonBuilder().setPrettyPrinting().create();
+     * step.setData(gson.toJson(lcDescription));
+     * }
+     * } catch (SQLException e) {
+     * throw new NonRecoverableException("CourseDAO-ERR-LC " + e.toString(), e);
+     * } finally {
+     * close(stmt);
+     * }
+     * }
+     * 
+     * // ADDED retrieveMUDescription method
+     * private void retrieveMUDescription(Step step, int id, Connection conn) throws
+     * NonRecoverableException {
+     * final String sql =
+     * "SELECT MuRecursiveFunctionId, SubType, ComponentId, DataId FROM MUDescription WHERE Id = ?"
+     * ;
+     * PreparedStatement stmt = null;
+     * 
+     * try {
+     * stmt = conn.prepareStatement(sql);
+     * stmt.setInt(1, id);
+     * ResultSet rs = stmt.executeQuery();
+     * 
+     * if (rs.next()) {
+     * MUStepSubType muSubType = MUStepSubType.valueOf(rs.getString("SubType"));
+     * 
+     * MUDescription muDescription = new MUDescription(id, muSubType);
+     * muDescription.setMuID(rs.getInt("MuRecursiveFunctionId"));
+     * muDescription.setComponentID(rs.getInt("ComponentId"));
+     * 
+     * Gson gson = new GsonBuilder().setPrettyPrinting().create();
+     * step.setData(gson.toJson(muDescription));
+     * }
+     * } catch (SQLException e) {
+     * throw new NonRecoverableException("CourseDAO-ERR-MU " + e.toString(), e);
+     * } finally {
+     * close(stmt);
+     * }
+     * }
      */
     /**
      *
