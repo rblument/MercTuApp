@@ -109,3 +109,66 @@ INSERT INTO
     LC_ABS_BODY (AbsId, BodyExprId, SeqIndex)
 VALUES
     (1, 100, 0);
+
+-- 5. Create the Variables 's' and 'z' for the zero function 
+INSERT INTO
+    LC_EXPRESSION (Id, ExprType)
+VALUES
+    (101, 'VAR');
+
+INSERT INTO
+    LC_VARIABLE (Id, Name)
+VALUES
+    (101, 's');
+
+INSERT INTO
+    LC_EXPRESSION (Id, ExprType)
+VALUES
+    (102, 'VAR');
+
+INSERT INTO
+    LC_VARIABLE (Id, Name)
+VALUES
+    (102, 'z');
+
+-- 6. Create the inner abstraciton (\z. z)
+INSERT INTO
+    LC_EXPRESSION (Id, ExprType)
+VALUES
+    (2, 'ABS');
+
+INSERT INTO
+    LC_ABSTRACTION (Id, IsCurried)
+VALUES
+    (2, FALSE);
+
+INSERT INTO
+    LC_ABS_PARAMS (AbsId, VarId, SeqIndex)
+VALUES
+    (2, 102, 0);
+
+INSERT INTO
+    LC_ABS_BODY (AbsId, BodyExprId, SeqIndex)
+VALUES
+    (2, 102, 0);
+
+-- 7. create the outer abstraction (\s. (\z. z))
+INSERT INTO
+    LC_EXPRESSION (Id, ExprType)
+VALUES
+    (3, 'ABS');
+
+INSERT INTO
+    LC_ABSTRACTION (Id, IsCurried)
+VALUES
+    (3, FALSE);
+
+INSERT INTO
+    LC_ABS_PARAMS (AbsId, VarId, SeqIndex)
+VALUES
+    (3, 101, 0);
+
+INSERT INTO
+    LC_ABS_BODY (AbsId, BodyExprId, SeqIndex)
+VALUES
+    (3, 2, 0);

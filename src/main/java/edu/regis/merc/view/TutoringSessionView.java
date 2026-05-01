@@ -12,11 +12,19 @@
  */
 package edu.regis.merc.view;
 
+import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.model.PendingTask;
 import edu.regis.merc.model.TutoringSession;
 
+import edu.regis.merc.svc.ClientRequest;
+import edu.regis.merc.svc.ServerRequestType;
+import edu.regis.merc.svc.SvcFacade;
+import edu.regis.merc.svc.TutorReply;
+
 import java.awt.*;
 import javax.swing.*;
+
+import com.google.gson.Gson;
 
 /**
  * Displays a tutoring session that allows a student to practice.
@@ -164,9 +172,56 @@ public class TutoringSessionView extends GPanel {
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
 
         submitButton.addActionListener(e -> {
-            if (lambdaCalcView.getSelectedLabel() != null) {
-                System.out.println("Submitting selection: " + lambdaCalcView.getSelectedLabel().getText());
-                // todo: create a ClientRequest with ServerRequestType.COMPLETED_STEP
+            LCExpression selectedNode = lambdaCalcView.getSelectedExpression();
+
+            if (selectedNode != null) {
+                System.out.println("Submitting answer for ID: " + selectedNode.getId());
+
+                ClientRequest request = new ClientRequest(ServerRequestType.COMPLETED_STEP);
+
+                request.setUserId(model.getStudent().getAccount().getUserId());
+                request.setSecurityToken((model.getSecurityToken()));
+
+                int currentStepId = model.currentTask().currentStep().getStep().getId();
+                String jsonPayload = "{\"stepId\": " + currentStepId + ", \"selectedComponentId\": "
+                        + selectedNode.getId() + "}";
+
+                // String jsonPayload = "{\"selectedComponentId\": " + selectedNode.getId() +
+                // "}";
+                request.setData(jsonPayload);
+
+                TutorReply reply = SvcFacade.instance().tutorRequest(request);
+
+                if ("Success".equals(reply.getStatus())) {
+                    JOptionPane.showMessageDialog(this,
+                            "Correct! Moving to the next step.",
+                            "Correct!",
+                            JOptionPane.INFORMATION_MESSAGE);
+
+                    model.currentTask().currentStep().setIsCompleted(true);
+
+                    model.currentTask().advanceStep();
+                    setModel(model);
+                    // Gson gson = new Gson();
+                    // TutoringSession updatedSession = gson.fromJson(reply.getData(),
+                    // TutoringSession.class);
+
+                    // setModel(updatedSession);
+                } else if ("Incorrect".equals(reply.getStatus())) {
+                    JOptionPane.showMessageDialog(this,
+                            reply.getData(),
+                            "Incorrect",
+                            JOptionPane.WARNING_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "System Error: " + reply.getData(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+
+                System.out.println("Server Evaluation: " + reply.getStatus());
+                System.out.println("Server Data: " + reply.getData());
+
             } else {
                 JOptionPane.showMessageDialog(this, "Please select a component first.");
             }

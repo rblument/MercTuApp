@@ -68,7 +68,7 @@ public class MercTutor implements TutorSvc {
     private TutoringSession session;
 
     private Student student;
-   
+
     private StudentModel studentModel;
 
     /**
@@ -76,7 +76,7 @@ public class MercTutor implements TutorSvc {
      */
     private Gson gson;
 
-    //private Objective currObjective;
+    // private Objective currObjective;
 
     /**
      * Initialize the tutor singleton (a NoOp).
@@ -109,7 +109,7 @@ public class MercTutor implements TutorSvc {
         // one current known in the DB for the given user.
         switch (methodName) {
             case "completedStep":
-            //case "getTask":
+                // case "getTask":
             case "newExample":
             case "requestHint":
             case "resetPassword":
@@ -331,7 +331,7 @@ public class MercTutor implements TutorSvc {
                 student = new Student(dbAcct);
                 String userId = dbAcct.getUserId();
 
-                try {       
+                try {
                     StudentModelSvc stuModSvc = ServiceFactory.findStudentModelSvc();
                     studentModel = stuModSvc.retrieve(userId);
                     student.setStudentModel(studentModel);
@@ -344,25 +344,23 @@ public class MercTutor implements TutorSvc {
 
                 SessionSvc svc = ServiceFactory.findSessionSvc();
                 TutoringSession session = svc.retrieve(student.getAccount().getUserId());
-                
+
                 Step step = session.currentTask().currentStep().getStep();
-                //switch (step.getSubType()) {
-                //    case DISPLAY_ALL:
-                 //       step.getData();
-                  //      brek;
-                 //   case TM_DESCRIPTION:
-                  //      TMDescription tmdescrp = gson.fromJson(step.getData(), TMDescription.class);
-                   //     tmdescrp.getTmId();
-           // }
+                // switch (step.getSubType()) {
+                // case DISPLAY_ALL:
+                // step.getData();
+                // brek;
+                // case TM_DESCRIPTION:
+                // TMDescription tmdescrp = gson.fromJson(step.getData(), TMDescription.class);
+                // tmdescrp.getTmId();
+                // }
                 // ToDo: tmp remove
-               // TuringMachine tm = createTestModel();
-              // TuringMachine tm = session.get
-               // Problem problem = new Problem();
-               // problem.setTuringMachine(tm);
-               // session.currentTask().getTask().setProblem(problem);
-               
-              
-                
+                // TuringMachine tm = createTestModel();
+                // TuringMachine tm = session.get
+                // Problem problem = new Problem();
+                // problem.setTuringMachine(tm);
+                // session.currentTask().getTask().setProblem(problem);
+
                 TutorReply reply = new TutorReply("Authenticated");
 
                 reply.setData(gson.toJson(session));
@@ -381,30 +379,30 @@ public class MercTutor implements TutorSvc {
             return new TutorReply();
         }
     }
-   // ToDo: Temporary
+    // ToDo: Temporary
     /*
-    public TuringMachine createTestModel() {
-        TuringMachine tm = new TuringMachine();
-        
-        ArrayList<State> states = new ArrayList<>();
-        
-        State state = new State("Q0");
-        
-        GuiCtx ctx = new GuiCtx();
-        ctx.setX(100);
-        ctx.setY(100);
-        ctx.setWidth(30);
-        ctx.setHeight(30);
-        
-        state.setGuiCtx(ctx);
-        
-        states.add(state);
-        
-        tm.setStates(states);
-        
-        return tm;
-    }
-    */
+     * public TuringMachine createTestModel() {
+     * TuringMachine tm = new TuringMachine();
+     * 
+     * ArrayList<State> states = new ArrayList<>();
+     * 
+     * State state = new State("Q0");
+     * 
+     * GuiCtx ctx = new GuiCtx();
+     * ctx.setX(100);
+     * ctx.setY(100);
+     * ctx.setWidth(30);
+     * ctx.setHeight(30);
+     * 
+     * state.setGuiCtx(ctx);
+     * 
+     * states.add(state);
+     * 
+     * tm.setStates(states);
+     * 
+     * return tm;
+     * }
+     */
 
     /**
      * Returns a hint to the GUI client, if any
@@ -418,8 +416,8 @@ public class MercTutor implements TutorSvc {
     public TutorReply requestHint(String jsonObj) {
         System.out.println("requestHint");
         StepCompletion completion = gson.fromJson(jsonObj, StepCompletion.class);
-        
-        return new TutorReply(":ERR", "Request Hint Not Implemented");     
+
+        return new TutorReply(":ERR", "Request Hint Not Implemented");
     }
 
     /**
@@ -427,11 +425,50 @@ public class MercTutor implements TutorSvc {
      * @return
      */
     public TutorReply completedStep(String jsonObj) {
-        System.out.println("completedStep");
+        System.out.println("--- Server Received Completed Step ---");
 
-        //StepCompletion completion = gson.fromJson(jsonObj, StepCompletion.class);
-        
-                return new TutorReply(":ERR", "Step completion Not Implemented");
+        // parse the JSON into the helper object
+        StudentPayload payload = gson.fromJson(jsonObj, StudentPayload.class);
+        int studentAnswerId = payload.selectedComponentId;
+        int activeStepId = payload.stepId;
+
+        System.out.println("Client is grading Step ID: " + activeStepId);
+        System.out.println("Student clicked ID: " + studentAnswerId);
+
+        Step currentStep = null;
+        for (Step s : session.currentTask().getTask().getSteps()) {
+            if (s.getId() == activeStepId) {
+                currentStep = s;
+                break;
+            }
+        }
+
+        if (currentStep.getData() == null || currentStep.getData().isEmpty()) {
+            return new TutorReply(":ERR", "This step does not have grading data");
+        }
+
+        StepData expectedData = gson.fromJson(currentStep.getData(), StepData.class);
+        System.out.println("Expected ID: " + expectedData.correctComponentId);
+
+        System.out.println("--- Grading Logic ---");
+        System.out.println("Student clicked ID: " + studentAnswerId);
+        System.out.println("Server Expected ID: " + expectedData.correctComponentId);
+
+        if (studentAnswerId == expectedData.correctComponentId) {
+
+            session.currentTask().currentStep().setIsCompleted(true);
+
+            boolean hasNextStep = session.currentTask().advanceStep();
+
+            if (hasNextStep) {
+                System.out.println("Advanced to next step: " + session.currentTask().currentStep().getStep().getId());
+            } else {
+                System.out.println("Task complete! No more steps.");
+            }
+            return new TutorReply("Success", gson.toJson(session));
+        } else {
+            return new TutorReply("Incorrect", "Not quite. Please try again or request a hint.");
+        }
     }
 
     /**
@@ -445,7 +482,6 @@ public class MercTutor implements TutorSvc {
 
         return null;
     }
-
 
     /**
      * Create and save a new tutoring session associated with the given account.
@@ -461,13 +497,12 @@ public class MercTutor implements TutorSvc {
         tSession.setStartDate(new GregorianCalendar());
         tSession.setCourse(course.getDigest());
 
-       
         Unit unit = course.findUnitBySequenceId(0); // The first unit
         tSession.setUnit(unit.getDigest());
-       
+
         Problem problem = unit.findProblemBySequence(0); // First Problem
         tSession.setProblem(problem);
-        
+
         Task task = problem.findTaskBySequence(0); // Task task = getFirstTask(course);
         PendingTask pendingTask = new PendingTask(task);
         pendingTask.setCurrentStep(new PendingStep(task.getCurrentStep()));
@@ -489,12 +524,12 @@ public class MercTutor implements TutorSvc {
     }
 
     /**
-     * Create a Student for the given Account and save their initial student 
+     * Create a Student for the given Account and save their initial student
      * model to the database.
      *
-     * @param acct an Account representing a new student user
+     * @param acct   an Account representing a new student user
      * @param course a Course that will be tutored to the student
-     * @return a Student whose StudentModel reflects the specified course 
+     * @return a Student whose StudentModel reflects the specified course
      * @throws NonRecoverableException perhaps see getCause().getErrorCode().
      */
     private Student createStudent(Account account, Course course)
@@ -543,38 +578,41 @@ public class MercTutor implements TutorSvc {
      * @throws NonRecoverableException see the message text.
      */
     /*
-    private Task getFirstTask(Course course) throws NonRecoverableException {
-        System.out.println("Tutor: primary: " + course.getPrimaryPedagogy());
-        switch (course.getPrimaryPedagogy()) {
-            case STUDENT_CHOICE:
-                return null; // ToDo
-
-            case FIXED_SEQUENCE:
-                Unit unit = course.findUnitBySequenceId(0);
-
-                if (unit == null) {
-                    throw new NonRecoverableException("Unit 0 not found in course: " + course.getId());
-                }
-
-                Task task = unit.findTaskBySequence(0);
-
-                if (task == null) {
-                    throw new NonRecoverableException("Task 0 not found in Unit 0 of course: " + course.getId());
-                }
-
-                return task;
-
-            case MASTERY_LEARNING:
-                return null; // ToDo
-
-            case MICROADAPTATION:
-                return null; // ToDo
-
-            default:
-                throw new NonRecoverableException("Unknwon task selection in course: " + course.getId());
-        }
-    }
-    */
+     * private Task getFirstTask(Course course) throws NonRecoverableException {
+     * System.out.println("Tutor: primary: " + course.getPrimaryPedagogy());
+     * switch (course.getPrimaryPedagogy()) {
+     * case STUDENT_CHOICE:
+     * return null; // ToDo
+     * 
+     * case FIXED_SEQUENCE:
+     * Unit unit = course.findUnitBySequenceId(0);
+     * 
+     * if (unit == null) {
+     * throw new NonRecoverableException("Unit 0 not found in course: " +
+     * course.getId());
+     * }
+     * 
+     * Task task = unit.findTaskBySequence(0);
+     * 
+     * if (task == null) {
+     * throw new NonRecoverableException("Task 0 not found in Unit 0 of course: " +
+     * course.getId());
+     * }
+     * 
+     * return task;
+     * 
+     * case MASTERY_LEARNING:
+     * return null; // ToDo
+     * 
+     * case MICROADAPTATION:
+     * return null; // ToDo
+     * 
+     * default:
+     * throw new NonRecoverableException("Unknwon task selection in course: " +
+     * course.getId());
+     * }
+     * }
+     */
 
     /**
      * Utility for logging an error and an creating a tutoring reply error with
@@ -593,5 +631,14 @@ public class MercTutor implements TutorSvc {
         }
 
         return new TutorReply(":ERR", errMsg);
+    }
+
+    private class StudentPayload {
+        int stepId;
+        int selectedComponentId;
+    }
+
+    private class StepData {
+        int correctComponentId;
     }
 }
