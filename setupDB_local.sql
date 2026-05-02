@@ -806,3 +806,8 @@ VALUES
     'The inner parameter is the letter z. Click the z!',
     1
   );
+
+INSERT INTO
+  MuFunction (Id, Name, Lhs, Rhs)
+VALUES
+  (0, 'Z', 'Z(x)', '0');

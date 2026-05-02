@@ -125,6 +125,8 @@ public class TutoringSessionView extends GPanel {
         // update the lambda view
         if (model.getProblem() != null) {
             lambdaCalcView.setModel(model.getProblem().getExpression());
+
+            muRecView.setModel(model.getProblem().getMuFunction());
         }
 
         // update the tutor view with instructions from session
@@ -179,56 +181,40 @@ public class TutoringSessionView extends GPanel {
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
 
         submitButton.addActionListener(e -> {
-            LCExpression selectedNode = lambdaCalcView.getSelectedExpression();
+            int selectedComponentId = -1;
 
-            if (selectedNode != null) {
-                System.out.println("Submitting answer for ID: " + selectedNode.getId());
+            if (lambdaCalcView.getSelectedExpression() != null) {
+                selectedComponentId = lambdaCalcView.getSelectedExpression().getId();
+            } else if (muRecView.getSelectedComponentId() != -1) {
+                selectedComponentId = muRecView.getSelectedComponentId();
+            }
+
+            if (selectedComponentId != -1) {
+                System.out.println("Submitting answer for ID: " + selectedComponentId);
 
                 ClientRequest request = new ClientRequest(ServerRequestType.COMPLETED_STEP);
-
                 request.setUserId(model.getStudent().getAccount().getUserId());
-                request.setSecurityToken((model.getSecurityToken()));
+                request.setSecurityToken(model.getSecurityToken());
 
                 int currentStepId = model.currentTask().currentStep().getStep().getId();
                 String jsonPayload = "{\"stepId\": " + currentStepId + ", \"selectedComponentId\": "
-                        + selectedNode.getId() + "}";
-
-                // String jsonPayload = "{\"selectedComponentId\": " + selectedNode.getId() +
-                // "}";
+                        + selectedComponentId + "}";
                 request.setData(jsonPayload);
 
                 TutorReply reply = SvcFacade.instance().tutorRequest(request);
 
                 if ("Success".equals(reply.getStatus())) {
-                    JOptionPane.showMessageDialog(this,
-                            "Correct! Moving to the next step.",
-                            "Correct!",
+                    JOptionPane.showMessageDialog(this, "Correct! Moving to the next step.", "Correct!",
                             JOptionPane.INFORMATION_MESSAGE);
-
                     model.currentTask().currentStep().setIsCompleted(true);
-
                     model.currentTask().advanceStep();
                     setModel(model);
-                    // Gson gson = new Gson();
-                    // TutoringSession updatedSession = gson.fromJson(reply.getData(),
-                    // TutoringSession.class);
-
-                    // setModel(updatedSession);
                 } else if ("Incorrect".equals(reply.getStatus())) {
-                    JOptionPane.showMessageDialog(this,
-                            reply.getData(),
-                            "Incorrect",
-                            JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(this, reply.getData(), "Incorrect", JOptionPane.WARNING_MESSAGE);
                 } else {
-                    JOptionPane.showMessageDialog(this,
-                            "System Error: " + reply.getData(),
-                            "Error",
+                    JOptionPane.showMessageDialog(this, "System Error: " + reply.getData(), "Error",
                             JOptionPane.ERROR_MESSAGE);
                 }
-
-                System.out.println("Server Evaluation: " + reply.getStatus());
-                System.out.println("Server Data: " + reply.getData());
-
             } else {
                 JOptionPane.showMessageDialog(this, "Please select a component first.");
             }
