@@ -13,6 +13,7 @@
 package edu.regis.merc.view;
 
 import edu.regis.merc.model.LCExpression;
+import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.PendingTask;
 import edu.regis.merc.model.TutoringSession;
 
@@ -42,6 +43,8 @@ public class TutoringSessionView extends GPanel {
     private TuringMachineView turingMachineView;
     private MuRecView muRecView;
     private LambdaCalcView lambdaCalcView;
+
+    private JButton showAnswerButton;
 
     // Horizontal split (MuRec | LambdaCalc)
     private JSplitPane bottomSplit;
@@ -146,14 +149,16 @@ public class TutoringSessionView extends GPanel {
 
         hintButton = new JButton("Hint");
         submitButton = new JButton("Submit");
+        showAnswerButton = new JButton("Show Answer");
 
         Dimension p1 = hintButton.getPreferredSize();
         Dimension p2 = submitButton.getPreferredSize();
-        int w = Math.max(p1.width, p2.width) + 10;
-        int h = Math.max(p1.height, p2.height);
+        Dimension p3 = showAnswerButton.getPreferredSize();
+        int w = Math.max(Math.max(p1.width, p2.width), p3.width) + 10;
+        int h = Math.max(Math.max(p1.height, p2.height), p3.height);
         Dimension uniform = new Dimension(w, h);
 
-        for (JButton b : new JButton[] { hintButton, submitButton }) {
+        for (JButton b : new JButton[] { hintButton, submitButton, showAnswerButton }) {
             b.setPreferredSize(uniform);
             b.setMinimumSize(uniform);
             b.setMaximumSize(uniform);
@@ -165,6 +170,8 @@ public class TutoringSessionView extends GPanel {
         buttonColumn.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 12));
         buttonColumn.add(Box.createVerticalGlue());
         buttonColumn.add(hintButton);
+        buttonColumn.add(Box.createVerticalStrut(12));
+        buttonColumn.add(showAnswerButton);
         buttonColumn.add(Box.createVerticalStrut(12));
         buttonColumn.add(submitButton);
         buttonColumn.add(Box.createVerticalGlue());
@@ -224,6 +231,73 @@ public class TutoringSessionView extends GPanel {
 
             } else {
                 JOptionPane.showMessageDialog(this, "Please select a component first.");
+            }
+        });
+
+        hintButton.addActionListener(e -> {
+            if (model == null || model.currentTask() == null || model.currentTask().currentStep() == null) {
+                JOptionPane.showMessageDialog(this, "No active step to get a hint for.");
+                return;
+            }
+
+            PendingStep pStep = model.currentTask().currentStep();
+            int currentStepId = pStep.getStep().getId();
+            int currentHintIndex = pStep.getCurrentHintIndex();
+
+            // send the step ID and the hint index
+            String jsonPayload = "{\"stepId\": " + currentStepId + ", \"hintIndex\": " + currentHintIndex + "}";
+
+            ClientRequest request = new ClientRequest(ServerRequestType.REQUEST_HINT);
+            request.setUserId(model.getStudent().getAccount().getUserId());
+            request.setSecurityToken(model.getSecurityToken());
+            request.setData(jsonPayload);
+
+            // send it to the server
+            TutorReply reply = SvcFacade.instance().tutorRequest(request);
+
+            // display the hint and advance
+            if ("Hint".equals(reply.getStatus())) {
+
+                // append the hint to the instructions
+                String baseInstructions = model.getCurrentInstructions();
+                tutorView.setInstructions(baseInstructions + "\n\nHINT: " + reply.getData());
+
+                // advance the local hint index so the next click gets the next hint
+                pStep.setCurrentHintIndex(currentHintIndex + 1);
+
+            } else {
+                JOptionPane.showMessageDialog(this, reply.getData(), "Hint Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        showAnswerButton.addActionListener(e -> {
+            if (model == null || model.currentTask() == null || model.currentTask().currentStep() == null) {
+                return;
+            }
+
+            int currentStepId = model.currentTask().currentStep().getStep().getId();
+            String jsonPayload = "{\"stepId\": " + currentStepId + "}";
+
+            ClientRequest request = new ClientRequest(ServerRequestType.MODEL_REQUEST);
+
+            request.setUserId(model.getStudent().getAccount().getUserId());
+            request.setSecurityToken(model.getSecurityToken());
+            request.setData(jsonPayload);
+
+            TutorReply reply = SvcFacade.instance().tutorRequest(request);
+
+            if ("Model".equals(reply.getStatus())) {
+                JOptionPane.showMessageDialog(this,
+                        "The correct component ID is: " + reply.getData() + ".\nLet's move to the next step.",
+                        "Answer Revealed",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+                model.currentTask().currentStep().setIsCompleted(true);
+                model.currentTask().advanceStep();
+                setModel(model);
+
+            } else {
+                JOptionPane.showMessageDialog(this, reply.getData(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
     }

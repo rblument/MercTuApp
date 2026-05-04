@@ -778,3 +778,31 @@ INSERT INTO
   MuFunction (Name, Lhs, Rhs)
 VALUES
   ('add', 'add(x, y)', '(x + y)');
+
+INSERT INTO
+  Hint (Id, StepId, Text, SequenceIndex)
+VALUES
+  (
+    10,
+    50,
+    'Look at the equation \\s.\\z.z. The outer parameter is the first variable declared after the first lambda.',
+    0
+  ),
+  (
+    11,
+    50,
+    'The outer parameter is the letter s. Click the s!',
+    1
+  ),
+  (
+    12,
+    51,
+    'The inner parameter is the second variable declared, right before the body.',
+    0
+  ),
+  (
+    13,
+    51,
+    'The inner parameter is the letter z. Click the z!',
+    1
+  );

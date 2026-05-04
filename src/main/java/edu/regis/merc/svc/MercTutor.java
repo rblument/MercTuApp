@@ -22,6 +22,7 @@ import edu.regis.merc.model.Assessment;
 import edu.regis.merc.model.AssessmentLevel;
 import edu.regis.merc.model.Course;
 import edu.regis.merc.model.GuiCtx;
+import edu.regis.merc.model.Hint;
 import edu.regis.merc.model.KnowledgeComponent;
 import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.PendingTask;
@@ -112,6 +113,7 @@ public class MercTutor implements TutorSvc {
                 // case "getTask":
             case "newExample":
             case "requestHint":
+            case "requestModel":
             case "resetPassword":
                 String userId = request.getUserId();
                 try {
@@ -414,10 +416,84 @@ public class MercTutor implements TutorSvc {
      *         a displayable hint text string.
      */
     public TutorReply requestHint(String jsonObj) {
-        System.out.println("requestHint");
-        StepCompletion completion = gson.fromJson(jsonObj, StepCompletion.class);
+        System.out.println("--- Server Received Hint Request ---");
 
-        return new TutorReply(":ERR", "Request Hint Not Implemented");
+        // unpack the json to find out which step the student is on
+        StudentPayload payload = gson.fromJson(jsonObj,
+                StudentPayload.class);
+        int activeStepId = payload.stepId;
+        int requestedHintIndex = payload.hintIndex;
+
+        System.out.println("Client requested hint index " + requestedHintIndex + " for Step ID: " + activeStepId);
+        System.out.println("Student requested a hint for Step ID: " + activeStepId);
+
+        // find the step the client is asking about
+        Step requestedStep = null;
+        if (session != null && session.currentTask() != null) {
+            for (Step s : session.currentTask().getTask().getSteps()) {
+                if (s.getId() == activeStepId) {
+                    requestedStep = s;
+                    break;
+                }
+            }
+        }
+
+        if (requestedStep == null) {
+            return new TutorReply(":ERR", "Step not found in current task.");
+        }
+
+        // grab the hints for this step
+        java.util.ArrayList<Hint> hints = requestedStep.getHints();
+        if (hints == null || hints.isEmpty()) {
+            return new TutorReply("Hint", "Sorry, no hints available for this step.");
+        }
+
+        // ensure the index is safe
+        if (requestedHintIndex >= hints.size()) {
+            requestedHintIndex = 0;
+        }
+
+        // send the hint back
+        String hintText = hints.get(requestedHintIndex).getText();
+        System.out.println("Sending Hint: " + hintText);
+
+        return new TutorReply("Hint", hintText);
+    }
+
+    public TutorReply requestModel(String jsonObj) {
+        System.out.println("--- Server Received Model Request (show Answer) ---");
+
+        // find out which step the student is asking about
+        StudentPayload payload = gson.fromJson(jsonObj, StudentPayload.class);
+        int activeStepId = payload.stepId;
+
+        System.out.println("Client requested the answer for Step ID: " + activeStepId);
+
+        // find the step in teh current task
+        Step requestedStep = null;
+        if (session != null && session.currentTask() != null) {
+            for (Step s : session.currentTask().getTask().getSteps()) {
+                if (s.getId() == activeStepId) {
+                    requestedStep = s;
+                    break;
+                }
+            }
+        }
+
+        if (requestedStep == null) {
+            return new TutorReply(":ERR", "Step not found in the current task.");
+        }
+        if (requestedStep.getData() == null || requestedStep.getData().isEmpty()) {
+            return new TutorReply(":ERR", "This step does not have answer data configured.");
+        }
+
+        // extract the correct answer from the database JSON
+        StepData expectedData = gson.fromJson(requestedStep.getData(), StepData.class);
+        String correctAnswerId = String.valueOf(expectedData.correctComponentId);
+
+        System.out.println("Sending Answer ID: " + correctAnswerId);
+
+        return new TutorReply("Model", correctAnswerId);
     }
 
     /**
@@ -636,6 +712,7 @@ public class MercTutor implements TutorSvc {
     private class StudentPayload {
         int stepId;
         int selectedComponentId;
+        int hintIndex;
     }
 
     private class StepData {
