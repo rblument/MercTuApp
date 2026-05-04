@@ -180,6 +180,13 @@ public class TutoringSessionView extends GPanel {
 
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
 
+        /**
+         * The grading logic below implements a priority-based seleciton check. It
+         * currently prioritizes LC selections over Mu-Recursive.
+         * 
+         * todo: Implement an observer pattern between LambdaCalcView and MuRecView to
+         * ensure mutual exclusivity of selection states.
+         */
         submitButton.addActionListener(e -> {
             int selectedComponentId = -1;
 
