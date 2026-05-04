@@ -30,6 +30,9 @@ import edu.regis.merc.model.ViewConfiguration;
 import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.svc.ProblemSvc;
 import edu.regis.merc.svc.ServiceFactory;
+import edu.regis.merc.model.MuFunction;
+import edu.regis.merc.model.MuExpression;
+import edu.regis.merc.model.LeftHandSide;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -157,6 +160,47 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                                 .println("Warning: LC Expression " + lcId + " listed in Problem but not found in DB.");
                     }
                 }
+                int muId = rs.getInt("MuRecursiveFunctionId");
+                System.out.println("DEBUG: Problem table says MuRecursiveFunctionId = " + muId);
+
+                if (!rs.wasNull() && muId >= 0) {
+                    System.out.println("DEBUG: Attempting to retrieve MuFunction ID: " + muId + " from DB...");
+                    try {
+                        MuFunction muFunc = retrieveMuFunction(muId, conn);
+                        if (muFunc != null) {
+                            System.out.println("DEBUG: Successfully built MuFunction: " + muFunc.toString());
+
+                            problem.setMuFunction(muFunc);
+                            System.out.println("DEBUG: Successfully attached MuFunction to the Problem object!");
+                        } else {
+                            System.out.println(
+                                    "DEBUG: retrieveMuFunction returned NULL! (Row doesn't exist in MuFunction table)");
+                        }
+                    } catch (Exception ex) {
+                        System.out.println("DEBUG: CRASH in retrieveMuFunction!");
+                        ex.printStackTrace();
+                    }
+                } else {
+                    System.out.println("DEBUG: Skipping MuFunction fetch (ID was null or negative)");
+                }
+
+                /*
+                 * Object muObj = rs.getObject("MuRecursiveFunctionId");
+                 * if (muObj != null) {
+                 * int muId = (int) muObj;
+                 * if (muId >= 0) {
+                 * try {
+                 * MuFunction muFunc = retrieveMuFunction(muId, conn);
+                 * if (muFunc != null) {
+                 * System.out.println("Found Mu Function: " + muFunc);
+                 * problem.setMuFunction(muFunc);
+                 * }
+                 * } catch (Exception e) {
+                 * System.out.println("Warning: MuFunction " + muId + " not found in DB.");
+                 * }
+                 * }
+                 * }
+                 */
 
                 return problem;
             } else {
@@ -656,5 +700,47 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
             }
         }
         return nums;
+    }
+
+    /**
+     * extracts a MuFunction from the database and builds the java object hierarchy
+     */
+    private MuFunction retrieveMuFunction(int muId, Connection conn) throws SQLException {
+        final String sql = "SELECT Name, Lhs, Rhs FROM MuFunction WHERE Id = ?";
+        PreparedStatement stmt = null;
+
+        try {
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, muId);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                String name = rs.getString("Name");
+                String lhsStr = rs.getString("Lhs");
+                String rhsStr = rs.getString("Rhs");
+
+                LeftHandSide lhs = new LeftHandSide(name);
+                int start = lhsStr.indexOf('(');
+                int end = lhsStr.indexOf(')');
+                if (start != -1 && end != -1) {
+                    String params = lhsStr.substring(start + 1, end);
+                    for (String p : params.split(",")) {
+                        lhs.addParameter(p.trim());
+                    }
+                }
+
+                MuExpression rhs;
+                try {
+                    rhs = new MuExpression(Integer.parseInt(rhsStr.trim()));
+                } catch (NumberFormatException e) {
+                    rhs = new MuExpression(rhsStr.trim());
+                }
+
+                return new MuFunction(muId, lhs, rhs);
+            }
+        } finally {
+            close(stmt);
+        }
+        return null;
     }
 }
