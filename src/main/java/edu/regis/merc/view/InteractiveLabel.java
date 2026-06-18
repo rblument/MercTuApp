@@ -12,9 +12,19 @@ import java.awt.event.MouseEvent;
  */
 public class InteractiveLabel extends JLabel {
 
+    /**
+     * the unique database ID associated with this component. This id is essential
+     * for synch between client-side selection and server-side grading logic
+     */
     private int componentId;
     private boolean isSelected = false;
 
+    /**
+     * Constructs an interactive math label
+     * 
+     * @param text        - the mathematical symbol to display (e.g., "x","λ" "0")
+     * @param componentId
+     */
     public InteractiveLabel(String text, int componentId) {
         super(text);
         this.componentId = componentId;
@@ -43,12 +53,20 @@ public class InteractiveLabel extends JLabel {
         });
     }
 
+    /**
+     * Returns the database ID required for the server-side grading loop
+     * 
+     * @return
+     */
     public int getComponentId() {
         return componentId;
     }
 
     /**
      * Toggles the selection state and updates the background color.
+     * * This method is called by the parent view to manage exclusive selection
+     * and visual synchronization across the tutoring session.
+     * * @param selected True if this component is the student's chosen answer.
      */
     public void setSelected(boolean selected) {
         this.isSelected = selected;
