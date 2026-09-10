@@ -460,6 +460,15 @@ public class MercTutor implements TutorSvc {
         return new TutorReply("Hint", hintText);
     }
 
+    /**
+     * This method implements a strictly stateless network contract. To prevent
+     * 'server amnesia,' the client must pass the current stepId and hintIndex in
+     * the JSON payload. This makes sure synchonization across asynch socket
+     * connections without relying on session memory
+     * 
+     * @param jsonObj
+     * @return
+     */
     public TutorReply requestModel(String jsonObj) {
         System.out.println("--- Server Received Model Request (show Answer) ---");
 

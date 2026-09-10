@@ -703,7 +703,12 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
     }
 
     /**
-     * extracts a MuFunction from the database and builds the java object hierarchy
+     * This method facilitates system interoperability by mapping relational MySQL
+     * strings into a hierarchical MuFunction AST.
+     * Possible future improvement could be done with the current parser. The
+     * current parser assumes a standard 'Name(Param) = Rhs' format. If complex
+     * nested functions are added to the DB, this parser should be upgraded to a
+     * formal Lexer/Parser patterns.
      */
     private MuFunction retrieveMuFunction(int muId, Connection conn) throws SQLException {
         final String sql = "SELECT Name, Lhs, Rhs FROM MuFunction WHERE Id = ?";
