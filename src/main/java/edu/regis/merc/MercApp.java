@@ -57,7 +57,7 @@ public class MercApp {
 
     /**
      * Main entry point for the ShaTut application, which will display the UI.
-     *
+     * Launch the MercTu desktop application.
      * @param args ignored
      */
     public static void main(String[] args) {
