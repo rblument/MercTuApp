@@ -94,21 +94,22 @@ public class ResetPasswordAction extends MercGuiAction {
         ClientRequest request = new ClientRequest(ServerRequestType.RESET_PASSWORD);
         request.setUserId(account.getUserId());
         request.setSecurityToken(token);
-        request.setData(new Gson().toJson(account));
+        //request.setData(new Gson().toJson(account));
 
-        request.setUserId(account.getUserId()); //required for session tracking
+        //request.setUserId(account.getUserId()); //required for session tracking
         request.setData(gson.toJson(account));
 
-        System.out.println(">>> Submitting RESET_PASSWORD request for: " + account.getUserId());
-        System.out.println(">>> Security token: " + token);
-        System.out.println(">>> Full JSON account data: " + gson.toJson(account));
+        //System.out.println(">>> Submitting RESET_PASSWORD request for: " + account.getUserId());
+        //System.out.println(">>> Security token: " + token);
+        //System.out.println(">>> Full JSON account data: " + gson.toJson(account));
   
         TutorReply reply = SvcFacade.instance().tutorRequest(request);
 
         String msg;
         String status = reply.getStatus();
+        //System.out.println("ResetPasswordAction: Server reply status = " + status);
+        //System.out.println("Account JSON sent: " + gson.toJson(account));
         System.out.println("ResetPasswordAction: Server reply status = " + status);
-        System.out.println("Account JSON sent: " + gson.toJson(account));
 
         if (status == null) {
             msg = "Server response was invalid. Please try again or contact support.";
@@ -118,10 +119,10 @@ public class ResetPasswordAction extends MercGuiAction {
 
         switch (status) {
             case "PasswordReset":
-                frame.clearNewAccountPanel();
-                msg = "Student user account password successfully reset\n\n" +
-                    "Press OK and we'll return you to the sign-in screen\n\n" +
-                    "Then, please sign-in to the tutor using this account.";
+                frame.clearResetPassword();
+                frame.clearForgotPassword();
+                msg = "Password successfully reset.\n\n" +
+                      "You can now sign in with your new password.";
                 JOptionPane.showMessageDialog(SplashFrame.instance(), msg);
                 frame.selectSplash();
                 break;

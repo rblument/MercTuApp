@@ -98,9 +98,6 @@ public class CheckSecurityQuestAction extends MercGuiAction {
             frame.initializeResetPassword(account.getUserId(), token);
             frame.selectResetPassword(account.getUserId());
 
-            msg = "Success!\n\n" +
-                "Press OK to create a new password\n\n";
-            JOptionPane.showMessageDialog(frame, msg);
             break;
 
             case "IllegalUserId":
