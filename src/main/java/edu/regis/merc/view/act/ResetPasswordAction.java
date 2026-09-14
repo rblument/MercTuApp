@@ -94,21 +94,14 @@ public class ResetPasswordAction extends MercGuiAction {
         ClientRequest request = new ClientRequest(ServerRequestType.RESET_PASSWORD);
         request.setUserId(account.getUserId());
         request.setSecurityToken(token);
-        //request.setData(new Gson().toJson(account));
 
-        //request.setUserId(account.getUserId()); //required for session tracking
+        //required for session tracking
         request.setData(gson.toJson(account));
-
-        //System.out.println(">>> Submitting RESET_PASSWORD request for: " + account.getUserId());
-        //System.out.println(">>> Security token: " + token);
-        //System.out.println(">>> Full JSON account data: " + gson.toJson(account));
   
         TutorReply reply = SvcFacade.instance().tutorRequest(request);
 
         String msg;
         String status = reply.getStatus();
-        //System.out.println("ResetPasswordAction: Server reply status = " + status);
-        //System.out.println("Account JSON sent: " + gson.toJson(account));
         System.out.println("ResetPasswordAction: Server reply status = " + status);
 
         if (status == null) {
