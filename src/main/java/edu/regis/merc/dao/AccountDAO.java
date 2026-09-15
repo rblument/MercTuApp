@@ -149,7 +149,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
      */
     @Override
     public void update(Account account) throws ObjNotFoundException, IllegalArgException, NonRecoverableException {
-        final String sql = "UPDATE Account SET Password = ?, FirstName = ?, LastName = ?, SecurityQuestion = ?, SecurityAnswer = ? WHERE UserId = ?";
+        final String sql = "UPDATE Account SET Password = ?, FirstName = ?, LastName = ?, Question = ?, Answer = ? WHERE UserId = ?";
 
         Connection conn = null;
         PreparedStatement stmt = null;

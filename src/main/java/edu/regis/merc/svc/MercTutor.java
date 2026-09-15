@@ -292,15 +292,11 @@ public class MercTutor implements TutorSvc {
         }
 
         try {
-            // Retrieve full DB account so we don't lose names or other info
+            // Retrieve the full account so existing account information is preserved.
             Account dbAcct = acctSvc.retrieve(acct.getUserId());
 
-            // Only update the changed fields
+            // Password is the only account field changed during password reset.
             dbAcct.setPassword(acct.getPassword());
-
-            // Only set security question/answer if needed
-            dbAcct.setSecurityQuestion(acct.getSecurityQuestion());
-            dbAcct.setSecurityAnswer(acct.getSecurityAnswer());
 
             acctSvc.update(dbAcct);
 

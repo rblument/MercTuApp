@@ -173,6 +173,11 @@ public class ResetPasswordPanel extends GPanel{
 
         backBut = new JButton("Back");
         backBut.setEnabled(true);
+        backBut.addActionListener(e -> {
+          clearFields();
+          setSecurityToken(null);
+          SplashFrame.instance().selectSplash();
+        });
         
         strength = new JLabel("(Strength: very poor)");
         strength.setForeground(new Color(173,7,1));

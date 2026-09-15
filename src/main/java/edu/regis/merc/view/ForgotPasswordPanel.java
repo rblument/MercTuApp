@@ -160,6 +160,10 @@ public class ForgotPasswordPanel extends GPanel{
 
         backBut = new JButton("Back");
         backBut.setEnabled(true);
+        backBut.addActionListener(e -> {
+          clearFields();
+          SplashFrame.instance().selectSplash();
+        });
         
         strength = new JLabel("(Strength: very poor)");
         strength.setForeground(new Color(173,7,1));
