@@ -17,30 +17,13 @@ import com.google.gson.GsonBuilder;
 import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
-import edu.regis.merc.model.Account;
-import edu.regis.merc.model.Assessment;
-import edu.regis.merc.model.AssessmentLevel;
-import edu.regis.merc.model.Course;
-import edu.regis.merc.model.GuiCtx;
-import edu.regis.merc.model.Hint;
-import edu.regis.merc.model.KnowledgeComponent;
-import edu.regis.merc.model.PendingStep;
-import edu.regis.merc.model.PendingTask;
-import edu.regis.merc.model.Problem;
-import edu.regis.merc.model.State;
-import edu.regis.merc.model.Step;
-import edu.regis.merc.model.StepCompletion;
-import edu.regis.merc.model.Student;
-import edu.regis.merc.model.StudentModel;
-import edu.regis.merc.model.Task;
-import edu.regis.merc.model.TuringMachine;
-import edu.regis.merc.model.TutoringSession;
-import edu.regis.merc.model.Unit;
+import edu.regis.merc.model.*;
 import edu.regis.merc.util.SHA_256;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
+import java.util.Optional;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -319,24 +302,24 @@ public class MercTutor implements TutorSvc {
      *         data being a JSon encoded TutoringSession object.
      */
     public TutorReply signIn(String jsonUser) {
-        System.out.println("Received sign in: " + jsonUser);
-        Account requestAcct = gson.fromJson(jsonUser, Account.class);
+        SignInRequest request = gson.fromJson(jsonUser, SignInRequest.class);
+        System.out.println("Received sign in from user: " + request.getUserId());
 
         try {
-            Account dbAcct = ServiceFactory.findAccountSvc().retrieve(requestAcct.getUserId());
-
-            if (dbAcct.getPassword().equals(requestAcct.getPassword())) {
+            AccountSvc acctSvc = ServiceFactory.findAccountSvc();
+            Optional<Account> optAcct = acctSvc.validatePassword(request.getUserId(), request.getPassword());
+            if(optAcct.isPresent()) {
+                Account dbAcct = optAcct.get();
                 student = new Student(dbAcct);
-                String userId = dbAcct.getUserId();
 
                 try {
                     StudentModelSvc stuModSvc = ServiceFactory.findStudentModelSvc();
-                    studentModel = stuModSvc.retrieve(userId);
+                    studentModel = stuModSvc.retrieve(dbAcct.getUserId());
                     student.setStudentModel(studentModel);
 
                 } catch (ObjNotFoundException ex) {
                     TutorReply reply = new TutorReply(":ERR");
-                    reply.setData("Student model not found in sign in for: " + userId);
+                    reply.setData("Student model not found in sign in for: " + dbAcct.getUserId());
                     return reply;
                 }
 
