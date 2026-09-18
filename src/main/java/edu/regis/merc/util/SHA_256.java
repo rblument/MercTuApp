@@ -23,8 +23,10 @@ import java.util.ArrayList;
  * See sha256(String). For example sha256("Regis Computer Science Rocks!")
  * returns fddfe0c1671993dbe8da88ccfbdf8aae3ae255d41b2808ff86041cca4cff65e5
  *
+ * Deprecated 9/18/26 - move to native java.security.MessageDigest.
  * @author rickb
  */
+@Deprecated
 public class SHA_256 {
 
     /**

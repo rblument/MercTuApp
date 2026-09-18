@@ -178,10 +178,7 @@ public class SplashPanel extends GPanel {
      */
     private void updateModel() {
         model.setUserId(userId.getText());
-
-        String encryptedPass = SHA_256.instance().sha256(new String(password.getPassword()));
-
-        model.setPassword(encryptedPass);
+        model.setPassword(new String(password.getPassword()));
     }
 
     /**

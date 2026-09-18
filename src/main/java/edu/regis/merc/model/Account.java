@@ -24,9 +24,14 @@ public class Account {
     protected String userId;
 
     /**
-     * An SHA-256 hashed password.
+     * The unhashed password of the account.
      */
     protected String password;
+
+    /**
+     * The hash of the user's password + the salt on the account.
+     */
+    protected String passwordHash;
 
     /**
      * A 32 byte salt for password hashing.
@@ -126,7 +131,23 @@ public class Account {
     }
 
     /**
-     * Return this user's password.
+     * Return the salt for this user's password hash
+     * @return the salt for password hashing
+     */
+    public String getSalt() {
+        return salt;
+    }
+
+    /**
+     * Change the salt for this user's password.
+     * @param salt The new salt for the user's password hash
+     */
+    public void setSalt(String salt) {
+        this.salt = salt;
+    }
+
+    /**
+     * Return this user's password hash
      *
      * @return a SHA-256 hashed String
      */
@@ -137,13 +158,31 @@ public class Account {
     /**
      * Assign this user's password.
      *
-     * @param password a SHA-256 hashed String
+     * @param password the raw password.
      */
     public void setPassword(String password) {
         this.password = password;
     }
-    
-      /**
+
+    /**
+     * Return this user's password hash of the pasword + salt.
+     *
+     * @return a SHA-256 hashed String
+     */
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    /**
+     * Assign this user's password hash of the raw password + salt..
+     *
+     * @param passwordHash the raw password.
+     */
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    /**
      * Return this StudentUser's first name.
      * @return the name String
      */
