@@ -35,6 +35,7 @@ USE MercTuDB;
 CREATE TABLE Account (
    UserId VARCHAR(256),
    Password VARCHAR(256) NOT NULL,
+   Salt VARCHAR(32) NOT NULL,
    FirstName VARCHAR(256),
    LastName VARCHAR(256),
    Question int,
@@ -443,12 +444,6 @@ INSERT INTO TmViewConfiguration
  VALUES
   (10, '0,1,2', '0,1,2', '', '2', '', 1, 1);
 
-CREATE TABLE TapeConfiguration (
-  Id INT NOT NULL,
-  CellId INT NOT NULL,
-  Content CHAR(1),
-  PRIMARY KEY(Id, CellId)
-);
 
 INSERT INTO TapeConfiguration (Id, CellId, Content) VALUES (10, 0, '1');
 INSERT INTO TapeConfiguration (Id, CellId, Content) VALUES (10, 1, '0');

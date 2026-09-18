@@ -32,6 +32,7 @@ CREATE TABLE
   Account (
     UserId VARCHAR(256),
     Password VARCHAR(256) NOT NULL,
+    Salt VARCHAR(32) NOT NULL,
     FirstName VARCHAR(256),
     LastName VARCHAR(256),
     Question int,

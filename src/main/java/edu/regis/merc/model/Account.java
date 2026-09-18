@@ -24,11 +24,21 @@ public class Account {
     protected String userId;
 
     /**
-     * An SHA-256 encrypted password.
+     * The unhashed password of the account.
      */
     protected String password;
-    
-     /**
+
+    /**
+     * The hash of the user's password + the salt on the account.
+     */
+    protected String passwordHash;
+
+    /**
+     * A 16 byte salt for password hashing.
+     */
+    protected String salt;
+
+    /**
      * The first name of this user for this account.
      */
     protected String firstName;
@@ -44,7 +54,7 @@ public class Account {
     protected int securityQuestion;
 
     /**
-     * An SHA-256 encrypted answer to the the security question.
+     * An SHA-256 hashed answer to the the security question.
      */
     protected String securityAnswer;
 
@@ -73,30 +83,18 @@ public class Account {
     }
     
     /**
-     * Constructor that takes a userId and a password.
-     * Allows setting both the user's login ID and password, while leaving
-     * the security question and answer fields as default values.
-     *
-     * @param userId The user's login ID (e.g., "name@university.edu").
-     * @param password The user's SHA-256 encrypted password.
-     */
-    public Account(String userId, String password) {
-        this(userId, password, 0, "");
-    }
-
-    /**
     * Full constructor for creating an Account.
     * Sets up all the fields of the account with provided values.
     *
     * @param userId The user's login ID (e.g., "name@university.edu").
-    * @param password The user's SHA-256 encrypted password.
+    * @param passwordHash The user's SHA-256 hashed password.
     * @param securityQuestion The ID of the security question selected by the user.
     * @param securityAnswer The user's SHA-256 encrypted answer to the security question.
     */
-    public Account(String userId, String password, int securityQuestion,
+    public Account(String userId, String passwordHash, int securityQuestion,
             String securityAnswer) {
         this.userId = userId; 
-        this.password = password; 
+        this.passwordHash = passwordHash;
         this.securityQuestion = securityQuestion;
         this.securityAnswer = securityAnswer;
         isStudent = true;
@@ -121,9 +119,25 @@ public class Account {
     }
 
     /**
-     * Return this user's password.
+     * Return the salt for this user's password hash
+     * @return the salt for password hashing
+     */
+    public String getSalt() {
+        return salt;
+    }
+
+    /**
+     * Change the salt for this user's password.
+     * @param salt The new salt for the user's password hash
+     */
+    public void setSalt(String salt) {
+        this.salt = salt;
+    }
+
+    /**
+     * Return this user's password hash
      *
-     * @return a SHA-256 encrypted String
+     * @return a SHA-256 hashed String
      */
     public String getPassword() {
         return password;
@@ -132,13 +146,31 @@ public class Account {
     /**
      * Assign this user's password.
      *
-     * @param password a SHA-256 encrypted String
+     * @param password the raw password.
      */
     public void setPassword(String password) {
         this.password = password;
     }
-    
-      /**
+
+    /**
+     * Return this user's password hash of the pasword + salt.
+     *
+     * @return a SHA-256 hashed String
+     */
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    /**
+     * Assign this user's password hash of the raw password + salt..
+     *
+     * @param passwordHash the raw password.
+     */
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    /**
      * Return this StudentUser's first name.
      * @return the name String
      */
@@ -236,6 +268,8 @@ public class Account {
     public void clear(){
         this.userId = null;
         this.password = null;
+        this.passwordHash = null;
+        this.salt = null;
         this.firstName = null;
         this.lastName = null;
         this.securityQuestion = 0;
