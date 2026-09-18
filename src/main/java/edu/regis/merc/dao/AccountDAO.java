@@ -244,7 +244,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
                 Account account = new Account(userId);
 
                 account.setPassword(rs.getString(1));
-                account.setPassword(rs.getString(2));
+                account.setSalt(rs.getString(2));
                 account.setFirstName(rs.getString(3));
                 account.setLastName(rs.getString(4));
                 account.setSecurityQuestion(rs.getInt(5));
@@ -302,11 +302,14 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
 
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
+        } catch (Throwable t){
+            t.printStackTrace();
+            throw t;
         }
     }
 
     private String getNewSalt() {
-        byte[] saltBytes = new byte[32];
+        byte[] saltBytes = new byte[16];
         new SecureRandom().nextBytes(saltBytes);
         return bytesToHex(saltBytes);
     }
