@@ -17,6 +17,11 @@ import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
 import edu.regis.merc.model.Account;
 import edu.regis.merc.svc.AccountSvc;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -43,13 +48,16 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
      */
     @Override
     public void create(Account acct) throws IllegalArgException, NonRecoverableException {
-        final String sql = "INSERT INTO Account (UserId, Password, FirstName, LastName, Question, Answer, IsStudent) VALUES (?,?,?,?,?,?,?)";
+        final String sql = "INSERT INTO Account (UserId, Password, Salt, FirstName, LastName, Question, Answer, IsStudent) VALUES (?,?,?,?,?,?,?,?)";
 
         if (acct.isStudent()) { // Can only create students, not admins.
             Connection conn = null;
             PreparedStatement stmt = null;
 
             String userId = acct.getUserId();
+
+            acct.setSalt(getNewSalt());
+            acct.setPasswordHash(getPasswordHash(acct.getPassword(), acct.getSalt()));
 
             try {
                 conn = DriverManager.getConnection(URL);
@@ -62,12 +70,13 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
                 stmt = conn.prepareStatement(sql, keyCol);
 
                 stmt.setString(1, userId);
-                stmt.setString(2, acct.getPassword());
-                stmt.setString(3, acct.getFirstName());
-                stmt.setString(4, acct.getLastName());
-                stmt.setInt(5, acct.getSecurityQuestion());
-                stmt.setString(6, acct.getSecurityAnswer());
-                stmt.setBoolean(7, acct.isStudent());
+                stmt.setString(2, acct.getPasswordHash());
+                stmt.setString(3, acct.getSalt());
+                stmt.setString(4, acct.getFirstName());
+                stmt.setString(5, acct.getLastName());
+                stmt.setInt(6, acct.getSecurityQuestion());
+                stmt.setString(7, acct.getSecurityAnswer());
+                stmt.setBoolean(8, acct.isStudent());
 
                 stmt.executeUpdate();
 
@@ -136,7 +145,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         try {
             conn = DriverManager.getConnection(URL);
 
-            return retrieve(userId, conn).orElseThrow(ObjNotFoundException::new);
+            return retrieve(userId, conn).orElseThrow(() -> new ObjNotFoundException("Student Id:" + userId));
 
         } catch (SQLException e) {
             throw new NonRecoverableException("AccountDAO-ERR-5" + e.toString(), e);
@@ -150,7 +159,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
      */
     @Override
     public void update(Account account) throws ObjNotFoundException, IllegalArgException, NonRecoverableException {
-        final String sql = "UPDATE Account SET Password = ?, FirstName = ?, LastName = ?, Question = ?, Answer = ? WHERE UserId = ?";
+        final String sql = "UPDATE Account SET Password = ?, Salt = ?, FirstName = ?, LastName = ?, Question = ?, Answer = ? WHERE UserId = ?";
 
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -160,17 +169,21 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         try {
             conn = DriverManager.getConnection(URL);
 
-            Account dbAcct = retrieve(userId, conn);
+            Account dbAcct = retrieve(userId, conn).orElseThrow(() -> new ObjNotFoundException("Student Id:" + userId));
 
             if (dbAcct.isStudent()) {
                 stmt = conn.prepareStatement(sql);
 
-                stmt.setString(1, account.getPassword());
-                stmt.setString(2, account.getFirstName());
-                stmt.setString(3, account.getLastName());
-                stmt.setInt(4, account.getSecurityQuestion());
-                stmt.setString(5, account.getSecurityAnswer());
-                stmt.setString(6, userId);
+                String salt = getNewSalt();
+                String passwordHash = getPasswordHash(account.getPassword(), salt);
+
+                stmt.setString(1, passwordHash);
+                stmt.setString(2, salt);
+                stmt.setString(3, account.getFirstName());
+                stmt.setString(4, account.getLastName());
+                stmt.setInt(5, account.getSecurityQuestion());
+                stmt.setString(6, account.getSecurityAnswer());
+                stmt.setString(7, userId);
 
                 int rows = stmt.executeUpdate();
 
@@ -194,13 +207,16 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
      */
     @Override
     public Optional<Account> validatePassword(String userId, String password) throws NonRecoverableException {
-        try {
-            Connection conn = DriverManager.getConnection(URL);
-            Account dbAcct = retrieve(userId, conn);
+        try (Connection conn = DriverManager.getConnection(URL)){
+            Optional<Account> optDbAcct = retrieve(userId, conn);
 
+            return optDbAcct.filter((Account dbAcct) ->  dbAcct.getPassword().equals(getPasswordHash(password, dbAcct.getSalt())));
 
+        } catch (SQLException e) {
+            throw new NonRecoverableException("AccountDAO-ERR-8" + e.toString(), e);
+        } catch (RuntimeException e) { /* Unwrap an unchecked wrapper for NoSuchAlgorithmException. */
+            throw new NonRecoverableException(e.getCause().getLocalizedMessage(), e.getCause());
         }
-
     }
 
     /**
@@ -212,8 +228,8 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
      * @return Optional.empty() if no account was found, Optional.of(Account) if it was.
      * @throws NonRecoverableException
      */
-    private Optional<Account> retrieve(String userId, Connection conn) throws ObjNotFoundException, NonRecoverableException {
-        final String sql = "SELECT Password, FirstName, LastName, Question, Answer, IsStudent FROM Account WHERE UserId = ?";
+    private Optional<Account> retrieve(String userId, Connection conn) throws NonRecoverableException {
+        final String sql = "SELECT Password, Salt, FirstName, LastName, Question, Answer, IsStudent FROM Account WHERE UserId = ?";
 
         PreparedStatement stmt = null;
 
@@ -228,11 +244,12 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
                 Account account = new Account(userId);
 
                 account.setPassword(rs.getString(1));
-                account.setFirstName(rs.getString(2));
-                account.setLastName(rs.getString(3));
-                account.setSecurityQuestion(rs.getInt(4));
-                account.setSecurityAnswer(rs.getString(5));
-                account.setIsStudent(rs.getBoolean(6));
+                account.setPassword(rs.getString(2));
+                account.setFirstName(rs.getString(3));
+                account.setLastName(rs.getString(4));
+                account.setSecurityQuestion(rs.getInt(5));
+                account.setSecurityAnswer(rs.getString(6));
+                account.setIsStudent(rs.getBoolean(7));
 
                 return Optional.of(account);
 
@@ -274,6 +291,36 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         } finally {
             close(stmt);
         }
+    }
+
+    private String getPasswordHash(String password, String salt) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(password.getBytes(StandardCharsets.UTF_8));
+            digest.update(salt.getBytes(StandardCharsets.UTF_8));
+            return bytesToHex(digest.digest());
+
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String getNewSalt() {
+        byte[] saltBytes = new byte[32];
+        new SecureRandom().nextBytes(saltBytes);
+        return bytesToHex(saltBytes);
+    }
+
+    private String bytesToHex(byte[] hash) {
+        StringBuilder hexString = new StringBuilder(2 * hash.length);
+        for (int i = 0; i < hash.length; i++) {
+            String hex = Integer.toHexString(0xff & hash[i]);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
     }
 }
 
