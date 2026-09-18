@@ -17,7 +17,22 @@ import com.google.gson.GsonBuilder;
 import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
-import edu.regis.merc.model.*;
+import edu.regis.merc.model.Account;
+import edu.regis.merc.model.Assessment;
+import edu.regis.merc.model.AssessmentLevel;
+import edu.regis.merc.model.Course;
+import edu.regis.merc.model.Hint;
+import edu.regis.merc.model.KnowledgeComponent;
+import edu.regis.merc.model.PendingStep;
+import edu.regis.merc.model.PendingTask;
+import edu.regis.merc.model.Problem;
+import edu.regis.merc.model.SignInRequest;
+import edu.regis.merc.model.Step;
+import edu.regis.merc.model.Student;
+import edu.regis.merc.model.StudentModel;
+import edu.regis.merc.model.Task;
+import edu.regis.merc.model.TutoringSession;
+import edu.regis.merc.model.Unit;
 import edu.regis.merc.util.SHA_256;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -203,7 +218,7 @@ public class MercTutor implements TutorSvc {
      * @param jsonAcct a JSon encoded Account object
      * @return a TutorReply if successful the status is "Created", otherwise the
      *         status is ":ERR".
-     * @throws edu.regis.shatu.err.NonRecoverableException
+     * @throws edu.regis.merc.err.NonRecoverableException
      */
     public TutorReply verifyUser(String jsonAcct) throws NonRecoverableException {
         Account requestAcct = gson.fromJson(jsonAcct, Account.class);
@@ -264,7 +279,7 @@ public class MercTutor implements TutorSvc {
      * @param jsonAcct a JSon encoded Account object
      * @return a TutorReply if successful the status is "Created", otherwise the
      *         status is ":ERR".
-     * @throws edu.regis.shatu.err.NonRecoverableException
+     * @throws edu.regis.merc.err.NonRecoverableException
      */
     public TutorReply resetPassword(String jsonAcct) throws NonRecoverableException {
         Account acct = gson.fromJson(jsonAcct, Account.class);
@@ -303,9 +318,11 @@ public class MercTutor implements TutorSvc {
      */
     public TutorReply signIn(String jsonUser) {
         SignInRequest request = gson.fromJson(jsonUser, SignInRequest.class);
-        System.out.println("Received sign in from user: " + request.getUserId());
 
         try {
+            if (request.getUserId() == null || request.getUserId().isEmpty() || request.getPassword() == null || request.getPassword().isEmpty()) {
+                return new TutorReply("InvalidPassword");
+            }
             AccountSvc acctSvc = ServiceFactory.findAccountSvc();
             Optional<Account> optAcct = acctSvc.validatePassword(request.getUserId(), request.getPassword());
             if(optAcct.isPresent()) {
@@ -422,7 +439,7 @@ public class MercTutor implements TutorSvc {
         }
 
         // grab the hints for this step
-        java.util.ArrayList<Hint> hints = requestedStep.getHints();
+        ArrayList<Hint> hints = requestedStep.getHints();
         if (hints == null || hints.isEmpty()) {
             return new TutorReply("Hint", "Sorry, no hints available for this step.");
         }
@@ -550,7 +567,7 @@ public class MercTutor implements TutorSvc {
     /**
      * Create and save a new tutoring session associated with the given account.
      *
-     * @param account the student user
+     * @param student the student user
      * @throws NonRecoverableException
      * @return the new TutoringSession
      */
@@ -591,7 +608,7 @@ public class MercTutor implements TutorSvc {
      * Create a Student for the given Account and save their initial student
      * model to the database.
      *
-     * @param acct   an Account representing a new student user
+     * @param account   an Account representing a new student user
      * @param course a Course that will be tutored to the student
      * @return a Student whose StudentModel reflects the specified course
      * @throws NonRecoverableException perhaps see getCause().getErrorCode().

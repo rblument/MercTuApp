@@ -34,7 +34,7 @@ public class Account {
     protected String passwordHash;
 
     /**
-     * A 32 byte salt for password hashing.
+     * A 16 byte salt for password hashing.
      */
     protected String salt;
 
@@ -82,31 +82,19 @@ public class Account {
         this(userId, "", 0, "");
     }
     
-    /*
-     * Constructor that takes a userId and a password.
-     * Allows setting both the user's login ID and password, while leaving
-     * the security question and answer fields as default values.
-     *
-     * @param userId The user's login ID (e.g., "name@university.edu").
-     * @param password The user's SHA-256 hashed password.
-
-    public Account(String userId, String password) {
-        this(userId, password, 0, "");
-    }*/
-
     /**
     * Full constructor for creating an Account.
     * Sets up all the fields of the account with provided values.
     *
     * @param userId The user's login ID (e.g., "name@university.edu").
-    * @param password The user's SHA-256 hashed password.
+    * @param passwordHash The user's SHA-256 hashed password.
     * @param securityQuestion The ID of the security question selected by the user.
     * @param securityAnswer The user's SHA-256 encrypted answer to the security question.
     */
-    public Account(String userId, String password, int securityQuestion,
+    public Account(String userId, String passwordHash, int securityQuestion,
             String securityAnswer) {
         this.userId = userId; 
-        this.password = password; 
+        this.passwordHash = passwordHash;
         this.securityQuestion = securityQuestion;
         this.securityAnswer = securityAnswer;
         isStudent = true;
@@ -280,6 +268,8 @@ public class Account {
     public void clear(){
         this.userId = null;
         this.password = null;
+        this.passwordHash = null;
+        this.salt = null;
         this.firstName = null;
         this.lastName = null;
         this.securityQuestion = 0;
