@@ -22,6 +22,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Optional;
 
 /**
  * A Data Access Object implementing {@link AccountSvc} behaviors.
@@ -135,7 +136,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         try {
             conn = DriverManager.getConnection(URL);
 
-            return retrieve(userId, conn);
+            return retrieve(userId, conn).orElseThrow(ObjNotFoundException::new);
 
         } catch (SQLException e) {
             throw new NonRecoverableException("AccountDAO-ERR-5" + e.toString(), e);
@@ -189,16 +190,29 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Optional<Account> validatePassword(String userId, String password) throws NonRecoverableException {
+        try {
+            Connection conn = DriverManager.getConnection(URL);
+            Account dbAcct = retrieve(userId, conn);
+
+
+        }
+
+    }
+
+    /**
      * Utility to retrieve the account with the given user id that uses an
      * established connection to the DB, which it does not close.
      *
      * @param userId
      * @param conn
-     * @return
-     * @throws ObjNotFoundException
+     * @return Optional.empty() if no account was found, Optional.of(Account) if it was.
      * @throws NonRecoverableException
      */
-    private Account retrieve(String userId, Connection conn) throws ObjNotFoundException, NonRecoverableException {
+    private Optional<Account> retrieve(String userId, Connection conn) throws ObjNotFoundException, NonRecoverableException {
         final String sql = "SELECT Password, FirstName, LastName, Question, Answer, IsStudent FROM Account WHERE UserId = ?";
 
         PreparedStatement stmt = null;
@@ -220,10 +234,10 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
                 account.setSecurityAnswer(rs.getString(5));
                 account.setIsStudent(rs.getBoolean(6));
 
-                return account;
+                return Optional.of(account);
 
             } else {
-                throw new ObjNotFoundException("Student Id:" + userId);
+                return Optional.empty();
             }
         } catch (SQLException e) {
             throw new NonRecoverableException("AccountDAO-ERR-9" + e.toString(), e);

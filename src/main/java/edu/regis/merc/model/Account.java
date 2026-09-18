@@ -24,11 +24,16 @@ public class Account {
     protected String userId;
 
     /**
-     * An SHA-256 encrypted password.
+     * An SHA-256 hashed password.
      */
     protected String password;
-    
-     /**
+
+    /**
+     * A 32 byte salt for password hashing.
+     */
+    protected String salt;
+
+    /**
      * The first name of this user for this account.
      */
     protected String firstName;
@@ -44,7 +49,7 @@ public class Account {
     protected int securityQuestion;
 
     /**
-     * An SHA-256 encrypted answer to the the security question.
+     * An SHA-256 hashed answer to the the security question.
      */
     protected String securityAnswer;
 
@@ -72,24 +77,24 @@ public class Account {
         this(userId, "", 0, "");
     }
     
-    /**
+    /*
      * Constructor that takes a userId and a password.
      * Allows setting both the user's login ID and password, while leaving
      * the security question and answer fields as default values.
      *
      * @param userId The user's login ID (e.g., "name@university.edu").
-     * @param password The user's SHA-256 encrypted password.
-     */
+     * @param password The user's SHA-256 hashed password.
+
     public Account(String userId, String password) {
         this(userId, password, 0, "");
-    }
+    }*/
 
     /**
     * Full constructor for creating an Account.
     * Sets up all the fields of the account with provided values.
     *
     * @param userId The user's login ID (e.g., "name@university.edu").
-    * @param password The user's SHA-256 encrypted password.
+    * @param password The user's SHA-256 hashed password.
     * @param securityQuestion The ID of the security question selected by the user.
     * @param securityAnswer The user's SHA-256 encrypted answer to the security question.
     */
@@ -123,7 +128,7 @@ public class Account {
     /**
      * Return this user's password.
      *
-     * @return a SHA-256 encrypted String
+     * @return a SHA-256 hashed String
      */
     public String getPassword() {
         return password;
@@ -132,7 +137,7 @@ public class Account {
     /**
      * Assign this user's password.
      *
-     * @param password a SHA-256 encrypted String
+     * @param password a SHA-256 hashed String
      */
     public void setPassword(String password) {
         this.password = password;
