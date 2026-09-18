@@ -19,10 +19,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.swing.BorderFactory;
@@ -138,7 +135,7 @@ public class ResetPasswordPanel extends GPanel{
      */
     private void updateModel() {
         model.setUserId(userEmail);
-        model.setPassword(encryptSHA256(new String(pass1.getPassword())));
+        model.setPassword(new String(pass1.getPassword()));
     }
 
     /**
@@ -507,49 +504,4 @@ public class ResetPasswordPanel extends GPanel{
             enableButtons(e.getDocument());
         }
     }
-
-    /**
-     * Encrypt the given password using MD5
-     */
-    private String encryptMD5(String password) {
-        try {
-            MessageDigest m = MessageDigest.getInstance("MD5");
-            byte[] data = password.getBytes();
-
-            m.update(data, 0, data.length);
-
-            BigInteger i = new BigInteger(1, m.digest());
-
-            return String.format("%1$032X", i).toLowerCase();
-        } catch (NoSuchAlgorithmException e) {
-            LOGGER.severe(e.toString());
-        }
-        return "";
-    }
-
-    /**
-     * Encrypt the given password using SHA-256
-     *
-     * @param base
-     * @return
-     */
-    public static String encryptSHA256(String base) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(base.getBytes("UTF-8"));
-            StringBuilder hexString = new StringBuilder();
-            for (int i = 0; i < hash.length; i++) {
-                String hex = Integer.toHexString(0xff & hash[i]);
-
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (UnsupportedEncodingException | NoSuchAlgorithmException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-    
 }

@@ -36,6 +36,7 @@ import java.util.Optional;
  */
 public class AccountDAO extends MySqlDAO implements AccountSvc {
 
+    private final SecureRandom secureRandom = new SecureRandom();
     /**
      * Initialize this DAO via the parent constructor.
      */
@@ -210,12 +211,12 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         try (Connection conn = DriverManager.getConnection(URL)){
             Optional<Account> optDbAcct = retrieve(userId, conn);
 
-            return optDbAcct.filter((Account dbAcct) ->  dbAcct.getPassword().equals(getPasswordHash(password, dbAcct.getSalt())));
+            return optDbAcct.filter((Account dbAcct) ->  dbAcct.getPasswordHash().equals(getPasswordHash(password, dbAcct.getSalt())));
 
         } catch (SQLException e) {
-            throw new NonRecoverableException("AccountDAO-ERR-8" + e.toString(), e);
-        } catch (RuntimeException e) { /* Unwrap an unchecked wrapper for NoSuchAlgorithmException. */
-            throw new NonRecoverableException(e.getCause().getLocalizedMessage(), e.getCause());
+            throw new NonRecoverableException("AccountDAO-ERR-11" + e.toString(), e);
+        } catch (RuntimeException e) {
+            throw new NonRecoverableException(e.getLocalizedMessage(), e);
         }
     }
 
@@ -243,7 +244,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
             if (rs.next()) {
                 Account account = new Account(userId);
 
-                account.setPassword(rs.getString(1));
+                account.setPasswordHash(rs.getString(1));
                 account.setSalt(rs.getString(2));
                 account.setFirstName(rs.getString(3));
                 account.setLastName(rs.getString(4));
@@ -302,15 +303,12 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
 
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
-        } catch (Throwable t){
-            t.printStackTrace();
-            throw t;
         }
     }
 
     private String getNewSalt() {
         byte[] saltBytes = new byte[16];
-        new SecureRandom().nextBytes(saltBytes);
+        secureRandom.nextBytes(saltBytes);
         return bytesToHex(saltBytes);
     }
 
