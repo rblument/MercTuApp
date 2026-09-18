@@ -1,15 +1,14 @@
 // Kristin Ingram
-
-
 package edu.regis.merc.model;
 
-// TESTS FOR EVERYTHING BEING CONNECTED PROPERLY 
+import static org.junit.Assert.assertEquals;
+
+import org.junit.jupiter.api.Test;
 
 public class MuFunctionTest {
-    public static void main(String[] args) {
 
-        // Simple Example: add(x, y) = (x + y)
-        
+    @Test
+    public void addFunction() {
         LeftHandSide lhs1 = new LeftHandSide("add");
         lhs1.addParameter("x");
         lhs1.addParameter("y");
@@ -17,10 +16,11 @@ public class MuFunctionTest {
         MuExpression rhs1 = new MuExpression(OpKind.ADD, "x", "y");
         MuFunction f1 = new MuFunction(1, lhs1, rhs1);
 
-        System.out.println("Example 1: " + f1);
+        assertEquals("add([x, y]) = (x + y)", f1.toString());
+    }
 
-        // Multiply Example: multiplyByFive(x) = (x * 5)
-
+    @Test
+    public void multiplyByFive() {
         LeftHandSide lhs2 = new LeftHandSide("multiplyByFive");
         lhs2.addParameter("x");
 
@@ -29,10 +29,11 @@ public class MuFunctionTest {
         MuExpression rhs2 = new MuExpression(OpKind.MUL, eLeft2, eRight2);
         MuFunction f2 = new MuFunction(2, lhs2, rhs2);
 
-        System.out.println("Example 2: " + f2);
+        assertEquals("multiplyByFive([x]) = (x * 5)", f2.toString());
+    }
 
-        //  Nested Example: addAndDouble(x, y) = ((x + y) * 2)
-     
+    @Test
+    public void addAndDouble() {
         LeftHandSide lhs3 = new LeftHandSide("addAndDouble");
         lhs3.addParameter("x");
         lhs3.addParameter("y");
@@ -41,27 +42,28 @@ public class MuFunctionTest {
         MuExpression rhs3 = new MuExpression(OpKind.MUL, innerAdd, new MuExpression(2));
         MuFunction f3 = new MuFunction(3, lhs3, rhs3);
 
-        System.out.println("Example 3: " + f3);
+        assertEquals("addAndDouble([x, y]) = ((x + y) * 2)", f3.toString());
+    }
 
-        // Subtract Example: subtractTen(x) = (x - 10)
-
+    @Test
+    public void subtract() {
         LeftHandSide lhs4 = new LeftHandSide("subtractTen");
         lhs4.addParameter("x");
 
         MuExpression rhs4 = new MuExpression(OpKind.SUB, "x", new MuExpression(10));
         MuFunction f4 = new MuFunction(4, lhs4, rhs4);
 
-        System.out.println("Example 4: " + f4);
+        assertEquals("subtractTen([x]) = (x - 10)", f4.toString());
+    }
 
-        
-        // Divide Example: half(x) = (x / 2)
-
+    @Test
+    public void divide() {
         LeftHandSide lhs5 = new LeftHandSide("half");
         lhs5.addParameter("x");
 
         MuExpression rhs5 = new MuExpression(OpKind.DIV, "x", new MuExpression(2));
         MuFunction f5 = new MuFunction(5, lhs5, rhs5);
 
-        System.out.println("Example 5: " + f5);
+        assertEquals("half([x]) = (x / 2)", f5.toString());
     }
 }
