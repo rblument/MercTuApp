@@ -187,6 +187,10 @@ public class MercTutor implements TutorSvc {
     public TutorReply createAccount(String jsonAcct) throws NonRecoverableException {
         Account acct = gson.fromJson(jsonAcct, Account.class);
 
+        if (acct.getPassword() == null || acct.getPassword().isEmpty()) {
+            return createError("A password is required to create an account.", null);
+        }
+
         int courseId = DEFAULT_COURSE_ID; // Currently only one course
 
         try {
@@ -283,8 +287,12 @@ public class MercTutor implements TutorSvc {
      */
     public TutorReply resetPassword(String jsonAcct) throws NonRecoverableException {
         Account acct = gson.fromJson(jsonAcct, Account.class);
-        AccountSvc acctSvc = ServiceFactory.findAccountSvc();
+        if (acct.getPassword() == null || acct.getPassword().isEmpty()) {
+            return createError("A password is required to reset the password on an account.", null);
+        }
 
+        AccountSvc acctSvc = ServiceFactory.findAccountSvc();
+        
         if (!acctSvc.exists(acct.getUserId())) {
             return new TutorReply("IllegalUserId");
         }

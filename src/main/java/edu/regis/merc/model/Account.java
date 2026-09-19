@@ -31,12 +31,12 @@ public class Account {
     /**
      * The hash of the user's password + the salt on the account.
      */
-    protected String passwordHash;
+    protected transient String passwordHash;
 
     /**
      * A 16 byte salt for password hashing.
      */
-    protected String salt;
+    protected transient String salt;
 
     /**
      * The first name of this user for this account.
