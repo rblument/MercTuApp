@@ -1,6 +1,6 @@
 package edu.regis.merc;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import edu.regis.merc.model.LeftHandSide;
 import edu.regis.merc.model.MuExpression;
@@ -17,7 +17,7 @@ public class MuTest {
         MuExpression rhsZ = new MuExpression(0);
         MuFunction fZ = new MuFunction(1, lhsZ, rhsZ);
 
-        assertEquals("The zero function should be zero.", "Z([x]) = 0", fZ.toString());
+        assertEquals("Z([x]) = 0", fZ.toString(), "The zero function should be zero.");
     }
 
     @Test
@@ -28,7 +28,7 @@ public class MuTest {
         MuExpression rhsS = new MuExpression(OpKind.ADD, new MuExpression("x"), new MuExpression(1));
         MuFunction fS = new MuFunction(2, lhsS, rhsS);
 
-        assertEquals("The successor function should add 1", "S([x]) = (x + 1)", fS.toString());
+        assertEquals("S([x]) = (x + 1)", fS.toString(), "The successor function should add 1");
     }
 
     @Test
@@ -41,7 +41,7 @@ public class MuTest {
         MuExpression rhsAD = new MuExpression(OpKind.MUL, add, new MuExpression(2));
         MuFunction fAD = new MuFunction(3, lhsAD, rhsAD);
 
-        assertEquals("A nested function should be correctly represented", "addDouble([x, y]) = ((x + y) * 2)", fAD.toString());
+        assertEquals("addDouble([x, y]) = ((x + y) * 2)", fAD.toString(), "A nested function should be correctly represented");
     }
 }
         
