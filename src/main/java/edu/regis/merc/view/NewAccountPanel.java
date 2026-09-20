@@ -142,7 +142,7 @@ public class NewAccountPanel extends GPanel {
         model.setUserId(userId.getText());
         model.setFirstName(fName.getText());
         model.setLastName(lName.getText());
-        model.setPassword(encryptSHA256(new String(pass1.getPassword())));
+        model.setPassword(new String(pass1.getPassword()));
         model.setSecurityQuestion(secQuestions.getSelectedIndex());
         model.setSecurityAnswer(encryptSHA256(new String(secAnswer.getPassword())));
     }
