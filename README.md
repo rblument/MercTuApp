@@ -97,7 +97,6 @@ bundle in `Msgs.properties`.
 ## Build and run
 
 ```bash
-cd MercTuApp
 mvn compile
 mvn exec:java          # main class comes from the exec.mainClass property
 ```
@@ -116,17 +115,28 @@ nor bundled dependencies, so `java -jar` will not work as-is.
 ## Tests
 
 ```bash
-cd MercTuApp
-mvn test
+mvn test                                      # everything
+mvn -Dtest=TuringMachineTest test             # one class
+mvn -Dtest='TuringMachineTest#testStep' test  # one method (quote it in bash)
 ```
 
-`TestLCParser` (JUnit 5) is the only test under `src/test`. Two additional
-drivers live in `src/main` and run as `main` methods rather than through Maven:
+Fifteen JUnit 5 tests across four classes under `src/test`, all of which run in
+CI on pull requests to `main` and `development`:
 
-- `edu.regis.merc.MuTest` — prints mu-recursive function formatting checks;
-  expected output is recorded in `MuTestOutput.txt`.
-- `edu.regis.merc.MuDAOTest` — inserts and reads back a mu function; requires a
-  live database.
+| Class | Covers |
+| --- | --- |
+| `model.TuringMachineTest` | Accept and reject runs of a Turing machine over `0`/`1` input. |
+| `model.MuFunctionTest` | Mu-recursive function formatting for each operator. |
+| `MuTest` | Zero, successor, and nested mu-recursive functions. |
+| `test.TestLCParser` | The lambda calculus parser. |
+
+None of them need a database. Failure detail lands in
+`target/surefire-reports/`.
+
+One driver still runs as a `main` method rather than through Maven:
+
+- `edu.regis.merc.MuDAOTest` — inserts and reads back a mu function. It
+  requires a live database.
 
 ## Authors
 
