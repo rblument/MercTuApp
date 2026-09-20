@@ -27,34 +27,56 @@ JUnit 4.12 / JUnit Jupiter 5.10.0 for tests.
 
 ### 1. Create the database
 
-The setup script drops and recreates the `MercTuDB` database, creates every
-table, and seeds the "See One" unit — the Zero Function overview problem with
-its Turing machine, hints, and knowledge component.
+One command, run as root from the repository root:
 
 ```bash
-cd MercTuApp
 mysql -u root -p < setupDB.sql
 ```
 
-The script's `CREATE USER` line is commented out. Create the tutor's database
-user yourself before running it, or uncomment the line:
+It creates the `MercTuTs` database user, rebuilds `MercTuDB`, and seeds the
+"See One" unit — the Zero Function overview problem with its Turing machine,
+lambda expressions, mu-recursive function, hints, and knowledge component.
 
-```sql
-CREATE USER 'MercTuTs'@'localhost' IDENTIFIED BY 'MercTu2025';
+> **This destroys any existing `MercTuDB`.** The script begins with
+> `DROP DATABASE IF EXISTS`, so every account, tutoring session, and student
+> model in it is lost. There is no migration path between schema versions —
+> recreating is the supported upgrade. Re-running the script is otherwise
+> safe, and is how you pick up a schema change from `development`.
+
+Run it from the repository root specifically: `setupDB.sql` pulls in the files
+under `sql/` with `SOURCE`, whose paths resolve against your current directory
+rather than the script's own location.
+
+| File | Contents |
+| --- | --- |
+| `setupDB.sql` | Entry point. Drops and recreates the database, then sources the three below in order. |
+| `sql/01_user.sql` | Creates `MercTuTs` and grants it privileges on `MercTuDB`. Idempotent. |
+| `sql/02_schema.sql` | Every table definition — the single source of truth for the schema. |
+| `sql/03_seed.sql` | The "See One" seed data. |
+| `deleteTestUser.sql` | Removes the `test@regis.edu` account between manual test runs. |
+
+Add new tables to `sql/02_schema.sql` and new seed rows to `sql/03_seed.sql`.
+Do not copy table definitions into other scripts — three partial copies of the
+schema is what this layout replaced, and they had silently drifted apart.
+
+To confirm the setup worked, connect as the application's own user:
+
+```bash
+mysql -u MercTuTs -p MercTuDB -e \
+  "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='MercTuDB';"
 ```
 
-Three SQL scripts are provided:
+Expect **39** tables. If you get 0, your `mysql` client did not process the
+`SOURCE` lines; run `sql/01_user.sql`, `sql/02_schema.sql`, and
+`sql/03_seed.sql` by hand instead.
 
-- `setupDB.sql` — canonical schema plus seed data; includes the `GRANT`.
-- `setupDB_local.sql` — same schema with the `GRANT` commented out (for running
-  everything as a local root user), plus extra seed hints for the lambda
-  parameter-selection steps.
-- `setupDB_lambdaTables.sql` — the `LC_*` lambda expression tables only, written
-  idempotently with `CREATE TABLE IF NOT EXISTS`; useful for adding them to an
-  existing database.
+If the application later fails to authenticate, a `MercTuTs` user from an
+earlier setup may have a different password — `CREATE USER IF NOT EXISTS`
+leaves existing users untouched. Reset it to match `Merc.properties`:
 
-`deleteTestUser.sql` removes the `test@regis.edu` account between manual test
-runs.
+```sql
+ALTER USER 'MercTuTs'@'localhost' IDENTIFIED BY 'MercTu2025';
+```
 
 ### 2. Configure the connection
 
