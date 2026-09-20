@@ -202,7 +202,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
             if (dbAcct.isStudent()) {
                 stmt = conn.prepareStatement(sql);
 
-                String salt = getNewSalt();
+                String salt = bytesToHex(generateSalt(SALT_LENGTH_BYTES));
                 String passwordHash = getPasswordHash(account.getPassword(), salt);
 
                 stmt.setString(1, passwordHash);
