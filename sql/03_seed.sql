@@ -19,6 +19,18 @@
 -- Assumes 02_schema.sql has already run against the selected database.
 
 
+-- MuFunction.Id is AUTO_INCREMENT, and MySQL normally reinterprets an
+-- explicitly inserted 0 as "generate the next value". That silently moved the
+-- zero function Z off id 0, leaving Problem.MuRecursiveFunctionId = 0 pointing
+-- at nothing, so ProblemDAO could not load the mu-recursive representation of
+-- the Zero Function. NO_AUTO_VALUE_ON_ZERO makes an explicit 0 mean 0.
+--
+-- MuFunction is the only seeded table where this applies: TuringMachine seeds
+-- a non-zero id, and Assessment, PendingStep and TutoringSession have no seed
+-- rows at all.
+SET SESSION sql_mode = CONCAT(@@SESSION.sql_mode, ',NO_AUTO_VALUE_ON_ZERO');
+
+
 -- ---------------------------------------------------------------
 -- Course, units, problems, tasks, steps and their view configs
 -- ---------------------------------------------------------------
