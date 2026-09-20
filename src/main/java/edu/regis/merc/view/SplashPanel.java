@@ -79,6 +79,11 @@ public class SplashPanel extends GPanel {
     protected JButton forgotPasswordBut;
 
     /**
+     * Displays a close button closing the splash panel and exiting the application.
+     */
+    protected JButton closeBut;
+
+    /**
      * Create and layout the child GUI components in this panel.
      */
     public SplashPanel() {
@@ -88,10 +93,6 @@ public class SplashPanel extends GPanel {
 
         initializeComponents();
         layoutComponents();
-
-        // ToDo: TMP DEBUGGING (saves me typing), remove this for real
-        userId.setText("test@regis.edu");
-        password.setText("TestP@ss");
     }
 
     /**
@@ -223,6 +224,9 @@ public class SplashPanel extends GPanel {
         createAcctBut = new JButton(NewUserAction.instance());
 
         forgotPasswordBut = new JButton(ForgotPasswordAction.instance());
+
+        closeBut = new JButton("Close");
+        closeBut.addActionListener(e -> System.exit(0));
     }
 
     /**
@@ -314,6 +318,9 @@ public class SplashPanel extends GPanel {
         panel.addc(forgotPasswordBut, 1, 5, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 15, 5, 5, 5);
+        panel.addc(closeBut, 0, 6, 2, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.NONE,
+                5, 5, 5, 5);
         return panel;
     }
 

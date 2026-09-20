@@ -151,6 +151,8 @@ public class SplashFrame extends JFrame {
     private SplashFrame() {
         super("ShaTu");
 
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
         // Get screen dimensions
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
