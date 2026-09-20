@@ -29,7 +29,8 @@ public class Account {
     protected String password;
 
     /**
-     * The hash of the user's password + the salt on the account.
+     * The PBKDF2-HMAC-SHA256 derived key for the user's password and the
+     * salt on the account, hex-encoded.
      */
     protected transient String passwordHash;
 
@@ -135,9 +136,9 @@ public class Account {
     }
 
     /**
-     * Return this user's password hash
+     * Return this user's unhashed password.
      *
-     * @return a SHA-256 hashed String
+     * @return the raw password String
      */
     public String getPassword() {
         return password;
@@ -153,18 +154,18 @@ public class Account {
     }
 
     /**
-     * Return this user's password hash of the pasword + salt.
+     * Return this user's PBKDF2-HMAC-SHA256 derived key for the password + salt.
      *
-     * @return a SHA-256 hashed String
+     * @return a hex-encoded PBKDF2 derived key String
      */
     public String getPasswordHash() {
         return passwordHash;
     }
 
     /**
-     * Assign this user's password hash of the raw password + salt..
+     * Assign this user's PBKDF2-HMAC-SHA256 derived key for the raw password + salt.
      *
-     * @param passwordHash the raw password.
+     * @param passwordHash a hex-encoded PBKDF2 derived key.
      */
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;

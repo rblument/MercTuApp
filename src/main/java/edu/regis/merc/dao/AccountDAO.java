@@ -18,9 +18,8 @@ import edu.regis.merc.err.ObjNotFoundException;
 import edu.regis.merc.model.Account;
 import edu.regis.merc.svc.AccountSvc;
 
-import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -29,6 +28,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
 
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+
 /**
  * A Data Access Object implementing {@link AccountSvc} behaviors.
  *
@@ -36,7 +39,31 @@ import java.util.Optional;
  */
 public class AccountDAO extends MySqlDAO implements AccountSvc {
 
-    private final SecureRandom secureRandom = new SecureRandom();
+    /**
+     * The number of PBKDF2 iterations used to derive a password key.
+     *
+     * Deliberately lower than the 600,000 recommended by OWASP so that
+     * sign-in stays responsive in this desktop/classroom application.
+     * Changing this value invalidates previously derived keys, so any
+     * change requires all users to reset their passwords.
+     */
+    private static final int PBKDF2_ITERATIONS = 100_000;
+
+    /**
+     * The length in bits of the derived PBKDF2 key (32 bytes, 64 hex chars).
+     */
+    private static final int PBKDF2_KEY_LENGTH_BITS = 256;
+
+    /**
+     * The length in bytes of a newly generated salt (128 bits, 32 hex chars).
+     */
+    private static final int SALT_LENGTH_BYTES = 16;
+
+    /**
+     * A shared, thread-safe source of cryptographic randomness.
+     */
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     /**
      * Initialize this DAO via the parent constructor.
      */
@@ -57,7 +84,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
 
             String userId = acct.getUserId();
 
-            acct.setSalt(getNewSalt());
+            acct.setSalt(bytesToHex(generateSalt(SALT_LENGTH_BYTES)));
             acct.setPasswordHash(getPasswordHash(acct.getPassword(), acct.getSalt()));
 
             try {
@@ -211,10 +238,21 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         try (Connection conn = DriverManager.getConnection(URL)){
             Optional<Account> optDbAcct = retrieve(userId, conn);
 
-            return optDbAcct.filter((Account dbAcct) ->  dbAcct.getPasswordHash().equals(getPasswordHash(password, dbAcct.getSalt())));
+            if (optDbAcct.isEmpty()) {
+                return Optional.empty();
+            }
+
+            Account dbAcct = optDbAcct.get();
+            byte[] expected = hexToBytes(dbAcct.getPasswordHash());
+            byte[] actual = hashPassword(password.toCharArray(), hexToBytes(dbAcct.getSalt()),
+                    PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH_BITS);
+
+            return MessageDigest.isEqual(expected, actual) ? optDbAcct : Optional.empty();
 
         } catch (SQLException e) {
             throw new NonRecoverableException("AccountDAO-ERR-11" + e.toString(), e);
+        } catch (GeneralSecurityException e) {
+            throw new NonRecoverableException(e.getLocalizedMessage(), e);
         } catch (RuntimeException e) {
             throw new NonRecoverableException(e.getLocalizedMessage(), e);
         }
@@ -294,22 +332,57 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         }
     }
 
+    /**
+     * Derive a PBKDF2-HMAC-SHA256 key from the given password and salt.
+     *
+     * @param password the raw password characters
+     * @param salt the random salt bytes
+     * @param iterations the number of PBKDF2 iterations
+     * @param keyLengthBits the desired derived key length in bits
+     * @return the derived key bytes
+     * @throws GeneralSecurityException if the algorithm or key spec is unsupported
+     */
+    public static byte[] hashPassword(char[] password, byte[] salt, int iterations, int keyLengthBits) throws GeneralSecurityException {
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+
+        PBEKeySpec spec = new PBEKeySpec(password, salt, iterations, keyLengthBits);
+        try {
+            SecretKey secretKey = factory.generateSecret(spec);
+            return secretKey.getEncoded();
+        } finally {
+            spec.clearPassword();
+        }
+    }
+
+    /**
+     * Generate a cryptographically random salt.
+     *
+     * @param lengthBytes the number of bytes to generate
+     * @return the random salt bytes
+     */
+    public static byte[] generateSalt(int lengthBytes) {
+        byte[] salt = new byte[lengthBytes];
+        SECURE_RANDOM.nextBytes(salt);
+        return salt;
+    }
+
     private String getPasswordHash(String password, String salt) {
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update(password.getBytes(StandardCharsets.UTF_8));
-            digest.update(salt.getBytes(StandardCharsets.UTF_8));
-            return bytesToHex(digest.digest());
+            return bytesToHex(hashPassword(password.toCharArray(), hexToBytes(salt),
+                    PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH_BITS));
 
-        } catch (NoSuchAlgorithmException e) {
+        } catch (GeneralSecurityException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private String getNewSalt() {
-        byte[] saltBytes = new byte[16];
-        secureRandom.nextBytes(saltBytes);
-        return bytesToHex(saltBytes);
+    static byte[] hexToBytes(String hex) {
+        int length = hex.length();
+        byte[] bytes = new byte[length / 2];
+        for (int i = 0; i < length; i += 2) {
+            bytes[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4) + Character.digit(hex.charAt(i + 1), 16));
+        }
+        return bytes;
     }
 
     private String bytesToHex(byte[] hash) {
