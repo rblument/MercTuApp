@@ -13,8 +13,14 @@
 
 -- Creates the database user the tutor authenticates as.
 --
--- Run this ONCE per MySQL server, as root, before 02_schema.sql. It is
--- idempotent: re-running it neither fails nor changes an existing password.
+-- Sourced by setupDB.sql; run it directly only to repair the user without
+-- rebuilding the database. Requires root either way.
+--
+-- Idempotent: re-running neither fails nor resets an existing user's
+-- password. The GRANT is issued before MercTuDB exists, which MySQL permits
+-- -- database-level privileges do not require the schema to be present, and
+-- they survive the DROP DATABASE that follows.
+--
 -- The credentials must match DB_USER / DB_PASS in
 -- src/main/java/resources/Merc.properties.
 

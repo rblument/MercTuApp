@@ -11,20 +11,23 @@
  *  or conditions of any kind, either expressed or implied.
  */
 
--- Creates MercTuDB from scratch and loads the "See One" seed data.
+-- Creates the tutor's database user, builds MercTuDB from scratch, and loads
+-- the "See One" seed data. This is the only command needed to set up a
+-- development machine:
 --
 --   mysql -u root -p < setupDB.sql
 --
--- Run it from the repository root: the SOURCE paths below are relative to
--- the directory mysql was started in, not to this file.
+-- Run it from the repository root. The SOURCE paths below resolve against the
+-- directory mysql was started in, not against this file's location.
 --
--- Create the tutor's database user first, once per MySQL server:
---
---   mysql -u root -p < sql/01_user.sql
+-- Everything here is safe to re-run. The user is created only if absent, and
+-- the database is rebuilt from nothing each time.
 --
 -- WARNING: this DROPS MercTuDB. Every account, tutoring session and student
 -- model in it is destroyed. There is no migration path from an older schema
 -- -- recreating is the supported upgrade.
+
+SOURCE sql/01_user.sql;
 
 DROP DATABASE IF EXISTS MercTuDB;
 
