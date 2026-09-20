@@ -195,6 +195,7 @@ public class MercTutor implements TutorSvc {
 
         try {
             ServiceFactory.findAccountSvc().create(acct);
+            acct.setPassword("");
         } catch (IllegalArgException e) {
             return createError(String.format("Account %s exists", acct.getUserId()), null);
         }
@@ -248,6 +249,7 @@ public class MercTutor implements TutorSvc {
                     student = createStudent(dbAcct, ServiceFactory.findCourseSvc().retrieve(DEFAULT_COURSE_ID));
                 }
 
+                dbAcct.setPassword("");
                 // Check if session already exists before creating
                 SessionSvc sessionSvc = ServiceFactory.findSessionSvc();
                 TutoringSession session;
