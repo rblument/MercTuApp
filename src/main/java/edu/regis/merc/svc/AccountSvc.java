@@ -17,6 +17,8 @@ import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
 import edu.regis.merc.model.Account;
 
+import java.util.Optional;
+
 /**
  * The API for {@link Account} life-cycle maintenance (CRUD persistence).
  * 
@@ -71,5 +73,15 @@ public interface AccountSvc {
      * @throws NonRecoverableException (see getCause().getErrorCode()).
      */
     boolean exists(String userId) throws NonRecoverableException;
+
+    /**
+     * Check if a supplied password matches the hash and salt stored in the database for
+     * this user.
+     * @param userId The id of the user attempting to login
+     * @param password The raw password offered for login
+     * @return An Optional containing the account of the user if login is valid, Optional.empty() if it is not.
+     * @throws NonRecoverableException (see getCause().getErrorCode()).
+     */
+    Optional<Account> validatePassword(String userId, String password) throws NonRecoverableException;
 }
 
