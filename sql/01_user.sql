@@ -17,17 +17,21 @@
 -- rebuilding the database. Requires root either way.
 --
 -- Idempotent: re-running neither fails nor resets an existing user's
--- password. The GRANT is issued before MercTuDB exists, which MySQL permits
--- -- database-level privileges do not require the schema to be present, and
--- they survive the DROP DATABASE that follows.
+-- password.
 --
 -- The credentials must match DB_USER / DB_PASS in
 -- src/main/java/resources/Merc.properties.
 
 CREATE USER IF NOT EXISTS 'MercTuTs'@'localhost' IDENTIFIED BY 'MercTu2025';
 
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP
+-- Data privileges only. The application issues no DDL -- every SQL statement
+-- in src/ is a SELECT, INSERT, UPDATE or DELETE -- so it has no need to
+-- create, drop or alter tables, and should not be able to. setupDB.sql does
+-- its DROP DATABASE as root, not as this user, so setup is unaffected.
+--
+-- A future schema-migration tool (Flyway or a startup migration runner) would
+-- need CREATE and ALTER added back. Add them deliberately at that point
+-- rather than granting them ahead of any need.
+GRANT SELECT, INSERT, UPDATE, DELETE
    ON MercTuDB.*
    TO 'MercTuTs'@'localhost';
-
-FLUSH PRIVILEGES;

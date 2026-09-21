@@ -27,13 +27,13 @@
 -- model in it is destroyed. There is no migration path from an older schema
 -- -- recreating is the supported upgrade.
 
-SOURCE sql/01_user.sql;
-
 DROP DATABASE IF EXISTS MercTuDB;
 
 CREATE DATABASE MercTuDB;
 
 USE MercTuDB;
+
+SOURCE sql/01_user.sql;
 
 SOURCE sql/02_schema.sql;
 
