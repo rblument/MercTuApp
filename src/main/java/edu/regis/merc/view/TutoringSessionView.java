@@ -12,6 +12,7 @@
  */
 package edu.regis.merc.view;
 
+import edu.regis.merc.MercApp;
 import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.PendingTask;
@@ -183,7 +184,7 @@ public class TutoringSessionView extends GPanel {
         buttonColumn.add(Box.createVerticalGlue());
 
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
-        closeButton.addActionListener(e -> System.exit(0));
+        closeButton.addActionListener(e -> MercApp.shutdown());
 
         /**
          * The grading logic below implements a priority-based seleciton check. It

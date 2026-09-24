@@ -12,9 +12,12 @@
  */
 package edu.regis.merc.view;
 
+import edu.regis.merc.MercApp;
 import edu.regis.merc.model.TutoringSession;
 import java.awt.Dimension;
 import java.awt.Toolkit;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -86,9 +89,16 @@ public class MainFrame extends JFrame {
         initializeComponents();
         layoutComponents();
 
-        setVisible(false);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                MercApp.shutdown();
+            }
+        });
+
+        setVisible(false);
     }
   
     /**
