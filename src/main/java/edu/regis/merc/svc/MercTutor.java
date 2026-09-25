@@ -529,9 +529,17 @@ public class MercTutor implements TutorSvc {
         // The session's own pointer decides which step is being answered, not
         // the id the client sent. Grading one step while advancing another is
         // how a correct answer could leave the student on the same question.
-        PendingTask pendingTask = session.currentTask();
-        PendingStep pendingStep = pendingTask.currentStep();
-        Step currentStep = pendingStep.getStep();
+        PendingTask pendingTask = session == null ? null : session.currentTask();
+        PendingStep pendingStep = pendingTask == null ? null : pendingTask.currentStep();
+
+        // getStep() is null when a PendingStep row names a StepId the task does
+        // not contain, which findStepById reports by returning null rather than
+        // failing.
+        Step currentStep = pendingStep == null ? null : pendingStep.getStep();
+
+        if (currentStep == null) {
+            return new TutorReply(":ERR", "No current step in this session.");
+        }
 
         if (currentStep.getId() != activeStepId) {
             // A stale client, or one that advanced on its own. Answering a
