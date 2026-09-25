@@ -12,6 +12,7 @@
  */
 package edu.regis.merc;
 
+import com.mysql.cj.jdbc.AbandonedConnectionCleanupThread;
 import edu.regis.merc.svc.MercServer;
 import edu.regis.merc.util.ResourceMgr;
 import edu.regis.merc.view.MainFrame;
@@ -28,6 +29,7 @@ import java.util.logging.Logger;
  * @author rickb
  */
 public class MercApp {
+
     /**
      * Property file located on the CLASSPATH, which is used to configure the LOGGER.
      */
@@ -37,6 +39,21 @@ public class MercApp {
      * Events of interest occurring in this class are logged to this logger.
      */
     private static final Logger LOGGER = Logger.getLogger(MercApp.class.getName());
+
+    /**
+     * The Merc tutoring server used by this application.
+     */
+    private static MercServer mercServer;
+
+    /**
+     * Thread running the Merc tutoring server.
+     */
+    private static Thread mercServerThread;
+
+    /**
+     * Prevents shutdown from being initiated more than once.
+     */
+    private static boolean shuttingDown = false;
 
     /**
      * Configure the LOGGER with the properties found in the LOGGER_PROPERTIES
@@ -58,6 +75,7 @@ public class MercApp {
     /**
      * Main entry point for the ShaTut application, which will display the UI.
      * Launch the MercTu desktop application.
+     *
      * @param args ignored
      */
     public static void main(String[] args) {
@@ -83,17 +101,31 @@ public class MercApp {
 
         System.out.println("Finished initializing");
 
-        // Create the server and then initialize the GUI client (see ntoes).
+        // Create the server and then initialize the GUI client (see notes).
         try {
             LOGGER.info(" Starting Merc Server (Tutoring Service)...");
+
             // ToDo: Separate the initialization of client and server
             // Start the socket server for the Merc tutor.
-            (new Thread(new MercServer())).start();
+            mercServer = new MercServer();
 
-            // ToDo: This puts the main client UI thread to sleep to give the 
-            // server a chance to finish starting. This won't be required once 
+            mercServerThread = new Thread(mercServer, "merc-server");
+
+            mercServerThread.start();
+
+            // Ensure the server socket is closed if JVM shutdown is initiated
+            // externally, such as with Ctrl+C.
+            Runtime.getRuntime().addShutdownHook(
+                    new Thread(() -> {
+                        if (mercServer != null) {
+                            mercServer.close();
+                        }
+                    }, "merc-server-shutdown"));
+
+            // ToDo: This puts the main client UI thread to sleep to give the
+            // server a chance to finish starting. This won't be required once
             // we separate the server into its own application that executes
-            // on a different host from the GUI client since the server should 
+            // on a different host from the GUI client since the server should
             // "always" be running.
             Thread.sleep(4000);
 
@@ -113,9 +145,54 @@ public class MercApp {
             LOGGER.info("Merc Initialization successful.");
 
         } catch (InterruptedException ex) {
-            Logger.getLogger(MercApp.class.getName()).log(Level.SEVERE, null, ex);
+            Thread.currentThread().interrupt();
+
+            Logger.getLogger(MercApp.class.getName())
+                    .log(Level.SEVERE, null, ex);
         }
     }
-    
+
+    /**
+     * Gracefully shut down the Merc server, MySQL cleanup thread, and
+     * application windows.
+     */
+    public static synchronized void shutdown() {
+        if (shuttingDown) {
+            return;
+        }
+
+        shuttingDown = true;
+
+        LOGGER.info("MERC shutdown initiated.");
+
+        if (mercServer != null) {
+            mercServer.close();
+        }
+
+        if (mercServerThread != null
+                && mercServerThread != Thread.currentThread()) {
+
+            try {
+                mercServerThread.join(2000);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+
+                LOGGER.log(
+                        Level.WARNING,
+                        "Interrupted while waiting for MERC server to stop.",
+                        e);
+            }
+        }
+
+        // Stop the MySQL Connector/J cleanup thread.
+        AbandonedConnectionCleanupThread.checkedShutdown();
+
+        MainFrame.instance().dispose();
+        SplashFrame.instance().dispose();
+
+        LOGGER.info("MERC application windows closed.");
+    }
+
     //test comment from Sophie Holland for sprint 1! (1/25/2026)
 }

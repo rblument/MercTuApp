@@ -19,6 +19,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,9 +46,19 @@ public class MercServer implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(MercServer.class.getName());
 
     /**
-     * The socket listening for connections from the client
+     * The socket listening for connections from the client.
      */
-    private ServerSocket server;
+    private volatile ServerSocket server;
+
+    /**
+     * The currently connected client socket, if one exists.
+     */
+    private volatile Socket activeClient;
+
+    /**
+     * Indicates whether the server should continue accepting connections.
+     */
+    private volatile boolean running = true;
 
     /**
      * A no-op
@@ -58,20 +69,81 @@ public class MercServer implements Runnable {
     /**
      * Create a server socket that waits for connection requests from a client,
      * which are handled by spawning a new MercTuConnection, with an associated
-     * new Merc tutor, that handles all subsequent communication between the 
+     * new Merc tutor, that handles all subsequent communication between the
      * client and sever.
      */
     @Override
     public void run() {
-        try {
-            server = new ServerSocket(PORT);
+        try (ServerSocket listener = new ServerSocket(PORT)) {
+            server = listener;
 
-            while (true) {
-                new MercTuConnection(server.accept()).run();
+            while (running) {
+                try {
+                    activeClient = listener.accept();
+
+                    new MercTuConnection(activeClient).run();
+
+                } catch (SocketException e) {
+                    // Closing either socket during application shutdown can
+                    // cause a SocketException. This is expected when the
+                    // application is shutting down.
+                    if (running) {
+                        LOGGER.log(Level.SEVERE, "MercServer.run()", e);
+                    }
+
+                    break;
+
+                } finally {
+                    activeClient = null;
+                }
             }
 
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "EncryptionServer.run()", e);
+            if (running) {
+                LOGGER.log(Level.SEVERE, "MercServer.run()", e);
+            }
+
+        } finally {
+            server = null;
+            activeClient = null;
+
+            LOGGER.info("Merc server stopped.");
+        }
+    }
+
+    /**
+     * Stop accepting new client connections and allow the server thread
+     * to terminate normally.
+     */
+    public void close() {
+        running = false;
+
+        Socket currentClient = activeClient;
+
+        if (currentClient != null && !currentClient.isClosed()) {
+            try {
+                currentClient.close();
+
+            } catch (IOException e) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Unable to close active MERC client socket.",
+                        e);
+            }
+        }
+
+        ServerSocket currentServer = server;
+
+        if (currentServer != null && !currentServer.isClosed()) {
+            try {
+                currentServer.close();
+
+            } catch (IOException e) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Unable to close MERC server socket.",
+                        e);
+            }
         }
     }
 
@@ -119,23 +191,28 @@ public class MercServer implements Runnable {
         @Override
         public void run() {
             Gson gson = new Gson();
+
             try {
                 in = new BufferedReader(
                         new InputStreamReader(client.getInputStream()));
+
                 out = new PrintWriter(client.getOutputStream(), true);
 
                 String msg = in.readLine();
-                
+
                 ClientRequest request = gson.fromJson(msg, ClientRequest.class);
-                
+
                 TutorReply reply = tutor.request(request);
-                
+
                 out.println(gson.toJson(reply));
 
                 out.flush();
 
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "EncryptionConnection.run()", e);
+                if (running) {
+                    LOGGER.log(Level.SEVERE, "EncryptionConnection.run()", e);
+                }
+
             } finally {
                 // About as ugly as it gets, but the following code ensures that
                 // we've at least tried to close an open socket and its associated

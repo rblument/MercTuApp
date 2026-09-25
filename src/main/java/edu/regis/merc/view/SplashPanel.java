@@ -12,10 +12,10 @@
  */
 package edu.regis.merc.view;
 
+import edu.regis.merc.MercApp;
 import edu.regis.merc.model.Account;
 import edu.regis.merc.model.Student;
 import edu.regis.merc.model.TutoringSession;
-import edu.regis.merc.util.SHA_256;
 import edu.regis.merc.view.act.ForgotPasswordAction;
 import edu.regis.merc.view.act.NewUserAction;
 import edu.regis.merc.view.act.SignInAction;
@@ -43,6 +43,7 @@ import javax.swing.text.Document;
  * @author rickb
  */
 public class SplashPanel extends GPanel {
+
     /**
      * Events of interest occurring in this class are logged to this logger.
      */
@@ -79,6 +80,11 @@ public class SplashPanel extends GPanel {
     protected JButton forgotPasswordBut;
 
     /**
+     * Displays a close button closing the application.
+     */
+    protected JButton closeBut;
+
+    /**
      * Create and layout the child GUI components in this panel.
      */
     public SplashPanel() {
@@ -88,10 +94,6 @@ public class SplashPanel extends GPanel {
 
         initializeComponents();
         layoutComponents();
-
-        // ToDo: TMP DEBUGGING (saves me typing), remove this for real
-        userId.setText("test@regis.edu");
-        password.setText("TestP@ss");
     }
 
     /**
@@ -143,8 +145,8 @@ public class SplashPanel extends GPanel {
     }
 
     public void clearFields() {
-        userId.setText(""); // Clear user ID field
-        password.setText(""); // Clear password field
+        userId.setText("");
+        password.setText("");
     }
 
     /**
@@ -170,6 +172,7 @@ public class SplashPanel extends GPanel {
 
             return session;
         }
+
         return null;
     }
 
@@ -195,31 +198,13 @@ public class SplashPanel extends GPanel {
 
         signInBut = new JButton(SignInAction.instance());
         signInBut.setEnabled(false);
-        /*
-         * signInBut.addActionListener(e -> {
-         * // Fetch the userId and encrypted password
-         * String userIdInput = userId.getText();
-         * 
-         * 
-         * if (!userIdInput.isEmpty()) {
-         * // Encrypt the password for validation (if needed)
-         * String encryptedPass = SHA_256.instance().sha256(new
-         * String(password.getPassword()));
-         * 
-         * // Pass the userId to SplashFrame and initialize the Dashboard
-         * SplashFrame.instance().initializeDashboard(authenticateUser(userId.getText(),
-         * encryptedPass));
-         * } else {
-         * JOptionPane.showMessageDialog(this, "Please enter your User ID", "Error",
-         * JOptionPane.ERROR_MESSAGE);
-         * }
-         * }
-         * );
-         * 
-         */
+
         createAcctBut = new JButton(NewUserAction.instance());
 
         forgotPasswordBut = new JButton(ForgotPasswordAction.instance());
+
+        closeBut = new JButton("Close");
+        closeBut.addActionListener(e -> MercApp.shutdown());
     }
 
     /**
@@ -227,22 +212,29 @@ public class SplashPanel extends GPanel {
      */
     private void layoutComponents() {
         setBackground(new Color(0, 43, 73));
+
         addc(createHeader(), 0, 0, 2, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 5, 5, 5, 5);
+
         addc(createOverview(), 0, 1, 1, 1, 1.0, 1.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH,
                 5, 5, 5, 5);
+
         addc(createLogin(), 1, 1, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 10, 5, 5, 5);
+
         addc(new JLabel(" "), 0, 2, 2, 1, 1.0, 1.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH,
                 5, 5, 5, 5);
 
-        JLabel copyright = new JLabel("(C) 2025 Richard Blumenthal. All Rights Reserved");
+        JLabel copyright =
+                new JLabel("(C) 2025 Richard Blumenthal. All Rights Reserved");
+
         copyright.setForeground(new Color(241, 196, 0));
         copyright.setFont(new Font("Dialog", Font.PLAIN, 10));
+
         addc(copyright, 0, 3, 2, 1, 1.0, 1.0,
                 GridBagConstraints.NORTH, GridBagConstraints.CENTER,
                 5, 5, 5, 5);
@@ -252,9 +244,13 @@ public class SplashPanel extends GPanel {
 
     private GPanel createHeader() {
         GPanel panel = new GPanel();
+
         panel.setBackground(new Color(241, 196, 0));
 
-        JLabel ccis = new JLabel("Regis University Department of Computer and Cyber Sciences Product");
+        JLabel ccis =
+                new JLabel(
+                        "Regis University Department of Computer and Cyber Sciences Product");
+
         ccis.setFont(new Font("Dialog", Font.PLAIN, 20));
         ccis.setForeground(new Color(0, 43, 73));
 
@@ -273,15 +269,18 @@ public class SplashPanel extends GPanel {
         panel.addc(createAcctBut, 2, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.EAST, GridBagConstraints.NONE,
                 5, 5, 5, 5);
+
         return panel;
     }
 
     private GPanel createLogin() {
         GPanel panel = new GPanel();
+
         panel.setBackground(new Color(241, 196, 0));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 5));
 
         JLabel label = new JLabel("Sign in");
+
         panel.addc(label, 0, 0, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 5, 5, 5, 5);
@@ -292,6 +291,7 @@ public class SplashPanel extends GPanel {
         panel.addc(label, 0, 1, 1, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 5, 5, 5, 5);
+
         panel.addc(userId, 0, 2, 2, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 0, 5, 5, 5);
@@ -302,20 +302,29 @@ public class SplashPanel extends GPanel {
         panel.addc(label, 0, 3, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 15, 5, 5, 5);
+
         panel.addc(password, 0, 4, 2, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 0, 5, 5, 5);
+
         panel.addc(signInBut, 0, 5, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 15, 5, 5, 5);
+
         panel.addc(forgotPasswordBut, 1, 5, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 15, 5, 5, 5);
+
+        panel.addc(closeBut, 0, 6, 2, 1, 0.0, 0.0,
+                GridBagConstraints.CENTER, GridBagConstraints.NONE,
+                5, 5, 5, 5);
+
         return panel;
     }
 
     private GPanel createOverview() {
         GPanel panel = new GPanel();
+
         panel.setBackground(new Color(241, 196, 0));
 
         panel.setSize(300, 400);
@@ -329,13 +338,18 @@ public class SplashPanel extends GPanel {
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 5, 5, 5, 5);
 
-        JLabel name = new JLabel("A See_1, Do_1, Teach_1 Intelligent Tutoring System.");
+        JLabel name =
+                new JLabel(
+                        "A See_1, Do_1, Teach_1 Intelligent Tutoring System.");
+
         name.setFont(new Font("Dialog", Font.PLAIN, 14));
+
         panel.addc(name, 0, 1, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 0, 5, 5, 5);
 
         JTextArea descr = new JTextArea();
+
         descr.setEditable(false);
         descr.setLineWrap(true);
         descr.setWrapStyleWord(true);
@@ -352,7 +366,9 @@ public class SplashPanel extends GPanel {
                 GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH,
                 15, 5, 5, 5);
 
-        JLabel loginMsg = new JLabel("To use the tutor, you must sign in.");
+        JLabel loginMsg =
+                new JLabel("To use the tutor, you must sign in.");
+
         panel.addc(loginMsg, 0, 3, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 5, 5, 5, 5);
@@ -360,6 +376,7 @@ public class SplashPanel extends GPanel {
         panel.addc(new JLabel(" "), 0, 4, 1, 1, 1.0, 1.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH,
                 5, 5, 5, 5);
+
         return panel;
     }
 
@@ -368,6 +385,7 @@ public class SplashPanel extends GPanel {
      * in order to appropriate enable the buttons in the dialog.
      */
     public class LoginDocumentListener implements DocumentListener {
+
         /**
          * As text was insert into the userId or password field, check whether
          * we need to enable or disable the LoginDialog's buttons.
@@ -404,7 +422,9 @@ public class SplashPanel extends GPanel {
 
             if ((userId.getDocument().getLength() == 0) ||
                     (password.getDocument().getLength() == 0)) {
+
                 signInBut.setEnabled(false);
+
             } else {
                 signInBut.setEnabled(true);
             }

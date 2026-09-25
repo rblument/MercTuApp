@@ -12,6 +12,7 @@
  */
 package edu.regis.merc.view;
 
+import edu.regis.merc.MercApp;
 import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.PendingTask;
@@ -94,6 +95,7 @@ public class TutoringSessionView extends GPanel {
     private JPanel mercTutorPanel;
     private JButton hintButton;
     private JButton submitButton;
+    private JButton closeButton;
 
     /**
      * Initialize this view including creating and laying out its child components.
@@ -152,6 +154,7 @@ public class TutoringSessionView extends GPanel {
         hintButton = new JButton("Hint");
         submitButton = new JButton("Submit");
         showAnswerButton = new JButton("Show Answer");
+        closeButton = new JButton("Close");
 
         Dimension p1 = hintButton.getPreferredSize();
         Dimension p2 = submitButton.getPreferredSize();
@@ -160,7 +163,7 @@ public class TutoringSessionView extends GPanel {
         int h = Math.max(Math.max(p1.height, p2.height), p3.height);
         Dimension uniform = new Dimension(w, h);
 
-        for (JButton b : new JButton[] { hintButton, submitButton, showAnswerButton }) {
+        for (JButton b : new JButton[] { hintButton, submitButton, showAnswerButton, closeButton }) {
             b.setPreferredSize(uniform);
             b.setMinimumSize(uniform);
             b.setMaximumSize(uniform);
@@ -176,9 +179,12 @@ public class TutoringSessionView extends GPanel {
         buttonColumn.add(showAnswerButton);
         buttonColumn.add(Box.createVerticalStrut(12));
         buttonColumn.add(submitButton);
+        buttonColumn.add(Box.createVerticalStrut(12));
+        buttonColumn.add(closeButton);
         buttonColumn.add(Box.createVerticalGlue());
 
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
+        closeButton.addActionListener(e -> MercApp.shutdown());
 
         /**
          * The grading logic below implements a priority-based seleciton check. It

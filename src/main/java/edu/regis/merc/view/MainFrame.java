@@ -12,17 +12,17 @@
  */
 package edu.regis.merc.view;
 
+import edu.regis.merc.MercApp;
 import edu.regis.merc.model.TutoringSession;
 import java.awt.Dimension;
 import java.awt.Toolkit;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.Timer;
-import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 
 /**
  * The primary GUI window in the ShaTu application.
@@ -31,7 +31,7 @@ import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
  * 
  * @author rickb
  */
-public class MainFrame extends JFrame implements WindowListener {
+public class MainFrame extends JFrame {
 
     /**
      * The singleton instance of this frame.
@@ -89,11 +89,16 @@ public class MainFrame extends JFrame implements WindowListener {
         initializeComponents();
         layoutComponents();
 
-        addWindowListener(this);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                MercApp.shutdown();
+            }
+        });
 
         setVisible(false);
-
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE); // see windowClosing()
     }
   
     /**
@@ -117,36 +122,6 @@ public class MainFrame extends JFrame implements WindowListener {
         // ToDo: Ask to save changes to existing model?
         this.model = model;
         view.setModel(model);
-    }
-
-    @Override
-    public void windowOpened(WindowEvent e) {
-    }
-
-    @Override
-    public void windowClosing(WindowEvent e) {
-        // ToDo: Save etc.
-        this.dispose();
-    }
-
-    @Override
-    public void windowClosed(WindowEvent e) {
-    }
-
-    @Override
-    public void windowIconified(WindowEvent e) {
-    }
-
-    @Override
-    public void windowDeiconified(WindowEvent e) {
-    }
-
-    @Override
-    public void windowActivated(WindowEvent e) {
-    }
-
-    @Override
-    public void windowDeactivated(WindowEvent e) {
     }
     
     /**
