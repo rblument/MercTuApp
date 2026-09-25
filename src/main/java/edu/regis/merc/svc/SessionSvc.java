@@ -67,9 +67,13 @@ public interface SessionSvc {
      * Persist the current step of the given session's current task.
      *
      * Call this after changing the session's pending-step state in memory --
-     * completing a step, advancing to the next one, or moving the hint index.
-     * Without it those changes live only in the session object and are lost
-     * when the session is next read back from the database.
+     * completing a step or advancing to the next one. Without it those changes
+     * live only in the session object and are lost when the session is next
+     * read back from the database.
+     *
+     * This also writes the step's hint index, though nothing currently changes
+     * it server side: the client advances its own copy without telling the
+     * tutor, so hint position is still lost between requests.
      *
      * If the current step has not been saved before, which is the case
      * immediately after {@link edu.regis.merc.model.PendingTask#advanceStep()},

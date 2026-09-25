@@ -317,7 +317,14 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
 
             int sessionId = session.getId();
             PendingTask pTask = session.currentTask();
-            PendingStep pStep = pTask.currentStep();
+            PendingStep pStep = pTask == null ? null : pTask.currentStep();
+
+            if (pStep == null) {
+                // Nothing to save, and continuing would raise an NPE inside the
+                // transaction, which neither catch below would roll back.
+                throw new NonRecoverableException(
+                        "SessionDAO-ERR-21: Session " + sessionId + " has no current step to save");
+            }
 
             if (pStep.getId() == Model.DEFAULT_ID) {
                 // PendingTask.advanceStep() replaced the current step with a
