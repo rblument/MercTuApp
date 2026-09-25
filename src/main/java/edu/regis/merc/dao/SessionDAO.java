@@ -16,6 +16,7 @@ import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.InconsistentDBException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
+import edu.regis.merc.model.Model;
 import edu.regis.merc.model.Account;
 import edu.regis.merc.model.CourseDigest;
 import edu.regis.merc.model.PendingStep;
@@ -38,14 +39,21 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
  * A Data Access Object implementing tutoring {@link SessionSvc} behaviors.
- * 
+ *
  * @author rickb
  */
 public class SessionDAO extends MySqlDAO implements SessionSvc {
+
+    /**
+     * MySqlDAO's logger is private, so this DAO needs its own.
+     */
+    private static final Logger LOGGER = Logger.getLogger(SessionDAO.class.getName());
 
     public SessionDAO() {
         super();
@@ -293,13 +301,84 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void updateCurrentStep(TutoringSession session) throws NonRecoverableException {
+        Connection conn = null;
+
+        try {
+            conn = DriverManager.getConnection(URL);
+
+            // The writes below are a single logical change: a half-applied
+            // advance would leave the session pointing at the old step with an
+            // orphaned PendingStep row beside it.
+            conn.setAutoCommit(false);
+
+            int sessionId = session.getId();
+            PendingTask pTask = session.currentTask();
+            PendingStep pStep = pTask == null ? null : pTask.currentStep();
+
+            if (pStep == null) {
+                // Nothing to save, and continuing would raise an NPE inside the
+                // transaction, which neither catch below would roll back.
+                throw new NonRecoverableException(
+                        "SessionDAO-ERR-21: Session " + sessionId + " has no current step to save");
+            }
+
+            if (pStep.getId() == Model.DEFAULT_ID) {
+                // PendingTask.advanceStep() replaced the current step with a
+                // new, unsaved one. Save the step it replaced, give the new one
+                // a row of its own, and repoint the task at it.
+                updatePendingStep(pTask.getReplacedStep(), conn);
+
+                updatePendingTask(sessionId, createPendingStep(sessionId, pStep, conn), conn);
+
+            } else {
+                // Still on the same step; only its state changed.
+                updatePendingStep(pStep, conn);
+            }
+
+            conn.commit();
+
+        } catch (SQLException e) {
+            rollback(conn);
+            throw new NonRecoverableException("SessionDAO-ERR-19", e);
+
+        } catch (NonRecoverableException e) {
+            // The helpers signal a failed row count this way, not as SQLException.
+            rollback(conn);
+            throw e;
+
+        } finally {
+            close(conn);
+        }
+    }
+
+    /**
      * Utility that deletes the given a file.
-     * 
+     *
      * @param file a File with an absolute path to delete.
      */
     private void delete(File file) {
         if (file.exists())
             file.delete();
+    }
+
+    /**
+     * Roll back the given connection, logging rather than throwing on failure
+     * so that a rollback error cannot mask the exception that caused it.
+     *
+     * @param conn the connection to roll back, which may be null
+     */
+    private void rollback(Connection conn) {
+        if (conn != null) {
+            try {
+                conn.rollback();
+            } catch (SQLException e) {
+                LOGGER.log(Level.INFO, "SessionDAO-ERR-20: rollback() {0}", e.toString());
+            }
+        }
     }
 
     private void createPendingTasks(TutoringSession session, Connection conn)
@@ -331,6 +410,50 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         } finally {
             close(stmt);
         }
+    }
+
+    /**
+     * Point the given session's PendingTask at a different PendingStep, using
+     * an established connection to the DB, which it does not close.
+     *
+     * This is how a student's progress through a task is recorded: the
+     * PendingStep rows accumulate as history, and PendingTask names the one
+     * they are currently on.
+     *
+     * SessionId alone is the PendingTask primary key, so a session has at most
+     * one pending task and no TaskId is needed to identify the row.
+     *
+     * @param sessionId the id of the tutoring session whose task is moving
+     * @param pendingStepId the id of an existing PendingStep row to point at
+     * @param conn an open connection to the DB
+     * @throws NonRecoverableException if the session has no PendingTask row,
+     *         which leaves the update affecting no rows
+     */
+    private void updatePendingTask(int sessionId, int pendingStepId, Connection conn)
+        throws NonRecoverableException {
+        final String sql = "UPDATE PendingTask SET PendingStepId = ? WHERE SessionId = ?";
+
+        PreparedStatement stmt = null;
+
+        try {
+            stmt = conn.prepareStatement(sql);
+
+            stmt.setInt(1, pendingStepId);
+            stmt.setInt(2, sessionId);
+
+            int rows = stmt.executeUpdate();
+
+            if (rows != 1) {
+                throw new NonRecoverableException("SessionDAO-ERR-17: PendingTask Update Failed");
+            }
+
+        } catch (SQLException e) {
+            throw new NonRecoverableException("SessionDAO-ERR-18", e);
+
+        } finally {
+            close(stmt);
+        }
+
     }
 
     private int createPendingStep(int sessionId, PendingStep pStep, Connection conn)
@@ -366,6 +489,60 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         } finally {
             close(stmt);
         }
+    }
+
+    /**
+     * Save the mutable state of an already persisted PendingStep, using an
+     * established connection to the DB, which it does not close.
+     *
+     * Use this when the student's position within a step changes -- taking a
+     * hint, or completing it -- rather than when they move to a new step. A
+     * step they have moved on to has no row yet and belongs in
+     * {@link #createPendingStep(int, PendingStep, Connection)} instead.
+     *
+     * The given PendingStep must carry the id of an existing row. An id of
+     * {@link Model#DEFAULT_ID} means it was never saved, which is rejected
+     * rather than allowed to update nothing silently.
+     *
+     * StepId is deliberately not updated: a row records progress on one
+     * specific step for the life of that row, so moving to another step means
+     * a new row rather than repointing this one.
+     *
+     * @param pStep a PendingStep whose id identifies the row to overwrite
+     * @param conn an open connection to the DB
+     * @throws NonRecoverableException if the step is null or was never
+     *         persisted, or if its row no longer exists
+     */
+    private void updatePendingStep(PendingStep pStep, Connection conn)
+        throws NonRecoverableException {
+
+        final String sql = "UPDATE PendingStep SET NotifyTutor = ?, IsCompleted = ?, CurrentHintIndex = ? WHERE Id = ?";
+
+        PreparedStatement stmt = null;
+
+        try {
+            if (pStep == null || pStep.getId() == Model.DEFAULT_ID) {
+                throw new NonRecoverableException("SessionDAO-ERR-14: No PendingStep to Update");
+            }
+            stmt = conn.prepareStatement(sql);
+
+            stmt.setBoolean(1, pStep.isNotifyTutor());
+            stmt.setBoolean(2, pStep.isCompleted());
+            stmt.setInt(3, pStep.getCurrentHintIndex());
+            stmt.setInt(4, pStep.getId());
+
+            int rows = stmt.executeUpdate();
+            if (rows != 1) {
+                throw new NonRecoverableException("SessionDAO-ERR-15: PendingStep Update Failed");
+            }
+
+        } catch (SQLException e) {
+            throw new NonRecoverableException("SessionDAO-ERR-16", e);
+
+        } finally {
+            close(stmt);
+        }
+
     }
 
     private ArrayList<PendingTask> retrievePendingTasks(TutoringSession session, Connection conn)
@@ -435,8 +612,13 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             if (rs.next()) {
                 PendingStep pStep = new PendingStep(task.findStepById(rs.getInt(1)));
 
+                // Without the row's own id the loaded step looks unsaved, and
+                // anything that later tries to update it has no row to target.
+                pStep.setId(pendingStepId);
+
                 pStep.setNotifyTutor(rs.getBoolean(2));
                 pStep.setIsCompleted(rs.getBoolean(3));
+                pStep.setCurrentHintIndex(rs.getInt(4));
 
                 return pStep;
             } else {
