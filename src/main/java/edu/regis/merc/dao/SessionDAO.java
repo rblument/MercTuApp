@@ -16,6 +16,7 @@ import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.InconsistentDBException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
+import edu.regis.merc.model.Model;
 import edu.regis.merc.model.Account;
 import edu.regis.merc.model.CourseDigest;
 import edu.regis.merc.model.PendingStep;
@@ -333,6 +334,33 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         }
     }
 
+    private void updatePendingTask(int sessionId, int pendingStepId, Connection conn) 
+        throws NonRecoverableException {
+        final String sql = "UPDATE PendingTask SET PendingStepId = ? WHERE SessionId = ?";
+
+        PreparedStatement stmt = null;
+
+        try {
+            stmt = conn.prepareStatement(sql);
+
+            stmt.setInt(1, pendingStepId);
+            stmt.setInt(2, sessionId);
+
+            int rows = stmt.executeUpdate();
+
+            if (rows != 1) {
+                throw new NonRecoverableException("SessionDAO-ERR-17: PendingTask Update Failed");
+            }
+
+        } catch (SQLException e) {
+            throw new NonRecoverableException("SessionDAO-ERR-18", e);
+
+        } finally {
+            close(stmt);
+        }
+
+    }
+
     private int createPendingStep(int sessionId, PendingStep pStep, Connection conn)
             throws NonRecoverableException {
         final String sql = "INSERT INTO PendingStep (SessionId, StepId, NotifyTutor, IsCompleted, CurrentHintIndex) VALUES (?,?,?,?,?)";
@@ -366,6 +394,41 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         } finally {
             close(stmt);
         }
+    }
+
+    private void updatePendingStep(PendingStep pStep, Connection conn) 
+        throws NonRecoverableException {
+        
+        final String sql = "UPDATE PendingStep SET StepId = ?, NotifyTutor = ?, IsCompleted = ?, CurrentHintIndex = ? WHERE Id = ?";
+
+        PreparedStatement stmt = null;
+
+        try {
+            if (pStep.getId() == Model.DEFAULT_ID) { 
+                throw new NonRecoverableException("SessionDAO-ERR-14: No PendingStep to Update"); 
+            }
+            stmt = conn.prepareStatement(sql);
+
+            stmt.setInt(1, pStep.getStep().getId());
+            stmt.setBoolean(2, pStep.isNotifyTutor());
+            stmt.setBoolean(3, pStep.isCompleted());
+            stmt.setInt(4, pStep.getCurrentHintIndex());
+
+
+            stmt.setInt(5, pStep.getId());
+
+            int rows = stmt.executeUpdate();
+            if (rows != 1) {
+                throw new NonRecoverableException("SessionDAO-ERR-15: PendingStep Update Failed");
+            }
+
+        } catch (SQLException e) {
+            throw new NonRecoverableException("SessionDAO-ERR-16", e);
+
+        } finally {
+            close(stmt);
+        }
+
     }
 
     private ArrayList<PendingTask> retrievePendingTasks(TutoringSession session, Connection conn)
