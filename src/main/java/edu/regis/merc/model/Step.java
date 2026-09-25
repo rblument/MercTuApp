@@ -155,7 +155,7 @@ public class Step extends TitledModel {
         return sequenceIndex;
     }
     
-    public void setSequenceIndex(int seqeunceIndex) {
+    public void setSequenceIndex(int sequenceIndex) {
        this.sequenceIndex = sequenceIndex;
     }
 
