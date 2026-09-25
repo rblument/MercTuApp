@@ -605,8 +605,13 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             if (rs.next()) {
                 PendingStep pStep = new PendingStep(task.findStepById(rs.getInt(1)));
 
+                // Without the row's own id the loaded step looks unsaved, and
+                // anything that later tries to update it has no row to target.
+                pStep.setId(pendingStepId);
+
                 pStep.setNotifyTutor(rs.getBoolean(2));
                 pStep.setIsCompleted(rs.getBoolean(3));
+                pStep.setCurrentHintIndex(rs.getInt(4));
 
                 return pStep;
             } else {

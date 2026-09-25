@@ -526,12 +526,20 @@ public class MercTutor implements TutorSvc {
         System.out.println("Client is grading Step ID: " + activeStepId);
         System.out.println("Student clicked ID: " + studentAnswerId);
 
-        Step currentStep = null;
-        for (Step s : session.currentTask().getTask().getSteps()) {
-            if (s.getId() == activeStepId) {
-                currentStep = s;
-                break;
-            }
+        // The session's own pointer decides which step is being answered, not
+        // the id the client sent. Grading one step while advancing another is
+        // how a correct answer could leave the student on the same question.
+        PendingTask pendingTask = session.currentTask();
+        PendingStep pendingStep = pendingTask.currentStep();
+        Step currentStep = pendingStep.getStep();
+
+        if (currentStep.getId() != activeStepId) {
+            // A stale client, or one that advanced on its own. Answering a
+            // step the session has already moved past must not count.
+            System.out.println("Rejected: session is on step " + currentStep.getId()
+                    + ", client submitted step " + activeStepId);
+
+            return new TutorReply(":ERR", "Step " + activeStepId + " is not the current step.");
         }
 
         if (currentStep.getData() == null || currentStep.getData().isEmpty()) {
@@ -547,16 +555,33 @@ public class MercTutor implements TutorSvc {
 
         if (studentAnswerId == expectedData.correctComponentId) {
 
-            session.currentTask().currentStep().setIsCompleted(true);
+            pendingStep.setIsCompleted(true);
 
-            boolean hasNextStep = session.currentTask().advanceStep();
+            boolean hasNextStep = pendingTask.advanceStep();
+
+            // Without this the advance lives only in memory, and the next
+            // request reloads the session with the pointer back where it was.
+            try {
+                ServiceFactory.findSessionSvc().updateCurrentStep(session);
+
+            } catch (NonRecoverableException e) {
+                return createError("Unable to save progress for " + session.getStudent()
+                        .getAccount().getUserId(), e);
+            }
 
             if (hasNextStep) {
-                System.out.println("Advanced to next step: " + session.currentTask().currentStep().getStep().getId());
+                System.out.println("Advanced to next step: " + pendingTask.currentStep().getStep().getId());
+
+                return new TutorReply("Success", gson.toJson(session));
+
             } else {
+                // The student finished the last step of the task. This is a
+                // distinct outcome from advancing: there is no next step to
+                // render, so the client must not try to move forward.
                 System.out.println("Task complete! No more steps.");
+
+                return new TutorReply("TaskComplete", gson.toJson(session));
             }
-            return new TutorReply("Success", gson.toJson(session));
         } else {
             return new TutorReply("Incorrect", "Not quite. Please try again or request a hint.");
         }

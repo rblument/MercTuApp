@@ -216,6 +216,14 @@ public class TutoringSessionView extends GPanel {
                     model.currentTask().currentStep().setIsCompleted(true);
                     model.currentTask().advanceStep();
                     setModel(model);
+                } else if ("TaskComplete".equals(reply.getStatus())) {
+                    // The last step of the task. There is nothing to advance
+                    // to, so mark it done and leave the view where it is
+                    // rather than re-rendering the same question.
+                    model.currentTask().currentStep().setIsCompleted(true);
+                    setModel(model);
+                    JOptionPane.showMessageDialog(this, "Correct! You have completed this task.", "Task Complete",
+                            JOptionPane.INFORMATION_MESSAGE);
                 } else if ("Incorrect".equals(reply.getStatus())) {
                     JOptionPane.showMessageDialog(this, reply.getData(), "Incorrect", JOptionPane.WARNING_MESSAGE);
                 } else {
