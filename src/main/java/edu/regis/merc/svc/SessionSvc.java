@@ -64,6 +64,24 @@ public interface SessionSvc {
     void update(TutoringSession session) throws ObjNotFoundException, NonRecoverableException;
 
     /**
+     * Persist the current step of the given session's current task.
+     *
+     * Call this after changing the session's pending-step state in memory --
+     * completing a step, advancing to the next one, or moving the hint index.
+     * Without it those changes live only in the session object and are lost
+     * when the session is next read back from the database.
+     *
+     * If the current step has not been saved before, which is the case
+     * immediately after {@link edu.regis.merc.model.PendingTask#advanceStep()},
+     * the step it replaced is marked completed, the new step is inserted, and
+     * the task is repointed at it. All of that applies as one transaction.
+     *
+     * @param session a TutoringSession whose current step has changed.
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode().
+     */
+    void updateCurrentStep(TutoringSession session) throws NonRecoverableException;
+
+    /**
      * Delete the session from the database for the given student user id.
      *
      * @param userId the student's user id (email: user@university.edu)
