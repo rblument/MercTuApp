@@ -1,37 +1,33 @@
--- 
--- MERC^T: Multiple External Representations of Computation Tutor
--- 
---  (C) Richard Blumenthal, All rights reserved
--- 
---  Unauthorized use, duplication or distribution without the authors'
---  permission is strictly prohibited.
--- 
---   Unless required by applicable law or agreed to in writing, this
---  software is distributed on an "AS IS" basis without warranties
---   or conditions of any kind, either expressed or implied.
--- 
---
--- Author:  rickb
--- Created: Sep 3, 2025
---
--- If the ShaTuDB exists, drop it. In general, you will lose any existing data.
-DROP DATABASE IF EXISTS MercTuDB;
+/*
+ * MERC^T: Multiple External Representations of Computation Tutor
+ *
+ *  (C) Richard Blumenthal, All rights reserved
+ *
+ *  Unauthorized use, duplication or distribution without the authors'
+ *  permission is strictly prohibited.
+ *
+ *  Unless required by applicable law or agreed to in writing, this
+ *  software is distributed on an "AS IS" basis without warranties
+ *  or conditions of any kind, either expressed or implied.
+ */
 
--- Create a database in MySql named: MercTuDB
-CREATE DATABASE MercTuDB;
 
--- commented out for test 
--- Create user representing the DICE tutor.
--- CREATE USER 'MercTuTs'@'localhost' IDENTIFIED BY 'MercTu2025';
--- Give the ShaTu tutor the following priveledges.
--- GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP ON MercTuDB.* TO 'MercTuTs'@'localhost';
--- Add tables to new database
-USE MercTuDB;
+-- Table definitions for MercTuDB. Assumes the database exists and is
+-- selected -- setupDB.sql does both before sourcing this file.
+--
+-- This is the single source of truth for the schema. Do not copy table
+-- definitions into other scripts.
+
+
+-- ---------------------------------------------------------------
+-- Core tutoring tables
+-- ---------------------------------------------------------------
 
 CREATE TABLE
   Account (
     UserId VARCHAR(256),
     Password VARCHAR(256) NOT NULL,
+    Salt VARCHAR(32) NOT NULL,
     FirstName VARCHAR(256),
     LastName VARCHAR(256),
     Question int,
@@ -426,388 +422,68 @@ CREATE TABLE
     PRIMARY KEY (id)
   );
 
---  Truncate Table Assessment;
--- Will delete data, but also reset the next id counter to zero
--- Populate tables
-INSERT INTO
-  Course (Id, Title, PrimaryPedagogy, Description)
-VALUES
-  (
-    0,
-    'Multiple External Representation of Computing Tutor',
-    'FIXED_SEQUENCE',
-    'Familiarizes students with the Turing Machine, Mu-Recursive Function and
-     Lambda Calculus computational models, and the relations among these .'
-  );
 
-INSERT INTO
-  Unit (
-    Id,
-    CourseId,
-    Title,
-    Description,
-    SequenceIndex,
-    Pedagogy
-  )
-VALUES
-  (
-    0,
-    0,
-    'MERC: See One',
-    'In this unit, the student will see examples of each computational model and their components.',
-    0,
-    'FIXED_SEQUENCE'
-  );
+-- ---------------------------------------------------------------
+-- Lambda calculus expression tables
+--
+-- Declared after the core tables because they carry foreign keys
+-- among themselves: LC_EXPRESSION must exist before LC_VARIABLE and
+-- LC_ABSTRACTION, which in turn must exist before the link tables.
+-- ---------------------------------------------------------------
 
-INSERT INTO
-  Problem (
-    Id,
-    Title,
-    Description,
-    UnitId,
-    SequenceIndex,
-    TuringMachineId,
-    LambdaCalculusId,
-    MuRecursiveFunctionId
-  )
-VALUES
-  (
-    0,
-    'Zero Function Overview',
-    'In this problem, the student acknowledges seeing the various computational models and their components.',
-    0,
-    0,
-    1,
-    3,
-    0
-  );
+-- Original lambda calculus tables by Ellis Langham.
 
-INSERT INTO
-  Task (
-    Id,
-    ProblemId,
-    SequenceIndex,
-    Title,
-    Description,
-    ExercisedComponentId
-  )
-VALUES
-  (
-    10,
-    0,
-    0,
-    'Initial Zero Function Overview',
-    'Displays each of the computational models for the zero function',
-    -1
-  );
+-- primary table
+CREATE TABLE LC_EXPRESSION (
+    Id INT PRIMARY KEY,
+    ExprType VARCHAR(10) -- possibles values are 'VAR', 'ABS', 'APP'
+);
 
-INSERT INTO
-  Step (
-    Id,
-    TaskId,
-    SequenceIndex,
-    Title,
-    Description,
-    Prompt,
-    Context,
-    Data,
-    ExercisedComponentId,
-    ViewConfigId,
-    StudentAction,
-    ActionId,
-    TimeoutId
-  )
-VALUES
-  (
-    50,
-    10,
-    0,
-    'Zero Function Outer Parameter',
-    'Identifies the outer parameter of the zero function',
-    'Identify the outer parameter.',
-    'In the Zero Function \\s.\\z.z, select the variable that represents the first parameter.',
-    '{"correctComponentId": 101}',
-    -1,
-    10,
-    'INFORMATION_MESSAGE',
-    -1,
-    0
-  ),
-  (
-    51,
-    10,
-    1,
-    'Zero Function Inner Parameter',
-    'Identifies the inner parameter of the zero function',
-    'Identify the inner parameter.',
-    'Now select the variable that represents the second parameter in the Zero function.',
-    '{"correctComponentId": 102}',
-    -1,
-    10,
-    'INFORMATION_MESSAGE',
-    -1,
-    0
-  );
+-- variable table 
+CREATE TABLE LC_VARIABLE (
+    Id INT PRIMARY KEY,
+    Name VARCHAR(50),
+    FOREIGN KEY (Id) REFERENCES LC_EXPRESSION(Id)
+);
 
-INSERT INTO
-  ViewConfiguration (
-    Id,
-    TmViewConfigId,
-    LCViewConfigId,
-    MuViewConfigId
-  )
-VALUES
-  (10, 10, 10, 10);
+-- abstraction table
+CREATE TABLE LC_ABSTRACTION (
+    Id INT PRIMARY KEY,
+    IsCurried BOOLEAN,
+    FOREIGN KEY (Id) REFERENCES LC_EXPRESSION(Id)
+);
 
-INSERT INTO
-  TmViewConfiguration (
-    Id,
-    StateIds,
-    TransitionIds,
-    TapeCellIds,
-    AcceptStateIndicatorIds,
-    RejectStateIndicatorIds,
-    DisplayStartIndicator,
-    DisplayTapeHead
-  )
-VALUES
-  (10, '0,1,2', '0,1,2', '', '2', '', 1, 1);
+-- table for abstraction's parameters
+CREATE TABLE LC_ABS_PARAMS (
+    AbsId INT,
+    VarId INT,
+    SeqIndex INT,
+    PRIMARY KEY (AbsId, SeqIndex),
+    FOREIGN KEY (AbsId) REFERENCES LC_ABSTRACTION(Id),
+    FOREIGN KEY (VarId) REFERENCES LC_VARIABLE(Id)
+);
 
-INSERT INTO
-  TapeConfiguration (Id, CellId, Content)
-VALUES
-  (10, 0, '1');
+-- table for an abstraction's body
+--
+-- NOTE: the primary key includes BodyExprId, where LC_ABS_PARAMS above keys
+-- only on (AbsId, SeqIndex). That is carried over from the original script
+-- and left alone here so this change stays a consolidation. It is looser than
+-- it should be: it permits two rows at the same SeqIndex for one abstraction.
+CREATE TABLE LC_ABS_BODY (
+    AbsId INT,
+    BodyExprId INT,
+    SeqIndex INT,
+    PRIMARY KEY (AbsId, BodyExprId, SeqIndex),
+    FOREIGN KEY (AbsId) REFERENCES LC_ABSTRACTION(Id),
+    FOREIGN KEY (BodyExprId) REFERENCES LC_EXPRESSION(Id)
+);
 
-INSERT INTO
-  TapeConfiguration (Id, CellId, Content)
-VALUES
-  (10, 1, '0');
-
-INSERT INTO
-  LCViewConfiguration (Id, ParameterIds, BodyIds, ArgumentIds)
-VALUES
-  (10, '', '', '');
-
-INSERT INTO
-  MuViewConfiguration (
-    Id,
-    HighlightName,
-    ParameterIds,
-    RhsIds,
-    ArgumentIds
-  )
-VALUES
-  (10, 0, '', '', '');
-
-INSERT INTO
-  InfoMsgStep (SubStepId, Text)
-VALUES
-  (
-    0,
-    'Welcome, I''m Merc. I''ll begin by showing you how this
-     application works.\n\n
-     When I send you an information message, like this one, all you
-     have to do is acknowledge it by pressing the ''Acknowledged'' button.'
-  );
-
-INSERT INTO
-  Timeout (id, TimeoutType, Seconds, Event, Msg)
-VALUES
-  (
-    0,
-    'Info Message',
-    60,
-    'Reminder',
-    'Please acknowledge the current information message to continue.'
-  );
-
-INSERT INTO
-  Hint (Id, StepId, Text, SequenceIndex)
-VALUES
-  (
-    0,
-    0,
-    'Acknowledge this message by pressing the ''Acknowledged'' button.',
-    0
-  ),
-  (
-    1,
-    100,
-    'Remember that each circle in a diagram represents a state.',
-    0
-  ),
-  (
-    2,
-    101,
-    'The initial state usually has an incoming arrow with no origin.',
-    0
-  ),
-  (
-    3,
-    104,
-    'Think of the tape as infinite memory that the machine can scroll through.',
-    0
-  );
-
-INSERT INTO
-  KnowledgeComponent (
-    Id,
-    CourseId,
-    Title,
-    Description,
-    BloomLevel,
-    IsDomainFocus,
-    Pedagogy,
-    ExercisingLocations,
-    Granularity
-  )
-VALUES
-  (
-    0,
-    0,
-    'Information Message Acknowledgement',
-    'Student has appropriately demonstrated acknowleding information messages presented by the tutor.',
-    'Application',
-    0,
-    'Other',
-    '0',
-    'Knowledge Component'
-  );
-
-INSERT INTO
-  ExercisingLocation (Id, CourseId, UnitId, TaskId, StepId)
-VALUES
-  (0, 0, 0, 0, 0);
-
-INSERT INTO
-  TmState (Id, TmId, Name, GuiCtxId)
-VALUES
-  (0, 1, 'Q0', 10),
-  (1, 1, 'Q1', 11),
-  (2, 1, 'Q2', 12);
-
-INSERT INTO
-  TmTransition (
-    Id,
-    TmId,
-    FromStateId,
-    ToStateId,
-    ReadSymbol,
-    WriteSymbol,
-    Direction,
-    GuiCtxId
-  )
-VALUES
-  (0, 1, 0, 0, '1', '-', 'RIGHT', 20),
-  (1, 1, 0, 1, '-', '0', 'RIGHT', 21),
-  (2, 1, 1, 2, '-', '-', 'LEFT', 22);
-
-INSERT INTO
-  Alphabet (
-    Id,
-    TmId,
-    Type
-  )
-VALUES
-  (0, 1, 'INPUT'),
-  (1, 1, 'TAPE');
-
-INSERT INTO
-  AlphabetSymbol (Id, AlphabetId, Symbol)
-VALUES
-  (0, 0, '-'),
-  (1, 0, '0'),
-  (2, 0, '1');
-
--- TM: 0, State 0
-INSERT INTO
-  GuiCtx (Id, X, Y, Width, Height, X2, Y2)
-VALUES
-  (10, 200, 100, 30, 30, -1, -1);
-
--- TM: 0, State 1
-INSERT INTO
-  GuiCtx (Id, X, Y, Width, Height, X2, Y2)
-VALUES
-  (11, 300, 100, 30, 30, -1, -1);
-
--- TM: 0, State 2
-INSERT INTO
-  GuiCtx (Id, X, Y, Width, Height, X2, Y2)
-VALUES
-  (12, 400, 100, 30, 30, -1, -1);
-
--- TM: 0, Transition 1
-INSERT INTO
-  GuiCtx (Id, X, Y, Width, Height, X2, Y2)
-VALUES
-  (20, 230, 115, 30, 30, 300, 115);
-
--- TM: 0, Transition 2
-INSERT INTO
-  GuiCtx (Id, X, Y, Width, Height, X2, Y2)
-VALUES
-  (21, 330, 115, 30, 30, 400, 115);
-
--- TM: 0, Transition 3
-INSERT INTO
-  GuiCtx (Id, X, Y, Width, Height, X2, Y2)
-VALUES
-  (22, 430, 115, 30, 30, 500, 115);
-
-INSERT INTO
-  TuringMachine (
-    Id,
-    Name,
-    Description,
-    StartStateId,
-    AcceptStateId,
-    RejectStateId
-  )
-VALUES
-  (
-    1,
-    'The Zero TM',
-    'A Turing Machine that computes the Zero function',
-    0,
-    2,
-    -1
-  );
-
-INSERT INTO
-  MuFunction (Name, Lhs, Rhs)
-VALUES
-  ('add', 'add(x, y)', '(x + y)');
-
-INSERT INTO
-  Hint (Id, StepId, Text, SequenceIndex)
-VALUES
-  (
-    10,
-    50,
-    'Look at the equation \\s.\\z.z. The outer parameter is the first variable declared after the first lambda.',
-    0
-  ),
-  (
-    11,
-    50,
-    'The outer parameter is the letter s. Click the s!',
-    1
-  ),
-  (
-    12,
-    51,
-    'The inner parameter is the second variable declared, right before the body.',
-    0
-  ),
-  (
-    13,
-    51,
-    'The inner parameter is the letter z. Click the z!',
-    1
-  );
-
-INSERT INTO
-  MuFunction (Id, Name, Lhs, Rhs)
-VALUES
-  (0, 'Z', 'Z(x)', '0');
+-- application table 
+CREATE TABLE LC_APPLICATION (
+    Id INT PRIMARY KEY,
+    FuncAbsId INT, 
+    ArgExprId INT, 
+    FOREIGN KEY (Id) REFERENCES LC_EXPRESSION(Id),
+    FOREIGN KEY (FuncAbsId) REFERENCES LC_ABSTRACTION(Id),
+    FOREIGN KEY (ArgExprId) REFERENCES LC_EXPRESSION(Id)
+);

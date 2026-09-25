@@ -16,7 +16,6 @@ import edu.regis.merc.MercApp;
 import edu.regis.merc.model.Account;
 import edu.regis.merc.model.Student;
 import edu.regis.merc.model.TutoringSession;
-import edu.regis.merc.util.SHA_256;
 import edu.regis.merc.view.act.ForgotPasswordAction;
 import edu.regis.merc.view.act.NewUserAction;
 import edu.regis.merc.view.act.SignInAction;
@@ -182,11 +181,7 @@ public class SplashPanel extends GPanel {
      */
     private void updateModel() {
         model.setUserId(userId.getText());
-
-        String encryptedPass =
-                SHA_256.instance().sha256(new String(password.getPassword()));
-
-        model.setPassword(encryptedPass);
+        model.setPassword(new String(password.getPassword()));
     }
 
     /**
