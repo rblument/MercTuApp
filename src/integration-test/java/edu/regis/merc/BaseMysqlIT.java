@@ -12,6 +12,8 @@
  */
 package edu.regis.merc;
 
+import edu.regis.merc.dao.AccountDAO;
+import edu.regis.merc.dao.MySqlDAO;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -42,6 +44,7 @@ public abstract class BaseMysqlIT {
         // into /docker-entrypoint-initdb.d/ instead. The official image runs
         // them via the mysql client with MercTuDB already created and
         // selected, in filename order.
+
         mysqlContainer = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName(DB_NAME)
             .withUsername(DB_USER)
@@ -58,6 +61,8 @@ public abstract class BaseMysqlIT {
 
         mysqlContainer.start();
 
+        MySqlDAO unused = new AccountDAO(); //have the MySqlDAO go through it's own startup and load the driver.
+        MySqlDAO.URL = String.format("%s?user=%s&password=%s", mysqlContainer.getJdbcUrl(), DB_USER, DB_PASS); //update with new connection information.
     }
 
     @AfterAll
