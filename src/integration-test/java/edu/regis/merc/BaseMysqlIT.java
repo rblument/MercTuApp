@@ -12,11 +12,8 @@
  */
 package edu.regis.merc;
 
-import java.lang.reflect.Field;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.utility.MountableFile;
@@ -30,8 +27,7 @@ import org.testcontainers.utility.MountableFile;
  * surefire excludes the tag, failsafe includes only the tag.
  */
 @Tag("integration")
-@DisplayName("Integration Test Base")
-public abstract class BaseIT {
+public abstract class BaseMysqlIT {
 
     protected static final String DB_NAME = "MercTuDB";
     protected static final String DB_USER = "MercTuTs";
@@ -62,35 +58,12 @@ public abstract class BaseIT {
 
         mysqlContainer.start();
 
-        pointMySqlDaoAt(mysqlContainer.getJdbcUrl() + "?user="
-            + mysqlContainer.getUsername() + "&password=" + mysqlContainer.getPassword());
     }
 
     @AfterAll
     public static void tearDownClass() {
         if (mysqlContainer != null) {
             mysqlContainer.stop();
-        }
-    }
-
-    /**
-     * MySqlDAO builds its connection URL once, from Merc.properties, guarded
-     * by the IS_LOADED flag. Overwrite both via reflection so every DAO in
-     * this JVM connects to the container instead of a local database.
-     */
-    private static void pointMySqlDaoAt(String url) {
-        try {
-            Class<?> daoClass = Class.forName("edu.regis.merc.dao.MySqlDAO");
-
-            Field urlField = daoClass.getDeclaredField("URL");
-            urlField.setAccessible(true);
-            urlField.set(null, url);
-
-            Field loadedField = daoClass.getDeclaredField("IS_LOADED");
-            loadedField.setAccessible(true);
-            loadedField.set(null, true);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to point MySqlDAO at the test container", e);
         }
     }
 }

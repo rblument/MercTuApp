@@ -23,12 +23,12 @@ import java.sql.Connection;
 import java.util.List;
 import java.util.Optional;
 
+import edu.regis.merc.BaseMysqlIT;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import edu.regis.merc.BaseIT;
 import edu.regis.merc.model.LeftHandSide;
 import edu.regis.merc.model.MuExpression;
 import edu.regis.merc.model.MuFunction;
@@ -38,7 +38,7 @@ import edu.regis.merc.model.MuFunction;
  * main() class. Runs against a real MySQL container (see BaseIT).
  */
 @DisplayName("MuFunctionDAO Integration Tests")
-public class MuFunctionDAOTest extends BaseIT {
+public class MuFunctionDAOTest extends BaseMysqlIT {
 
     private MuFunctionDAO dao;
 
