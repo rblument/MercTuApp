@@ -8,8 +8,8 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>24</maven.compiler.release>
-        <exec.mainClass>edu.regis.merc.MercApp</exec.mainClass>
-        <testcontainers.version>1.19.3</testcontainers.version>
+	<exec.mainClass>edu.regis.merc.MercApp</exec.mainClass>
+	<testcontainers.version>1.21.4</testcontainers.version>
     </properties>
      <build>
         <resources>
@@ -132,7 +132,7 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>${testcontainers.version}</version>
+	    <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
       </dependencies>
