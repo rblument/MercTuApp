@@ -320,8 +320,6 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             PendingStep pStep = pTask == null ? null : pTask.currentStep();
 
             if (pStep == null) {
-                // Nothing to save, and continuing would raise an NPE inside the
-                // transaction, which neither catch below would roll back.
                 throw new NonRecoverableException(
                         "SessionDAO-ERR-21: Session " + sessionId + " has no current step to save");
             }
@@ -342,15 +340,18 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             conn.commit();
 
         } catch (SQLException e) {
-            rollback(conn);
             throw new NonRecoverableException("SessionDAO-ERR-19", e);
 
-        } catch (NonRecoverableException e) {
-            // The helpers signal a failed row count this way, not as SQLException.
-            rollback(conn);
-            throw e;
-
         } finally {
+            // Rolling back here rather than in a catch covers every way out of
+            // the try, including unchecked exceptions. That matters because
+            // close() below calls setAutoCommit(true), and JDBC commits the
+            // open transaction when auto-commit is turned back on -- so an
+            // un-rolled-back failure would be committed on the way out. After a
+            // successful commit above this rolls back an empty transaction and
+            // does nothing.
+            rollback(conn);
+
             close(conn);
         }
     }
