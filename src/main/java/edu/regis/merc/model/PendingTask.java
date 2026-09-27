@@ -30,6 +30,17 @@ public class PendingTask {
 
     private PendingStep currentStep;
 
+    /**
+     * The step that {@link #advanceStep()} most recently moved off of, or null
+     * if this task has not advanced.
+     *
+     * Advancing replaces the current step, which would otherwise discard the
+     * completed one before it can be written to the database. Holding onto it
+     * lets the DAO persist both halves of an advance. Transient because it is
+     * a handle for the pending save, not part of the session the client sees.
+     */
+    private transient PendingStep replacedStep;
+
     public PendingTask(Task task) {
         this.task = task;
     }
@@ -96,9 +107,19 @@ public class PendingTask {
         // if it was found, and it's not the last step in the list, advance forward
         if (currentIndex != -1 && currentIndex < steps.size() - 1) {
             Step nextStep = steps.get(currentIndex + 1);
+            this.replacedStep = this.currentStep;
             this.setCurrentStep(new PendingStep(nextStep));
             return true;
         }
         return false;
+    }
+
+    /**
+     * Return the step this task most recently advanced off of.
+     *
+     * @return the replaced PendingStep, or null if this task has not advanced
+     */
+    public PendingStep getReplacedStep() {
+        return replacedStep;
     }
 }
