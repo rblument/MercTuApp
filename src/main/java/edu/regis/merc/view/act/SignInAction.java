@@ -24,6 +24,7 @@ import edu.regis.merc.view.MainFrame;
 import edu.regis.merc.view.SplashFrame;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import static javax.swing.Action.MNEMONIC_KEY;
 import static javax.swing.Action.SHORT_DESCRIPTION;
@@ -50,6 +51,7 @@ import edu.regis.merc.model.LCApplication;
  * @author rickb
  */
 public class SignInAction extends MercGuiAction {
+
     /**
      * Exceptions occurring in this class are also logged to this logger.
      */
@@ -107,34 +109,51 @@ public class SignInAction extends MercGuiAction {
                 .setPrettyPrinting()
                 .registerTypeAdapter(LCExpression.class, new JsonDeserializer<LCExpression>() {
                     @Override
-                    public LCExpression deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+                    public LCExpression deserialize(
+                            JsonElement json,
+                            Type typeOfT,
+                            JsonDeserializationContext context)
                             throws JsonParseException {
+
                         JsonObject jsonObject = json.getAsJsonObject();
 
                         // rule 1: if it has a 'name' field it's a var
-                        if (jsonObject.has("name") && !jsonObject.get("name").isJsonNull()) {
-                            return context.deserialize(jsonObject, LCVariable.class);
+                        if (jsonObject.has("name")
+                                && !jsonObject.get("name").isJsonNull()) {
+                            return context.deserialize(
+                                    jsonObject, LCVariable.class);
                         }
                         // rule 2: if it has 'function' or 'arg' fields, it's an app
-                        else if (jsonObject.has("function") || jsonObject.has("arg")) {
-                            return context.deserialize(jsonObject, LCApplication.class);
+                        else if (jsonObject.has("function")
+                                || jsonObject.has("arg")) {
+                            return context.deserialize(
+                                    jsonObject, LCApplication.class);
                         }
                         // rule 3: otherwise it's an Abstraction
                         else {
-                            return context.deserialize(jsonObject, LCAbstraction.class);
+                            return context.deserialize(
+                                    jsonObject, LCAbstraction.class);
                         }
                     }
                 })
                 .create();
 
         Account account = SplashFrame.instance().getAccount();
-        ClientRequest request = new ClientRequest(ServerRequestType.SIGN_IN);
+
+        ClientRequest request
+                = new ClientRequest(ServerRequestType.SIGN_IN);
+
         request.setData(gson.toJson(account));
-        TutorReply reply = SvcFacade.instance().tutorRequest(request);
+
+        TutorReply reply
+                = SvcFacade.instance().tutorRequest(request);
 
         switch (reply.getStatus()) {
             case "Authenticated":
-                TutoringSession session = gson.fromJson(reply.getData(), TutoringSession.class);
+                LOGGER.log(Level.INFO, "Sign-in successful");
+
+                TutoringSession session = gson.fromJson(
+                        reply.getData(), TutoringSession.class);
 
                 // Initialize main frame instance.
                 // This is used after selecting a mode from the dashboard.
@@ -148,16 +167,30 @@ public class SignInAction extends MercGuiAction {
 
                 // Start tracking user inactivity
                 // inactivityManager.startTracking();
-
                 break;
+
             case "InvalidPassword":
+                LOGGER.log(
+                        Level.WARNING,
+                        "Sign-in failed: invalid password");
+
                 SplashFrame.instance().invalidPass();
                 break;
+
             case "UnknownUser":
+                LOGGER.log(
+                        Level.WARNING,
+                        "Sign-in failed: unknown user");
+
                 SplashFrame.instance().unknownUser();
                 break;
+
             default:
-                System.out.println("Coding error  status: " + reply.getStatus());
+                LOGGER.log(
+                        Level.WARNING,
+                        "Unexpected sign-in response status: {0}",
+                        reply.getStatus());
+                break;
         }
     }
 }

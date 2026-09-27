@@ -22,6 +22,8 @@ import edu.regis.merc.view.SplashFrame;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static javax.swing.Action.MNEMONIC_KEY;
 import static javax.swing.Action.SHORT_DESCRIPTION;
 import javax.swing.JOptionPane;
@@ -33,6 +35,13 @@ import javax.swing.JOptionPane;
  * @author mandyroskelley
  */
 public class ResetPasswordAction extends MercGuiAction {
+
+    /**
+     * Handler for logging messages.
+     */
+    private static final Logger LOGGER =
+            Logger.getLogger(ResetPasswordAction.class.getName());
+
     /**
      * The single instance of this reset password action.
      */
@@ -40,8 +49,8 @@ public class ResetPasswordAction extends MercGuiAction {
 
     /**
      * Create the singleton for this action, which occurs when this class
-     * is loaded by the Java class loaded, as a result of the class being 
-     * referenced by executing ResetPassword.instance() in the 
+     * is loaded by the Java class loaded, as a result of the class being
+     * referenced by executing ResetPassword.instance() in the
      * initializeComponents() method of the NewAccountPanel class.
      */
     static {
@@ -68,70 +77,110 @@ public class ResetPasswordAction extends MercGuiAction {
     }
 
     /**
-     * Handle the user's request to reset their password. After password is reset,
-     * user will be forwarded to the SplashFrame, where they can log in.
+     * Handle the user's request to reset their password. After password is
+     * reset, user will be forwarded to the SplashFrame, where they can log in.
      *
      * @param evt ignored
      */
     @Override
     public void actionPerformed(ActionEvent evt) {
         Gson gson = new Gson();
-        
+
         SplashFrame frame = SplashFrame.instance();
-        
+
         Account account = frame.getAccount();
-        
+
         // Find the ResetPasswordPanel instance
         // ToDo: better way?
         String token = null;
+
         for (Component comp : frame.getContentPane().getComponents()) {
             if (comp instanceof edu.regis.merc.view.ResetPasswordPanel) {
-                token = ((edu.regis.merc.view.ResetPasswordPanel) comp).getSecurityToken();
+                token = ((edu.regis.merc.view.ResetPasswordPanel) comp)
+                        .getSecurityToken();
                 break;
             }
         }
 
-        ClientRequest request = new ClientRequest(ServerRequestType.RESET_PASSWORD);
+        ClientRequest request =
+                new ClientRequest(ServerRequestType.RESET_PASSWORD);
+
         request.setUserId(account.getUserId());
         request.setSecurityToken(token);
 
-        //required for session tracking
+        // Required for session tracking
         request.setData(gson.toJson(account));
-  
+
         TutorReply reply = SvcFacade.instance().tutorRequest(request);
 
         String msg;
         String status = reply.getStatus();
-        System.out.println("ResetPasswordAction: Server reply status = " + status);
 
         if (status == null) {
+            LOGGER.log(
+                    Level.WARNING,
+                    "Password reset failed: invalid server response");
+
             msg = "Server response was invalid. Please try again or contact support.";
-            JOptionPane.showMessageDialog(null, msg, "Error", JOptionPane.ERROR_MESSAGE);
+
+            JOptionPane.showMessageDialog(
+                    null,
+                    msg,
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+
             return;
         }
 
         switch (status) {
             case "PasswordReset":
+                LOGGER.log(Level.INFO, "Password reset successful");
+
                 frame.clearResetPassword();
                 frame.clearForgotPassword();
-                msg = "Password successfully reset.\n\n" +
-                      "You can now sign in with your new password.";
-                JOptionPane.showMessageDialog(SplashFrame.instance(), msg);
+
+                msg = "Password successfully reset.\n\n"
+                        + "You can now sign in with your new password.";
+
+                JOptionPane.showMessageDialog(
+                        SplashFrame.instance(),
+                        msg);
+
                 frame.selectSplash();
                 break;
 
             case "IllegalUserId":
+                LOGGER.log(
+                        Level.WARNING,
+                        "Password reset failed: user ID not found");
+
                 msg = "User ID does not exist: " + account.getUserId();
-                JOptionPane.showMessageDialog(null, msg, "Information", JOptionPane.INFORMATION_MESSAGE);
+
+                JOptionPane.showMessageDialog(
+                        null,
+                        msg,
+                        "Information",
+                        JOptionPane.INFORMATION_MESSAGE);
+
                 break;
 
             default:
-                msg = "An unexpected error occurred. Server responded with status: " + status;
-                JOptionPane.showMessageDialog(null, msg, "Error", JOptionPane.ERROR_MESSAGE);
+                LOGGER.log(
+                        Level.WARNING,
+                        "Password reset failed: unexpected server status {0}",
+                        status);
+
+                msg = "An unexpected error occurred. "
+                        + "Server responded with status: "
+                        + status;
+
+                JOptionPane.showMessageDialog(
+                        null,
+                        msg,
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+
                 break;
         }
-
     }
 }
-
-

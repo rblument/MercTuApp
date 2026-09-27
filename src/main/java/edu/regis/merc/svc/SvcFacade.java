@@ -55,7 +55,7 @@ public class SvcFacade {
      * If true, the JSon request sent to the server and the JSon replies from
      * the tutor are output for debugging purposes.
      */
-    private static boolean IS_DEBUG = true;
+    private static final boolean IS_DEBUG = false;
     
     /**
      * The single instance of the tutor facade.
@@ -121,12 +121,12 @@ public class SvcFacade {
         String jsonRequest = gson.toJson(request);
         
         if (IS_DEBUG)
-            System.out.println("JSon Request *" + jsonRequest + "*");
+            LOGGER.log(Level.INFO, "Sending tutor request");
   
         String jsonReply = send(jsonRequest);
         
         if (IS_DEBUG)
-            System.out.println("JSon Reply: " + jsonReply);
+            LOGGER.log(Level.INFO, "Tutor reply received");
         
         return gson.fromJson(jsonReply, TutorReply.class);
     }
