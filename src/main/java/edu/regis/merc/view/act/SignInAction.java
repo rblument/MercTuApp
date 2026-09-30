@@ -15,6 +15,10 @@ package edu.regis.merc.view.act;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import edu.regis.merc.model.Account;
+import edu.regis.merc.model.Student;
+import edu.regis.merc.util.StudentDeserializer;
+import edu.regis.merc.model.Timeout;
+import edu.regis.merc.util.TimeoutDeserializer;
 import edu.regis.merc.model.TutoringSession;
 import edu.regis.merc.svc.ClientRequest;
 import edu.regis.merc.svc.ServerRequestType;
@@ -28,6 +32,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import static javax.swing.Action.MNEMONIC_KEY;
 import static javax.swing.Action.SHORT_DESCRIPTION;
+import javax.swing.JOptionPane;
 
 // imports added to build a deserializer 
 import com.google.gson.JsonDeserializer;
@@ -94,19 +99,12 @@ public class SignInAction extends MercGuiAction {
         // putValue(ACCELERATOR_KEY, getAcceleratorKeyStroke());
     }
 
-    /**
-     * Handle the user's request to sign-in by sending it to the DICE tutor.
-     *
-     * If successful, the MainFrame with the Courtroom View is displayed.
-     *
-     * @param evt ignored
-     */
-    @Override
-    public void actionPerformed(ActionEvent evt) {
-
-        // Gson with lambda calc decoder
-        Gson gson = new GsonBuilder()
+    /** Creates the parser for the complete session returned by sign-in. */
+    static Gson createSessionGson() {
+        return new GsonBuilder()
                 .setPrettyPrinting()
+                .registerTypeAdapter(Student.class, new StudentDeserializer())
+                .registerTypeAdapter(Timeout.class, new TimeoutDeserializer())
                 .registerTypeAdapter(LCExpression.class, new JsonDeserializer<LCExpression>() {
                     @Override
                     public LCExpression deserialize(
@@ -137,23 +135,48 @@ public class SignInAction extends MercGuiAction {
                     }
                 })
                 .create();
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent evt) {
+        Gson gson = createSessionGson();
 
         Account account = SplashFrame.instance().getAccount();
+        String logUserId = sanitizeLogValue(account.getUserId());
 
         ClientRequest request
                 = new ClientRequest(ServerRequestType.SIGN_IN);
 
         request.setData(gson.toJson(account));
 
-        TutorReply reply
-                = SvcFacade.instance().tutorRequest(request);
+        TutorReply reply;
+        try {
+            reply = SvcFacade.instance().tutorRequest(request);
+        } catch (JsonParseException ex) {
+            showSignInError("The server returned an invalid response. Please try again.");
+            return;
+        }
+
+        if (reply == null || reply.getStatus() == null) {
+            showSignInError("No valid response was received from the server. Please try again.");
+            return;
+        }
 
         switch (reply.getStatus()) {
             case "Authenticated":
-                LOGGER.log(Level.INFO, "Sign-in successful");
+                LOGGER.log(Level.INFO, "Sign-in successful; userId={0}", logUserId);
 
-                TutoringSession session = gson.fromJson(
-                        reply.getData(), TutoringSession.class);
+                TutoringSession session;
+                try {
+                    session = gson.fromJson(reply.getData(), TutoringSession.class);
+                } catch (JsonParseException ex) {
+                    showSignInError("Your tutoring session could not be loaded. Please try again.");
+                    return;
+                }
+                if (session == null) {
+                    showSignInError("Your tutoring session could not be loaded. Please try again.");
+                    return;
+                }
 
                 // Initialize main frame instance.
                 // This is used after selecting a mode from the dashboard.
@@ -170,27 +193,30 @@ public class SignInAction extends MercGuiAction {
                 break;
 
             case "InvalidPassword":
-                LOGGER.log(
-                        Level.WARNING,
-                        "Sign-in failed: invalid password");
-
-                SplashFrame.instance().invalidPass();
-                break;
-
             case "UnknownUser":
                 LOGGER.log(
                         Level.WARNING,
-                        "Sign-in failed: unknown user");
+                        "Sign-in failed: invalid credentials; userId={0}", logUserId);
 
-                SplashFrame.instance().unknownUser();
+                SplashFrame.instance().invalidPass();
                 break;
 
             default:
                 LOGGER.log(
                         Level.WARNING,
-                        "Unexpected sign-in response status: {0}",
-                        reply.getStatus());
+                        "Unexpected sign-in response status: {0}; userId={1}",
+                        new Object[] { sanitizeLogValue(reply.getStatus()), logUserId });
+                showSignInError("Unable to sign in. Please check that the tutoring server is running and try again.");
                 break;
         }
+    }
+
+    private static String sanitizeLogValue(String value) {
+        return value == null ? "(missing)" : value.replaceAll("[\\p{Cntrl}\\p{Zl}\\p{Zp}]", "_");
+    }
+
+    private void showSignInError(String message) {
+        JOptionPane.showMessageDialog(SplashFrame.instance(), message,
+                "Sign In Error", JOptionPane.ERROR_MESSAGE);
     }
 }

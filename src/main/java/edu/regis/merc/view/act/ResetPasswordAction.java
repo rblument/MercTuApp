@@ -19,7 +19,6 @@ import edu.regis.merc.svc.ServerRequestType;
 import edu.regis.merc.svc.SvcFacade;
 import edu.regis.merc.svc.TutorReply;
 import edu.regis.merc.view.SplashFrame;
-import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.util.logging.Level;
@@ -90,16 +89,12 @@ public class ResetPasswordAction extends MercGuiAction {
 
         Account account = frame.getAccount();
 
-        // Find the ResetPasswordPanel instance
-        // ToDo: better way?
-        String token = null;
-
-        for (Component comp : frame.getContentPane().getComponents()) {
-            if (comp instanceof edu.regis.merc.view.ResetPasswordPanel) {
-                token = ((edu.regis.merc.view.ResetPasswordPanel) comp)
-                        .getSecurityToken();
-                break;
-            }
+        String token = frame.getResetPasswordSecurityToken();
+        if (token == null || token.isBlank()) {
+            JOptionPane.showMessageDialog(frame,
+                    "Please verify your security answer again before resetting your password.",
+                    "Password Reset", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
         ClientRequest request =
@@ -114,7 +109,7 @@ public class ResetPasswordAction extends MercGuiAction {
         TutorReply reply = SvcFacade.instance().tutorRequest(request);
 
         String msg;
-        String status = reply.getStatus();
+        String status = reply == null ? null : reply.getStatus();
 
         if (status == null) {
             LOGGER.log(
