@@ -59,7 +59,7 @@ public class Hint extends Model {
         return sequenceIndex;
     }
 
-    public void setSequenceIndex(int sequenceIindex) {
+    public void setSequenceIndex(int sequenceIndex) {
         this.sequenceIndex = sequenceIndex;
     }
 }
