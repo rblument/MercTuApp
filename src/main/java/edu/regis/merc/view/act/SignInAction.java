@@ -15,6 +15,7 @@ package edu.regis.merc.view.act;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import edu.regis.merc.model.Account;
+import edu.regis.merc.util.AuthenticationLogger;
 import edu.regis.merc.model.Student;
 import edu.regis.merc.util.StudentDeserializer;
 import edu.regis.merc.model.Timeout;
@@ -28,8 +29,6 @@ import edu.regis.merc.view.MainFrame;
 import edu.regis.merc.view.SplashFrame;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import static javax.swing.Action.MNEMONIC_KEY;
 import static javax.swing.Action.SHORT_DESCRIPTION;
 import javax.swing.JOptionPane;
@@ -56,11 +55,6 @@ import edu.regis.merc.model.LCApplication;
  * @author rickb
  */
 public class SignInAction extends MercGuiAction {
-
-    /**
-     * Exceptions occurring in this class are also logged to this logger.
-     */
-    private static final Logger LOGGER = Logger.getLogger(SignInAction.class.getName());
 
     /**
      * The single instance of this sign-in action.
@@ -142,7 +136,6 @@ public class SignInAction extends MercGuiAction {
         Gson gson = createSessionGson();
 
         Account account = SplashFrame.instance().getAccount();
-        String logUserId = sanitizeLogValue(account.getUserId());
 
         ClientRequest request
                 = new ClientRequest(ServerRequestType.SIGN_IN);
@@ -164,7 +157,7 @@ public class SignInAction extends MercGuiAction {
 
         switch (reply.getStatus()) {
             case "Authenticated":
-                LOGGER.log(Level.INFO, "Sign-in successful; userId={0}", logUserId);
+                AuthenticationLogger.signInSucceeded(account.getUserId());
 
                 TutoringSession session;
                 try {
@@ -194,25 +187,16 @@ public class SignInAction extends MercGuiAction {
 
             case "InvalidPassword":
             case "UnknownUser":
-                LOGGER.log(
-                        Level.WARNING,
-                        "Sign-in failed: invalid credentials; userId={0}", logUserId);
+                AuthenticationLogger.signInFailed(account.getUserId());
 
                 SplashFrame.instance().invalidPass();
                 break;
 
             default:
-                LOGGER.log(
-                        Level.WARNING,
-                        "Unexpected sign-in response status: {0}; userId={1}",
-                        new Object[] { sanitizeLogValue(reply.getStatus()), logUserId });
+                AuthenticationLogger.unexpectedSignInResponse(account.getUserId());
                 showSignInError("Unable to sign in. Please check that the tutoring server is running and try again.");
                 break;
         }
-    }
-
-    private static String sanitizeLogValue(String value) {
-        return value == null ? "(missing)" : value.replaceAll("[\\p{Cntrl}\\p{Zl}\\p{Zp}]", "_");
     }
 
     private void showSignInError(String message) {
