@@ -21,6 +21,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.function.Function;
 
 /**
  * A Facade that standardizes requests from the GUI Client to the MERC tutor 
@@ -52,10 +53,9 @@ import java.util.logging.Logger;
  */
 public class SvcFacade {
     /**
-     * If true, the JSon request sent to the server and the JSon replies from
-     * the tutor are output for debugging purposes.
+     * Enables request/reply status messages, never their JSON payloads.
      */
-    private static boolean IS_DEBUG = true;
+    private static final boolean IS_DEBUG = false;
     
     /**
      * The single instance of the tutor facade.
@@ -102,12 +102,23 @@ public class SvcFacade {
      * Utility reference to Gson for converting between Java and JSon objects.
      */
     private Gson gson;
+    private final Function<String, String> transport;
+    private final boolean debug;
     
     /**
      * Initialize this facade with its Gson convertor.
      */
     private SvcFacade() {  
         gson = new Gson();
+        transport = this::send;
+        debug = IS_DEBUG;
+    }
+
+    /** Allows testing the protocol and logging without a live socket server. */
+    SvcFacade(Function<String, String> transport, boolean debug) {
+        gson = new Gson();
+        this.transport = java.util.Objects.requireNonNull(transport);
+        this.debug = debug;
     }
 
     /**
@@ -120,13 +131,13 @@ public class SvcFacade {
     public TutorReply tutorRequest(ClientRequest request) {
         String jsonRequest = gson.toJson(request);
         
-        if (IS_DEBUG)
-            System.out.println("JSon Request *" + jsonRequest + "*");
+        if (debug)
+            LOGGER.log(Level.INFO, "Sending tutor request");
   
-        String jsonReply = send(jsonRequest);
+        String jsonReply = transport.apply(jsonRequest);
         
-        if (IS_DEBUG)
-            System.out.println("JSon Reply: " + jsonReply);
+        if (debug)
+            LOGGER.log(Level.INFO, "Tutor reply received");
         
         return gson.fromJson(jsonReply, TutorReply.class);
     }

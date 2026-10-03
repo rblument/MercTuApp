@@ -15,6 +15,11 @@ package edu.regis.merc.view.act;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import edu.regis.merc.model.Account;
+import edu.regis.merc.util.AuthenticationLogger;
+import edu.regis.merc.model.Student;
+import edu.regis.merc.util.StudentDeserializer;
+import edu.regis.merc.model.Timeout;
+import edu.regis.merc.util.TimeoutDeserializer;
 import edu.regis.merc.model.TutoringSession;
 import edu.regis.merc.svc.ClientRequest;
 import edu.regis.merc.svc.ServerRequestType;
@@ -24,9 +29,9 @@ import edu.regis.merc.view.MainFrame;
 import edu.regis.merc.view.SplashFrame;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import java.util.logging.Logger;
 import static javax.swing.Action.MNEMONIC_KEY;
 import static javax.swing.Action.SHORT_DESCRIPTION;
+import javax.swing.JOptionPane;
 
 // imports added to build a deserializer 
 import com.google.gson.JsonDeserializer;
@@ -50,10 +55,6 @@ import edu.regis.merc.model.LCApplication;
  * @author rickb
  */
 public class SignInAction extends MercGuiAction {
-    /**
-     * Exceptions occurring in this class are also logged to this logger.
-     */
-    private static final Logger LOGGER = Logger.getLogger(SignInAction.class.getName());
 
     /**
      * The single instance of this sign-in action.
@@ -92,49 +93,83 @@ public class SignInAction extends MercGuiAction {
         // putValue(ACCELERATOR_KEY, getAcceleratorKeyStroke());
     }
 
-    /**
-     * Handle the user's request to sign-in by sending it to the DICE tutor.
-     *
-     * If successful, the MainFrame with the Courtroom View is displayed.
-     *
-     * @param evt ignored
-     */
-    @Override
-    public void actionPerformed(ActionEvent evt) {
-
-        // Gson with lambda calc decoder
-        Gson gson = new GsonBuilder()
+    /** Creates the parser for the complete session returned by sign-in. */
+    static Gson createSessionGson() {
+        return new GsonBuilder()
                 .setPrettyPrinting()
+                .registerTypeAdapter(Student.class, new StudentDeserializer())
+                .registerTypeAdapter(Timeout.class, new TimeoutDeserializer())
                 .registerTypeAdapter(LCExpression.class, new JsonDeserializer<LCExpression>() {
                     @Override
-                    public LCExpression deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+                    public LCExpression deserialize(
+                            JsonElement json,
+                            Type typeOfT,
+                            JsonDeserializationContext context)
                             throws JsonParseException {
+
                         JsonObject jsonObject = json.getAsJsonObject();
 
                         // rule 1: if it has a 'name' field it's a var
-                        if (jsonObject.has("name") && !jsonObject.get("name").isJsonNull()) {
-                            return context.deserialize(jsonObject, LCVariable.class);
+                        if (jsonObject.has("name")
+                                && !jsonObject.get("name").isJsonNull()) {
+                            return context.deserialize(
+                                    jsonObject, LCVariable.class);
                         }
                         // rule 2: if it has 'function' or 'arg' fields, it's an app
-                        else if (jsonObject.has("function") || jsonObject.has("arg")) {
-                            return context.deserialize(jsonObject, LCApplication.class);
+                        else if (jsonObject.has("function")
+                                || jsonObject.has("arg")) {
+                            return context.deserialize(
+                                    jsonObject, LCApplication.class);
                         }
                         // rule 3: otherwise it's an Abstraction
                         else {
-                            return context.deserialize(jsonObject, LCAbstraction.class);
+                            return context.deserialize(
+                                    jsonObject, LCAbstraction.class);
                         }
                     }
                 })
                 .create();
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent evt) {
+        Gson gson = createSessionGson();
 
         Account account = SplashFrame.instance().getAccount();
-        ClientRequest request = new ClientRequest(ServerRequestType.SIGN_IN);
+
+        ClientRequest request
+                = new ClientRequest(ServerRequestType.SIGN_IN);
+
         request.setData(gson.toJson(account));
-        TutorReply reply = SvcFacade.instance().tutorRequest(request);
+
+        TutorReply reply;
+        try {
+            reply = SvcFacade.instance().tutorRequest(request);
+        } catch (JsonParseException ex) {
+            showSignInError("The server returned an invalid response. Please try again.");
+            return;
+        }
+
+        if (reply == null || reply.getStatus() == null) {
+            showSignInError("No valid response was received from the server. Please try again.");
+            return;
+        }
 
         switch (reply.getStatus()) {
             case "Authenticated":
-                TutoringSession session = gson.fromJson(reply.getData(), TutoringSession.class);
+                AuthenticationLogger.signInSucceeded(account.getUserId());
+
+                TutoringSession session;
+                try {
+                    session = gson.fromJson(reply.getData(), TutoringSession.class);
+                } catch (JsonParseException ex) {
+                    showSignInError("Your tutoring session could not be loaded. Please try again.");
+                    return;
+                }
+                if (session == null) {
+                    showSignInError("Your tutoring session could not be loaded. Please try again.");
+                    return;
+                }
 
                 // Initialize main frame instance.
                 // This is used after selecting a mode from the dashboard.
@@ -148,16 +183,24 @@ public class SignInAction extends MercGuiAction {
 
                 // Start tracking user inactivity
                 // inactivityManager.startTracking();
-
                 break;
+
             case "InvalidPassword":
+            case "UnknownUser":
+                AuthenticationLogger.signInFailed(account.getUserId());
+
                 SplashFrame.instance().invalidPass();
                 break;
-            case "UnknownUser":
-                SplashFrame.instance().unknownUser();
-                break;
+
             default:
-                System.out.println("Coding error  status: " + reply.getStatus());
+                AuthenticationLogger.unexpectedSignInResponse(account.getUserId());
+                showSignInError("Unable to sign in. Please check that the tutoring server is running and try again.");
+                break;
         }
+    }
+
+    private void showSignInError(String message) {
+        JOptionPane.showMessageDialog(SplashFrame.instance(), message,
+                "Sign In Error", JOptionPane.ERROR_MESSAGE);
     }
 }

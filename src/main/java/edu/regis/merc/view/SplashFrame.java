@@ -222,7 +222,7 @@ public class SplashFrame extends JFrame {
     public void invalidPass() {
         if (signInAttempts <= MAX_SIGNIN_ATTEMPTS) {
            
-            String msg = "Invalid Password attempt " + 
+            String msg = "Invalid email or password. Attempt " +
                          String.valueOf(signInAttempts) + " of " + 
                          MAX_SIGNIN_ATTEMPTS;
             
@@ -419,6 +419,13 @@ public class SplashFrame extends JFrame {
         this.resetPasswordPanel = new ResetPasswordPanel(email);
         this.resetPasswordPanel.setSecurityToken(token);
         this.cards.add(resetPasswordPanel, RESET_PASSWORD);
+    }
+
+    /**
+     * Return the token supplied when password recovery was verified.
+     */
+    public String getResetPasswordSecurityToken() {
+        return resetPasswordPanel == null ? null : resetPasswordPanel.getSecurityToken();
     }
 
     /**
