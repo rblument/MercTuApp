@@ -18,6 +18,7 @@ import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
 import edu.regis.merc.model.Account;
+import edu.regis.merc.model.RecoveryRequest;
 import edu.regis.merc.model.Assessment;
 import edu.regis.merc.model.AssessmentLevel;
 import edu.regis.merc.model.Course;
@@ -226,18 +227,12 @@ public class MercTutor implements TutorSvc {
      * @throws edu.regis.merc.err.NonRecoverableException
      */
     public TutorReply verifyUser(String jsonAcct) throws NonRecoverableException {
-        Account requestAcct = gson.fromJson(jsonAcct, Account.class);
-        AccountSvc acctSvc = ServiceFactory.findAccountSvc();
-
-        if (!acctSvc.exists(requestAcct.getUserId())) {
-            return new TutorReply("IllegalUserId");
-        }
-
+        RecoveryRequest request = gson.fromJson(jsonAcct, RecoveryRequest.class);
+        RecoverySvc recovery = new RecoverySvc(userId -> ServiceFactory.findAccountSvc().retrieve(userId));
         try {
-            Account dbAcct = acctSvc.retrieve(requestAcct.getUserId());
+            Account dbAcct = recovery.verifyAnswer(request);
 
-            if ((dbAcct.getSecurityAnswer().equals(requestAcct.getSecurityAnswer())) &&
-                    (dbAcct.getSecurityQuestion() == requestAcct.getSecurityQuestion())) {
+            if (dbAcct != null) {
 
                 student = new Student(dbAcct);
 
@@ -270,11 +265,18 @@ public class MercTutor implements TutorSvc {
             }
 
         } catch (ObjNotFoundException e) {
-            return new TutorReply("UnknownUser");
+            return new TutorReply("InvalidAnswer");
         } catch (NonRecoverableException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
             return new TutorReply();
         }
+    }
+
+    /** Public lookup returns only the stored question, never an account or token. */
+    public TutorReply getSecurityQuestion(String json) {
+        RecoveryRequest request = gson.fromJson(json, RecoveryRequest.class);
+        RecoverySvc recovery = new RecoverySvc(userId -> ServiceFactory.findAccountSvc().retrieve(userId));
+        return recovery.questionFor(request == null ? null : request.getUserId());
     }
 
     /**

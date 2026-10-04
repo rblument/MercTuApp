@@ -356,7 +356,13 @@ public class SplashFrame extends JFrame {
      * so that they can reset their password.
      */
     public void selectForgotPassword() {
+        forgotPasswordPanel.clearFields();
         this.selectPanel(FORGOT_PASSWORD);
+        forgotPasswordPanel.updateFocus();
+    }
+
+    public void verifyRecoveryAnswer() {
+        forgotPasswordPanel.verifyAnswer();
     }
     
     /**
