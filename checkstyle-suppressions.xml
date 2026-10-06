@@ -6,4 +6,5 @@
 <suppressions>
 	<suppress files=".*edu.*merc.*view.*" checks="MagicNumber"/> <!-- Exempt grid numbers in the views. -->
 	<suppress files=".*edu.*merc.*dao.*" checks="MagicNumber"/> <!-- Also exempt arguments to creating SQL statements. -->
+	<suppress files=".*edu.*merc.*util.*SHA.*" checks="MagicNumber" />
 </suppressions>
