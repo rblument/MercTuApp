@@ -27,6 +27,9 @@ import edu.regis.merc.dao.MUSvcImpl;
  * @author rickb
  */
 public class ServiceFactory {
+
+    private ServiceFactory() {}
+
     /**
      * Return a reference to the user service.
      *

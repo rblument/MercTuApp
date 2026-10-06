@@ -51,7 +51,7 @@ import java.util.logging.Logger;
  */
 public class MercTutor implements TutorSvc {
     /**
-     * The id of the default course taught by the this tutor.
+     * The id of the default course taught by this tutor.
      */
     private static final int DEFAULT_COURSE_ID = 0;
 
@@ -95,10 +95,10 @@ public class MercTutor implements TutorSvc {
         Logger.getLogger(MercTutor.class.getName()).log(Level.INFO, request.getRequestType().getRequestName());
 
         // Efficiently produce "signIn" from ":SignIn", for example.
-        char c[] = request.getRequestType().getRequestName().toCharArray();
+        char[] c = request.getRequestType().getRequestName().toCharArray();
         c[1] = Character.toLowerCase(c[1]);
 
-        char m[] = new char[c.length - 1];
+        char[] m = new char[c.length - 1];
         for (int i = 1; i < c.length; i++) {
             m[i - 1] = c[i];
         }

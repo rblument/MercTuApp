@@ -30,6 +30,8 @@ import java.util.logging.Logger;
  */
 public class MercApp {
 
+    private MercApp() {}
+
     /**
      * Property file located on the CLASSPATH, which is used to configure the LOGGER.
      */
@@ -54,6 +56,8 @@ public class MercApp {
      * Prevents shutdown from being initiated more than once.
      */
     private static boolean shuttingDown = false;
+
+    private static final int THREAD_WAIT_MILLIS = 4000;
 
     /**
      * Configure the LOGGER with the properties found in the LOGGER_PROPERTIES
@@ -127,7 +131,7 @@ public class MercApp {
             // we separate the server into its own application that executes
             // on a different host from the GUI client since the server should
             // "always" be running.
-            Thread.sleep(4000);
+            Thread.sleep(THREAD_WAIT_MILLIS);
 
             LOGGER.info(" Server is running.");
 
@@ -173,7 +177,7 @@ public class MercApp {
                 && mercServerThread != Thread.currentThread()) {
 
             try {
-                mercServerThread.join(2000);
+                mercServerThread.join(THREAD_WAIT_MILLIS);
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
