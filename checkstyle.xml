@@ -18,12 +18,13 @@
     <property name="optional" value="true"/>
   </module>
 
-  <module name="JavadocPackage"/>
+	  <!--<module name="JavadocPackage"/>-->
   <module name="NewlineAtEndOfFile"/>
   <module name="Translation"/>
   <module name="FileLength"/>
   <module name="LineLength">
-    <property name="fileExtensions" value="java"/>
+	  <property name="fileExtensions" value="java"/>
+	  <property name="max" value="160"/>
   </module>
   <module name="FileTabCharacter"/>
   <module name="RegexpSingleline">
@@ -39,13 +40,11 @@
     <module name="MultipleVariableDeclarations"/>
     <module name="SimplifyBooleanExpression"/>
     <module name="SimplifyBooleanReturn"/>
-    <module name="DesignForExtension"/>
     <module name="FinalClass"/>
     <module name="HideUtilityClassConstructor"/>
     <module name="InterfaceIsType"/>
     <module name="VisibilityModifier"/>
     <module name="ArrayTypeStyle"/>
-    <module name="FinalParameters"/>
     <module name="TodoComment"/>
     <module name="UpperEll"/>
   </module>

@@ -39,12 +39,12 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
     /**
      * The model displayed by this view
      */
-    protected Transition model;
+    private Transition model;
 
-    protected Font font;
+    private Font font;
 
-    protected int halfW;
-    protected int halfH;
+    private int halfW;
+    private int halfH;
 
     private int dragX;
     private int dragY;

@@ -65,20 +65,20 @@ public class NewAccountPanel extends GPanel {
     /**
      * The editable fields appearing in this dialog.
      */
-    protected HintTextField fName;
-    protected HintTextField lName;
-    protected HintTextField userId;
-    protected JPasswordField pass1;
-    protected JPasswordField pass2;
-    protected JComboBox secQuestions;
-    protected JPasswordField secAnswer;
+    private HintTextField fName;
+    private HintTextField lName;
+    private HintTextField userId;
+    private JPasswordField pass1;
+    private JPasswordField pass2;
+    private JComboBox secQuestions;
+    private JPasswordField secAnswer;
 
-    protected JLabel strength;
-    protected JLabel msg;
+    private JLabel strength;
+    private JLabel msg;
 
-    protected JButton signInBut;
-    protected JButton createAcctBut;
-    protected JButton backBut;
+    private JButton signInBut;
+    private JButton createAcctBut;
+    private JButton backBut;
 
     public NewAccountPanel() {
         super();

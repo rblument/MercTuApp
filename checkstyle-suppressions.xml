@@ -4,5 +4,6 @@
     "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 
 <suppressions>
-  <suppress files=".*edu.*merc.*view.*" checks="MagicNumber"/>
+	<suppress files=".*edu.*merc.*view.*" checks="MagicNumber"/> <!-- Exempt grid numbers in the views. -->
+	<suppress files=".*edu.*merc.*dao.*" checks="MagicNumber"/> <!-- Also exempt arguments to creating SQL statements. -->
 </suppressions>

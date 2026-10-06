@@ -62,27 +62,27 @@ public class SplashPanel extends GPanel {
     /**
      * Hidden display of the user's password: *******.
      */
-    protected JPasswordField password;
+    private JPasswordField password;
 
     /**
      * Allows the user to attempt to sign-in using their id and password.
      */
-    protected JButton signInBut;
+    private JButton signInBut;
 
     /**
      * Displays a panel allowing the user to create a new student account.
      */
-    protected JButton createAcctBut;
+    private JButton createAcctBut;
 
     /**
      * Displays a panel allowing the user to reset their password.
      */
-    protected JButton forgotPasswordBut;
+    private JButton forgotPasswordBut;
 
     /**
      * Displays a close button closing the application.
      */
-    protected JButton closeBut;
+    private JButton closeBut;
 
     /**
      * Create and layout the child GUI components in this panel.

@@ -68,17 +68,17 @@ public class ResetPasswordPanel extends GPanel{
     /**
      * The editable fields appearing in this dialog.
      */
-    protected JTextField userId;
-    protected JPasswordField pass1;
-    protected JPasswordField pass2;
+    private JTextField userId;
+    private JPasswordField pass1;
+    private JPasswordField pass2;
 
-    public String userEmail = "";
+    private String userEmail = "";
 
-    protected JLabel strength;
-    protected JLabel msg;
+    private JLabel strength;
+    private JLabel msg;
 
-    protected JButton resetBut;
-    protected JButton backBut;
+    private JButton resetBut;
+    private JButton backBut;
 
     public ResetPasswordPanel(String email) {
         super();

@@ -37,12 +37,12 @@ public class HintTextField extends JTextField {
     /**
      * The initial default 'hint' displayed as gray text in the field.
      */
-    protected String hint = "";
+    private String hint = "";
 
     /**
      * A light gray color to display initial default text.
      */
-    protected Color hintColor = new Color(200,200,200);
+    private final Color hintColor = new Color(200,200,200);
 
     /**
      * True, if the field contains only the default hint text (i.e. no user

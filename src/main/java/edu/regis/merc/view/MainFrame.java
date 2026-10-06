@@ -36,12 +36,7 @@ public class MainFrame extends JFrame {
     /**
      * The singleton instance of this frame.
      */
-    private final static MainFrame SINGLETON;
-
-    // Invoked when this class is loaded
-    static {
-        SINGLETON = new MainFrame();
-    }
+    private final static MainFrame SINGLETON = new MainFrame();
 
     /**
      * Return the singleton instance of this frame.

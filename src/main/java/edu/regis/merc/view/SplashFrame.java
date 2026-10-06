@@ -79,18 +79,13 @@ public class SplashFrame extends JFrame {
 
     /**
      * The single instance of this frame.
-     */
-    private static final SplashFrame SINGLETON;
-
-    /**
+     *
      * Create the singleton for this JFrame, which occurs when this class
      * is loaded by the Java class loaded, as a result of the class being
      * referenced by executing WelcomeFrame.instance() in the main() method of
      * EthicsCourtTutor.
      */
-    static {
-        SINGLETON = new SplashFrame();
-    }
+    private static final SplashFrame SINGLETON = new SplashFrame();
 
     /**
      * Return the singleton instance of this JFrame.
@@ -148,7 +143,7 @@ public class SplashFrame extends JFrame {
      * The number of consecutive illegal passwords attempted by the current
      * user attempting to login (see MAX_SIGNIN_ATTEMPTS).
      */
-    protected int signInAttempts = 1;
+    private int signInAttempts = 1;
 
     /**
      * Create and layout the child components in this Splash JFrame.

@@ -58,15 +58,15 @@ public class ForgotPasswordPanel extends GPanel{
     /**
      * The editable fields appearing in this dialog.
      */
-    protected HintTextField userId;
-    protected JPasswordField secAnswer;
-    protected JComboBox securityQuestions;
+    private HintTextField userId;
+    private JPasswordField secAnswer;
+    private JComboBox securityQuestions;
 
-    protected JLabel strength;
-    protected JLabel msg;
+    private JLabel strength;
+    private JLabel msg;
 
-    protected JButton verifyBut;
-    protected JButton backBut;
+    private JButton verifyBut;
+    private JButton backBut;
 
     public ForgotPasswordPanel() {
         super();
