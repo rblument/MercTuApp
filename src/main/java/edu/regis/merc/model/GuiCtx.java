@@ -20,6 +20,8 @@ import java.awt.Font;
  * @author Rickb
  */
 public class GuiCtx extends Model {
+    private static final int DEFAULT_FONTSIZE_PTS = 10;
+
     private int x = 0;
     private int y = 0;
     private int width = 0;
@@ -30,7 +32,7 @@ public class GuiCtx extends Model {
 
     private String fontName = "Dialog";
     private int fontStyle  = Font.PLAIN;
-    private int fontSize = 10; // pts
+    private int fontSize = DEFAULT_FONTSIZE_PTS; // pts
 
     private int borderWidth = 1;
 

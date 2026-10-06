@@ -70,7 +70,7 @@ public class NewAccountPanel extends GPanel {
     private HintTextField userId;
     private JPasswordField pass1;
     private JPasswordField pass2;
-    private JComboBox secQuestions;
+    private JComboBox<String> secQuestions;
     private JPasswordField secAnswer;
 
     private JLabel strength;
@@ -180,8 +180,7 @@ public class NewAccountPanel extends GPanel {
         pass2 = new JPasswordField(20);
         pass2.getDocument().addDocumentListener(docListener);
 
-        String s1[] = {"What city were you born in?", "What is your mother's maiden name?"};
-        secQuestions = new JComboBox(s1);
+        secQuestions = new JComboBox(new String[]{"What city were you born in?", "What is your mother's maiden name?"});
 
         secAnswer = new JPasswordField(20);
         secAnswer.getDocument().addDocumentListener(docListener);

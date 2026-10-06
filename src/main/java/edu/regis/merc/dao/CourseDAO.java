@@ -164,7 +164,11 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
     private ArrayList<KnowledgeComponent> retrieveKnowledgeComponents(Course course, Connection conn)
             throws NonRecoverableException {
 
-        final String sql = "SELECT Id, Title, Description, BloomLevel, IsDomainFocus, Pedagogy, ExercisingLocations, Granularity FROM KnowledgeComponent WHERE CourseId = ?";
+        final String sql = """
+            SELECT Id, Title, Description, BloomLevel, IsDomainFocus, Pedagogy, ExercisingLocations, Granularity
+            FROM KnowledgeComponent
+            WHERE CourseId = ?
+            """;
 
         ArrayList<KnowledgeComponent> outcomes = new ArrayList<>();
 

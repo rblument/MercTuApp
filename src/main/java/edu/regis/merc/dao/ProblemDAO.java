@@ -269,7 +269,11 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
 
     private ArrayList<Step> retrieveSteps(int taskId, Connection conn)
             throws NonRecoverableException {
-        final String sql = "SELECT Id,Title,Description,SequenceIndex,Context,Prompt,Data,ExercisedComponentId,ViewConfigId,StudentAction,ActionId,TimeoutId FROM Step WHERE TaskId = ?";
+        final String sql = """
+                SELECT Id,Title,Description,SequenceIndex,Context,Prompt,Data,ExercisedComponentId,ViewConfigId,StudentAction,ActionId,TimeoutId
+                FROM Step
+                WHERE TaskId = ?
+                """;
         ArrayList<Step> steps = new ArrayList<>();
         PreparedStatement stmt = null;
         try {
@@ -363,7 +367,11 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
 
     private TmViewConfiguration retrieveTmViewConfiguration(int tmViewConfigId, Connection conn)
             throws InconsistentDBException, NonRecoverableException {
-        final String sql = "SELECT StateIds,TransitionIds,TapeCellIds,AcceptStateIndicatorIds,RejectStateIndicatorIds,DisplayStartIndicator,DisplayTapeHead FROM TmViewConfiguration WHERE Id = ?";
+        final String sql = """
+            SELECT StateIds,TransitionIds,TapeCellIds,AcceptStateIndicatorIds,RejectStateIndicatorIds,DisplayStartIndicator,DisplayTapeHead
+            FROM TmViewConfiguration
+            WHERE Id = ?
+            """;
         PreparedStatement stmt = null;
         try {
             stmt = conn.prepareStatement(sql);

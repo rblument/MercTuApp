@@ -66,8 +66,7 @@ public abstract class Model implements Serializable {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        return hash;
+        return id;
     }
 
     @Override

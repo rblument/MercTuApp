@@ -21,6 +21,9 @@ import java.awt.GridBagConstraints;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -60,7 +63,7 @@ public class ForgotPasswordPanel extends GPanel{
      */
     private HintTextField userId;
     private JPasswordField secAnswer;
-    private JComboBox securityQuestions;
+    private JComboBox<String> securityQuestions;
 
     private JLabel strength;
     private JLabel msg;
@@ -145,9 +148,7 @@ public class ForgotPasswordPanel extends GPanel{
         userId.setIsEmailAddr(true);
         userId.getDocument().addDocumentListener(docListener);
 
-
-        String s1[] = {"What city were you born in?", "What is your mother's maiden name?"};
-        securityQuestions = new JComboBox(s1);
+        securityQuestions = new JComboBox<>(new String[] {"What city were you born in?", "What is your mother's maiden name?"});
 
         secAnswer = new JPasswordField(20);
         secAnswer.getDocument().addDocumentListener(docListener);

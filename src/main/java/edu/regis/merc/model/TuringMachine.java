@@ -36,7 +36,9 @@ public class TuringMachine extends GraphicalComponent {
     private LinkedList<Character> inputTape; // Copy of original input string - used to reset
     private ArrayList<Character> inputAlphabet; // List of allowed symbols
     private ArrayList<Character> tapeAlphabet; // List of allowed symbols on tape
-    private State startState, acceptState, rejectState; // Special states
+    private State startState; // Special states
+    private State acceptState;
+    private State rejectState;
     private State currentState; // Current state of machine
     private int head; // Current index of tape
 
@@ -77,7 +79,14 @@ public class TuringMachine extends GraphicalComponent {
         reset();
     }
 
-    public TuringMachine(int id, String name, String description, ArrayList<Character> inputAlphabet, ArrayList<Character> tapeAlphabet, State startState, State acceptState, State rejectState) {
+    public TuringMachine(int id,
+                         String name,
+                         String description,
+                         ArrayList<Character> inputAlphabet,
+                         ArrayList<Character> tapeAlphabet,
+                         State startState,
+                         State acceptState,
+                         State rejectState) {
         super(id);
         super.setTitle(name);
         super.setDescription(description);

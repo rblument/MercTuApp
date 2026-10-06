@@ -36,21 +36,15 @@ import javax.swing.JOptionPane;
 public class CheckSecurityQuestAction extends MercGuiAction {
     /**
      * The single instance of this check security question action.
-     */
-    private static final CheckSecurityQuestAction SINGLETON;
-
-    public Account model;
-
-
-    /**
+     *
      * Create the singleton for this action, which occurs when this class
      * is loaded by the Java class loaded, as a result of the class being
      * referenced by executing CheckSecurityQuestAction.instance() in the
      * initializeComponents() method of the SplashPanel class.
      */
-    static {
-        SINGLETON = new CheckSecurityQuestAction();
-    }
+    private static final CheckSecurityQuestAction SINGLETON = new CheckSecurityQuestAction();;
+
+    private  Account model;
 
     /**
      * Return the singleton instance of this check security question action.

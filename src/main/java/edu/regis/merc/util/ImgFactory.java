@@ -27,6 +27,9 @@ import javax.swing.ImageIcon;
  * @author rickb
  */
 public class ImgFactory {
+
+    private ImgFactory() {}
+
     /**
      * Directory in the resources directory where the images are located.
      */

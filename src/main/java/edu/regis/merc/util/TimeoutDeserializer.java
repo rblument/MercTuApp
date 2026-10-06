@@ -17,9 +17,9 @@ public class TimeoutDeserializer implements JsonDeserializer<Timeout> {
     }
 
     private static class TimeoutData {
-        String type;
-        int seconds;
-        String event;
-        String text;
+        private String type;
+        private int seconds;
+        private String event;
+        private String text;
     }
 }

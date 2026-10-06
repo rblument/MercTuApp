@@ -285,7 +285,7 @@ public class SHA_256 {
         System.arraycopy(H0, 0, h, 0, H0.length);
 
         // initialize all words
-        int initWords [] = pad(message);
+        int[] initWords = pad(message);
 
         return initWords;
     }

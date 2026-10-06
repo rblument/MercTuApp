@@ -49,7 +49,7 @@ public abstract class MySqlDAO {
     /**
      * Fully qualified name of the MySql JDBC driver class.
      */
-    public static String DRIVER = "com.mysql.cj.jdbc.Driver";
+    public static final String DRIVER = "com.mysql.cj.jdbc.Driver";
 
     /*
      * The URL used to obtain a JDBC connection.

@@ -51,7 +51,7 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
 
     private boolean isHighlighted;
 
-    JPopupMenu popupMenu;
+    private JPopupMenu popupMenu;
 
     public TransitionView(Transition model) {
         isHighlighted = false;
@@ -215,7 +215,10 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
     {
         for (int offset = 0; offset < width + height; offset += separation)
             for (int i = 0; i < thickness; i++, offset++) {
-                int x1, y1, x2, y2;
+                int x1;
+                int y1;
+                int x2;
+                int y2;
 
                 if (offset < height) {
                     x1 = x;

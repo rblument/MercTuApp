@@ -57,7 +57,7 @@ public class SplashPanel extends GPanel {
     /**
      * The user's id of the form "user@university.edu".
      */
-    protected JTextField userId;
+    private JTextField userId;
 
     /**
      * Hidden display of the user's password: *******.
