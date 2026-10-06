@@ -68,7 +68,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
             close(conn);
         }
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -310,7 +310,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
      *             method.
      * @return an ArrayList of Hint
      */
-    
+
     private ArrayList<Hint> retrieveHints(int stepId, Connection conn)
             throws NonRecoverableException {
         final String sql = "SELECT Id,Text,SequenceIndex FROM Hint WHERE StepId = ?";

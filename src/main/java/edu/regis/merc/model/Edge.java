@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -40,55 +40,55 @@ public class Edge extends GraphicalComponent {
     public Edge() {
         this(DEFAULT_ID);
     }
-    
+
     public Edge(int id) {
         this(id, null, null);
     }
 
     /**
      * Construct this edge
-     * 
+     *
      * @param id
      * @param tail
      * @param head
      */
     public Edge(int id, Node tail, Node head) {
-	super(id);
+        super(id);
 
-	this.tail = tail;
-	this.head = head;
+        this.tail = tail;
+        this.head = head;
     }
 
     /**
      * Accessor that returns this edge's tail (previous/from) node.
      */
     public Node getTail() {
-	return tail;
+        return tail;
     }
 
     /**
      * Mutator that assigns this edge's tail (previous/from) node.
      */
     public void setTail(Node tail) {
-	this.tail = tail;
+        this.tail = tail;
     }
 
     /**
      * Accessor that returns this edge's head (next/to) node.
      */
     public Node getHead() {
-	return head;
+        return head;
     }
 
     /**
      * Mutator that assigns this edge's head (next/to) node.
      */
     public void setHead(Node head) {
-	this.head = head;
+        this.head = head;
     }
 
     public String getType() {
-	return type;
+        return type;
     }
 }
 

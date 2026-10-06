@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -17,11 +17,11 @@ import java.util.ArrayList;
 /**
  * The current step within a pending task that a student needs to complete as
  * part of the current tutoring session.
- * 
+ *
  * A pending step represents the dynamic information associated with a student
  * completing a step, while the associated step is a static step within a
  * course.
- * 
+ *
  * @author rickb
  */
 public class PendingStep {
@@ -45,7 +45,7 @@ public class PendingStep {
 
     /**
      * True, if the student has completed this step, otherwise false.
-     * 
+     *
      * Note, if this is true and notifyTutor is true, the tutor has been
      * notified that the student completed this step. Otherwise, the tutor
      * will be notified when the student completes the parent task associated

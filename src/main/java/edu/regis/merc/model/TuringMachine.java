@@ -25,8 +25,8 @@ public class TuringMachine extends GraphicalComponent {
      * Default character representing a blank on the tape.
      */
     public static final char BLANK = '-';
-    
-    
+
+
     /**
      * The sates in this Turing Machine.
      */
@@ -99,7 +99,7 @@ public class TuringMachine extends GraphicalComponent {
     public void addState(State state) {
         states.add(state);
     }
-    
+
     public State findState(int id) throws ObjNotFoundException {
         for (State state : states) {
             if (state.getId() == id) {
@@ -109,14 +109,14 @@ public class TuringMachine extends GraphicalComponent {
 
         throw new ObjNotFoundException("State " + id + " not found in TM " + this.id);
     }
-    
+
     public State findState(String name) throws ObjNotFoundException {
         for (State state : states) {
             if (state.getName().equalsIgnoreCase(name)) {
                 return state;
             }
         }
-        
+
         throw new ObjNotFoundException("State " + name + " not found in TM " + this.id);
     }
 
@@ -224,7 +224,7 @@ public class TuringMachine extends GraphicalComponent {
 
     public void setTransitions(ArrayList<Transition> transitions) {
         this.transitions = transitions;
-        
+
         for (Transition transition : transitions)
             cachedTransitions.add(transition);
 

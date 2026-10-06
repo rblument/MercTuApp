@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -15,11 +15,11 @@ package edu.regis.merc.model;
 /**
  * A task that a student needs to complete as part of the current tutoring
  * session (this may be the current task or one that is still to be completed).
- * 
+ *
  * A pending task represents the dynamic information associated with a student
  * completing a task, while the associated task is a static step within a
  * course.
- * 
+ *
  * @author rickb
  */
 public class PendingTask {
@@ -74,7 +74,7 @@ public class PendingTask {
 
     /**
      * Return whether this task is completed.
-     * 
+     *
      * @return true if all of the steps in this task have been completed,
      *         otherwise false
      */
@@ -85,7 +85,7 @@ public class PendingTask {
 
     /**
      * Advances the current step to the next step in the task sequence.
-     * 
+     *
      * @return true if successfully advanced, false if there are no more steps.
      */
     public boolean advanceStep() {

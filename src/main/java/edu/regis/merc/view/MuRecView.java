@@ -13,7 +13,7 @@ import java.awt.event.MouseEvent;
 /**
  * This view demosntrates human-centered design by transforming a static
  * mathematical string into a non-mouse interactive interface.
- * 
+ *
  * Design pattern: uses a recursive composite pattern to walk the MuExpression
  * tree. Note that 'StaticLabels' (parentheses/equals) are intentionalyl
  * non-interactive to guide the student toward functional computing
@@ -146,7 +146,7 @@ public class MuRecView extends JPanel {
     /**
      * a recursive method that reads the MuExpression tree and turns it into UI
      * components
-     * 
+     *
      * @param expr
      */
     private void renderExpression(MuExpression expr) {

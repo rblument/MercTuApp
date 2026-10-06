@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -17,12 +17,12 @@ import java.util.ArrayList;
 /**
  * A multi-minute activity that can be skipped or interchanged with other tasks,
  * whose steps the student is expected to perform.
- * 
+ *
  * Tasks are based on tutoring behaviors in (VanLehn, 2006).
- * 
+ *
  * As a Task appears within actions/expectations created by an agent,
  * all fields are final so that other malicious agents cannot change them.
- * 
+ *
  * @author rickb
  */
 public class Task extends TitledModel {
@@ -74,7 +74,7 @@ public class Task extends TitledModel {
 
     /**
      * Instantiate this task with the given id.
-     * 
+     *
      * @param id database id of this task.
      */
     public Task(int id) {
@@ -143,7 +143,7 @@ public class Task extends TitledModel {
     }
 
     /**
-     * 
+     *
      * @param stepId the database id of the step to find.
      * @return
      */
@@ -158,7 +158,7 @@ public class Task extends TitledModel {
     /**
      * Locally update the task state to note that the given step has been
      * performed by the student (this doesn't notify the tutor).
-     * 
+     *
      * @param completion the Step that was completed by the student.
      */
     public void completedStep(StepCompletion completion) {

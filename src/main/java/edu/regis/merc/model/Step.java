@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -18,10 +18,10 @@ import java.util.ArrayList;
  * A user interface gesture/event performed by a student, as part of a Task.
  *
  * Steps in tasks are based on tutoring behaviors in (VanLehn, 2006).
- * 
+ *
  * As a Step appears within actions/expectations created by an agent,
  * all fields are final so that other malicious agents cannot change them.
- * 
+ *
  * @author rickb
  */
 public class Step extends TitledModel {
@@ -36,19 +36,19 @@ public class Step extends TitledModel {
      * Which step this is in the parent task.
      */
     protected int sequenceIndex = 1;
-    
+
     /**
      * A displayable description providing background information for solving
      * the problem presented by the prompt in this step.
      */
     private String context;
-    
+
     /**
      * A displayable description describing what the student needs to perform
      * in this step.
      */
     private String prompt;
-    
+
     private ViewConfiguration viewConfiguration;
 
     /**
@@ -75,7 +75,7 @@ public class Step extends TitledModel {
 
     /**
      * Instantiate this step with the given information.
-     * 
+     *
      * @param id
      * @param sequenceId
      * @param subType
@@ -123,7 +123,7 @@ public class Step extends TitledModel {
 
     public void setViewConfiguration(ViewConfiguration viewConfiguration) {
         this.viewConfiguration = viewConfiguration;
-    }    
+    }
 
   //  public StepSubType getSubType() {
    //     return subType;
@@ -154,7 +154,7 @@ public class Step extends TitledModel {
     public int getSequenceIndex() {
         return sequenceIndex;
     }
-    
+
     public void setSequenceIndex(int sequenceIndex) {
        this.sequenceIndex = sequenceIndex;
     }

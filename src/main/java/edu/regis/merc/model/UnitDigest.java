@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -13,9 +13,9 @@
 package edu.regis.merc.model;
 
 /**
- * A descriptive summary of a unit as used in a tutoring session, which 
+ * A descriptive summary of a unit as used in a tutoring session, which
  * eliminates the need to return an entire unit to the GUI.
- * 
+ *
  * @author rickb
  */
 public class UnitDigest extends TitledModel {
@@ -25,10 +25,10 @@ public class UnitDigest extends TitledModel {
     public UnitDigest() {
         this(DEFAULT_ID);
     }
-    
+
     /**
      * Instantiate this digest with the given id and empty title and description.
-     * 
+     *
      * @param id the digest's unique id, as determined by the database used to
      *           persist this model.
      */

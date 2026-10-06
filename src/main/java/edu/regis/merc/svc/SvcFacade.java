@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -24,27 +24,27 @@ import java.util.logging.Logger;
 import java.util.function.Function;
 
 /**
- * A Facade that standardizes requests from the GUI Client to the MERC tutor 
+ * A Facade that standardizes requests from the GUI Client to the MERC tutor
  * server via a socket connection with requests and replies encoded as JSon
  * encoded object strings
  *
  * Conceptually, this facade is part of the Swing-based GUI client.
  *
  * This facade exists to facilitate a subsequent port from the Swing-based GUI
- * to a Restful HTML client. As such, it is currently a logical part of the 
+ * to a Restful HTML client. As such, it is currently a logical part of the
  * Swing-based GUI client, but for a Web-Browser client, it would be implemented
- * as part of the Server Socket Connection, which would forward the HTTML JSon 
+ * as part of the Server Socket Connection, which would forward the HTTML JSon
  * HttpReqeust to the tutor using POJO message passing (i.e. method invocation).
- * 
+ *
  * Currently, the following request types are supported:
  * {"request": "CreateStudentAccount",
- *  "data": {"userId":"userId@regis.edu", 
+ *  "data": {"userId":"userId@regis.edu",
  *           "password":"sha256Password",
  *           "firstName":"Rick",
  *           "lastName":"Justice"
  *          }
  * }
- * 
+ *
  * {"request": "SignIn",
  *  "data":  {"userId": "user email addr"}
  * }
@@ -56,7 +56,7 @@ public class SvcFacade {
      * Enables request/reply status messages, never their JSON payloads.
      */
     private static final boolean IS_DEBUG = false;
-    
+
     /**
      * The single instance of the tutor facade.
      */
@@ -64,51 +64,51 @@ public class SvcFacade {
 
     /**
      * Create the singleton for this facade, which occurs when this class
-     * is loaded by the Java class loaded, as a result of the class being 
+     * is loaded by the Java class loaded, as a result of the class being
      * referenced be the SvcFacade.instance() method occurring initially
      * in the SignInAction class.
      */
     static {
         SINGLETON = new SvcFacade();
     }
-    
+
     /**
      * Return the singleton implementing the TutorFacade interface.
-     * 
+     *
      * @return a TutorFacade
      */
     public static SvcFacade instance() {
         return SINGLETON;
     }
-    
+
     /**
      * Handler for logging messages.
      */
     private static final Logger LOGGER = Logger.getLogger(SvcFacade.class.getName());
-    
+
     /**
      * The computer host to which ShaTu tutor requests are delegated.
-     * 
+     *
      * That is, the ShaTuServer is executing on this host.
      */
     private static final String SERVER = "localhost";
-    
+
     /**
      * Socket port supporting the MERC tutoring service protocol
      */
     private static final int PORT = 53640;
-    
+
     /**
      * Utility reference to Gson for converting between Java and JSon objects.
      */
     private Gson gson;
     private final Function<String, String> transport;
     private final boolean debug;
-    
+
     /**
      * Initialize this facade with its Gson convertor.
      */
-    private SvcFacade() {  
+    private SvcFacade() {
         gson = new Gson();
         transport = this::send;
         debug = IS_DEBUG;
@@ -124,29 +124,29 @@ public class SvcFacade {
     /**
      * Encodes the given client request as a JSon object and sends it to the
      * tutor returning the tutor's reply.
-     * 
+     *
      * @param request the ClientRequest being sent to the tutor.
      * @return the TutorReply from the tutor.
      */
     public TutorReply tutorRequest(ClientRequest request) {
         String jsonRequest = gson.toJson(request);
-        
+
         if (debug)
             LOGGER.log(Level.INFO, "Sending tutor request");
-  
+
         String jsonReply = transport.apply(jsonRequest);
-        
+
         if (debug)
             LOGGER.log(Level.INFO, "Tutor reply received");
-        
+
         return gson.fromJson(jsonReply, TutorReply.class);
     }
-    
+
     /**
      * Send the given request to the ShaTu server and return the reply.
-     * 
+     *
      * Communication with the SERVER occurs via the socket connection on port PORT.
-     * 
+     *
      * @param request a JSon encoded ClientRequest object
      * @return a JSon encoded TutorReply from the tutor
      */
@@ -154,19 +154,19 @@ public class SvcFacade {
         Socket client = null;
         BufferedReader in = null;
         PrintWriter out = null;
-        
+
         try {
             client = new Socket(SERVER, PORT);
-            
+
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-            
+
             out = new PrintWriter(client.getOutputStream());
             out.println(request);
-            
+
             out.flush();
-            
+
             return in.readLine();
-            
+
         } catch (UnknownHostException e) {
             LOGGER.log(Level.SEVERE, "Unknown Host", e);
         } catch (IOException e) {
@@ -194,7 +194,7 @@ public class SvcFacade {
                 }
             }
         }
-        
+
         // Return this as a JSon encoded TutorReply object string.
         return "{'status':':ERR','data':'A non-recoverable error occurred in the socket connection (see logs)'}";
     }

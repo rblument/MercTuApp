@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -24,14 +24,14 @@ public class Node extends GraphicalComponent {
      *.
      */
     protected ArrayList<Edge> incomingEdges;
-    
+
     protected ArrayList<Edge> outgoingEdges;
 
     /**
      * An edge pointing to the (next) node after this node, if any.
      */
     protected Edge next;
-    
+
     public Node () {
         this(DEFAULT_ID);
     }
@@ -39,7 +39,7 @@ public class Node extends GraphicalComponent {
     public Node(int id) {
         super(id);
 
-	this.guiCtx = new GuiCtx();
+        this.guiCtx = new GuiCtx();
         incomingEdges = new ArrayList<>();
         outgoingEdges = new ArrayList<>();
     }
@@ -47,11 +47,11 @@ public class Node extends GraphicalComponent {
     public void addIncomingEdge(Edge edge) {
         incomingEdges.add(edge);
     }
-    
+
     public void deleteIncomingEdge(Edge edge) {
         incomingEdges.remove(edge);
     }
-    
+
     public ArrayList<Edge> getIncomingEdges() {
         return incomingEdges;
     }
@@ -59,11 +59,11 @@ public class Node extends GraphicalComponent {
     public void setIncomingEdges(ArrayList<Edge> incomingEdges) {
         this.incomingEdges = incomingEdges;
     }
-    
+
     public void addOutgoingEdge(Edge edge) {
         outgoingEdges.add(edge);
     }
-    
+
     public void deleteOutgoingEdge(Edge edge) {
         outgoingEdges.remove(edge);
     }
@@ -80,11 +80,11 @@ public class Node extends GraphicalComponent {
      * Accessor that returns this node's next edge.
      */
     public Edge getNext() {
-	return next;
+        return next;
     }
 
     public String toString() {
-	return "Node: " + getId();
+        return "Node: " + getId();
     }
 }
 

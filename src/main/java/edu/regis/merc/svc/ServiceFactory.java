@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -13,23 +13,23 @@
 package edu.regis.merc.svc;
 
 import edu.regis.merc.dao.*;
-import edu.regis.merc.svc.MUSvc; 
-import edu.regis.merc.dao.MUSvcImpl; 
+import edu.regis.merc.svc.MUSvc;
+import edu.regis.merc.dao.MUSvcImpl;
 
 /**
  * A singleton providing a concrete implementation of the service factory used
  * to obtain references to various ShaTu tutoring services.
- * 
+ *
  * Use of the service factory allows easier changes to how the services are
  * actually implemented without directly affecting the consumers who use them.
  * For example, returning a POJO versus returning a network-based service.
- * 
+ *
  * @author rickb
  */
 public class ServiceFactory {
     /**
      * Return a reference to the user service.
-     * 
+     *
      * @return AccountSvc
      */
     public static AccountSvc findAccountSvc() {
@@ -38,7 +38,7 @@ public class ServiceFactory {
 
     /**
      * Return a reference to the course service.
-     * 
+     *
      * @return CourseSvc
      */
     public static CourseSvc findCourseSvc() {
@@ -47,16 +47,16 @@ public class ServiceFactory {
 
     /**
      * Return a reference to the session service.
-     * 
+     *
      * @return SessionSvc
      */
     public static SessionSvc findSessionSvc() {
         return new SessionDAO();
     }
-    
+
     /**
      * Return a reference to the problem service.
-     * 
+     *
      * @return ProblemSvc
      */
     public static ProblemSvc findProbelmSvc() {
@@ -65,7 +65,7 @@ public class ServiceFactory {
 
     /**
      * Return a reference to the student model service.
-     * 
+     *
      * @return StudentModelSvc
      */
 
@@ -83,7 +83,7 @@ public class ServiceFactory {
     public static TuringMachingSvc findTuringMachineSvc() {
         return new TuringMachineDAO();
     }
-    
+
     /**
      * Return a reference to the μ-recursive function service.
      *
@@ -101,11 +101,11 @@ public class ServiceFactory {
     public static MUSvc findMUSvc() {
         return new MUSvcImpl();
     }
-    
+
         /**
      * Return a reference to the Lambda Calculus service.
-     * 
-     * @return 
+     *
+     * @return
      */
     public static LCSvc findLCSvc() {
         return new LCDAO();

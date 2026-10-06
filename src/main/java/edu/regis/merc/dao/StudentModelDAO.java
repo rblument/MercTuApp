@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -178,7 +178,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
     /**
      * Retrieves a list of unfinished lessons for a student in a specific learning
      * category.
-     * 
+     *
      * The category is inferred from `AssessmentLevel`:
      * - "Not Started" → Teach Me
      * - "In Progress" → Practice
@@ -345,10 +345,10 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
              throw new NonRecoverableException("Error updating scaffold level: " + e.toString(), e);
         }
     }
-    
+
     /**
      * Retrive
-     * 
+     *
      * @param userId
      * @param conn
      * @return

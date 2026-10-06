@@ -20,7 +20,7 @@ public class MuFunctionDAO extends MySqlDAO implements MuFunctionSvc {
 
         try (Connection conn = DriverManager.getConnection(MySqlDAO.URL);
              PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) 
+             ResultSet rs = stmt.executeQuery())
         {
             while (rs.next()) {
                 int id = rs.getInt("Id");
@@ -28,7 +28,7 @@ public class MuFunctionDAO extends MySqlDAO implements MuFunctionSvc {
                 String lhsText = rs.getString("Lhs");
                 String rhsText = rs.getString("Rhs");
 
-                System.out.println("Loaded MU Function from DB → " + name 
+                System.out.println("Loaded MU Function from DB → " + name
                                    + "  LHS=" + lhsText + "  RHS=" + rhsText);
 
                 MuFunction f = new MuFunction(id, new LeftHandSide(name), new MuExpression(rhsText));
@@ -47,7 +47,7 @@ public class MuFunctionDAO extends MySqlDAO implements MuFunctionSvc {
         String sql = "INSERT INTO MuFunction (Name, Lhs, Rhs) VALUES (?, ?, ?)";
 
         try (Connection conn = DriverManager.getConnection(MySqlDAO.URL);
-             PreparedStatement stmt = conn.prepareStatement(sql)) 
+             PreparedStatement stmt = conn.prepareStatement(sql))
         {
             stmt.setString(1, f.getLhs().getName());
             stmt.setString(2, f.getLhs().toString());

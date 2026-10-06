@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -209,7 +209,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
 
     /**
      * Return the units in this course from the &lt;Unit> elements.
-     * 
+     *
      * @param parent a &lt;Course> element
      * @return a List of Units
      * @throws NonRecoverableException
@@ -220,7 +220,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
         ArrayList<Unit> units = new ArrayList<>();
 
         PreparedStatement stmt = null;
-        
+
         ProblemSvc problemSvc = ServiceFactory.findProbelmSvc();
 
         try {
@@ -243,7 +243,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
             }
 
             return units;
-            
+
         } catch (SQLException e) {
             throw new NonRecoverableException("CourseDAO-ERR-6" + e.toString(), e);
         } finally {

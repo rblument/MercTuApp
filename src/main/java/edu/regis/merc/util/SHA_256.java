@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -61,7 +61,7 @@ public class SHA_256 {
     private boolean isSendCallbacks = true;
 
 
-    // The above fields are part of the ShaTu tutor, 
+    // The above fields are part of the ShaTu tutor,
     // the following fields are part of the SHA-256 algorithm.
     /**
      * The constants (in hex) defined in the SHA-256 specification.
@@ -150,7 +150,7 @@ public class SHA_256 {
 
     /**
      * Takes a string in hexidecimal and returns a binary string representation
-     * 
+     *
      * @param hexString
      */
     private static String hexToBin(String hexString) {
@@ -254,117 +254,117 @@ public class SHA_256 {
         int [] words = initializeMessage(message);
 
         if (isSendCallbacks){
-            
+
             // enumerate all blocks (each containing 16 words -- uses method)
 
             for (int i = 0, n = words.length / 16; i < n; ++i) {
                 enumerateMessageBlocks (i, words);
-                
-        // use method to operate on temp and do compression rounds        
+
+        // use method to operate on temp and do compression rounds
                 for (int t = 0; t < w.length; ++t) {
                     compressionRound (t);
                 }
-         // add values in TEMP to values in H        
+         // add values in TEMP to values in H
                 nextMessageBlockHValue ();
             }
         }
-        
-        return toByteArray(h); 
+
+        return toByteArray(h);
     }
-    
+
     /**
-     * Prepares the message for hashing by creating all words, padding with a zero 
+     * Prepares the message for hashing by creating all words, padding with a zero
      * bit and adding the 64 bit length of the original message.
      *
      * @param message The bytes to hash.
      * @return The int array of words that make up the message.
      */
-    
+
     public int [] initializeMessage(byte [] message){
         //let H = H0
         System.arraycopy(H0, 0, h, 0, H0.length);
 
         // initialize all words
-        int initWords [] = pad(message);  
-        
+        int initWords [] = pad(message);
+
         return initWords;
-    } 
-    
+    }
+
      /**
-     * Completes message schedule prepartion by creating the array of words for 
-     * a single block (64 words) to be hashed.  
-     * Appends additional zero bit words until total of 64 32-bit words in block 
+     * Completes message schedule prepartion by creating the array of words for
+     * a single block (64 words) to be hashed.
+     * Appends additional zero bit words until total of 64 32-bit words in block
      * then adds length of original message to end of block .
      *
      * @param m The block number being enumerated.
-     * @param words Array of words created from original message by initializeMessage 
+     * @param words Array of words created from original message by initializeMessage
      *        method
      */
     public void enumerateMessageBlocks (int m, int[] words){
         // initialize w from the block's words
             System.arraycopy(words, m * 16, w, 0, 16);
-         
+
             // Modify the zero-ed indexes at the end of the array using the following algorithm:
             for (int t = 16; t < w.length; ++t) {
                  w[t] = smallSig1(w[t - 2]) + w[t - 7] + smallSig0(w[t - 15]) + w[t - 16];
             }
-            
+
             //create copy of array holding initial values for working variables
-            
+
             System.arraycopy(h, 0, temp, 0, h.length);
 
     }
-    
+
     /**
-     * Performs one round of compression for the given message block.  Copies new 
-     * inputs given by calculated outputs into a temporary array used in round 
+     * Performs one round of compression for the given message block.  Copies new
+     * inputs given by calculated outputs into a temporary array used in round
      * compression round 1-63.
      * @param cr The number of the compression round (0-63).
-     * 
+     *
      */
     public void compressionRound (int cr){
         //     Choice function (if/then/else function using three variables)
         //        =  H              E        F        G
-                choice = ch(temp[4], temp[5], temp[6]); 
+                choice = ch(temp[4], temp[5], temp[6]);
         //                        A         B       C
                 majority = maj(temp[0], temp[1], temp[2]);
         //                                A
                 bigSig0Val = bigSig0(temp[0]);
-        //                                E        
+        //                                E
                 bigSig1Val = bigSig1(temp[4]);
                 Kt = K[cr];
                 Wt = w[cr];
                 mod3 = Wt + Kt;
                 mod2 = temp[7] + choice + mod3;
-                
+
         //                    E                 D
                 t1 = temp[7] + bigSig1Val + choice + Kt + Wt;
-                
-                //                               
+
+                //
                 t2 = bigSig0Val + majority;
-                
+
                 // Rick
                 // if (t == 0) {
                 //    System.out.println("Maj: " + padLeftZeros(Integer.toBinaryString(maj(TEMP[0], TEMP[1], TEMP[2])), 32));
                // System.out.println("Sig0: " + padLeftZeros(Integer.toBinaryString(bigSig0(TEMP[0])), 32));
-                
+
                 // }
                 // end Rick
-                
-                //arrays to hold orinal values of working variables and new values 
-                //after compression round is finished 
+
+                //arrays to hold orinal values of working variables and new values
+                //after compression round is finished
                 System.arraycopy(temp, 0, inTemp, 0, temp.length);
                 System.arraycopy(temp, 0, temp, 1, temp.length - 1);
                 // E
                 temp[4] += t1;
                 temp[0] = t1 + t2;
     }
-    
+
     /**
      * Adds each outgoing variable value from last compression round to the initial
      * incoming variables from compression round 0 of the message block to prepare
      * for compression of next message block (if there is one).
-     * 
+     *
      */
     public void nextMessageBlockHValue (){
      // add values in TEMP to values in H
@@ -426,13 +426,13 @@ public class SHA_256 {
     }
 
     /**
-     * Performs the choice function (bitwise if/then/else) for the compression 
-     * round 
+     * Performs the choice function (bitwise if/then/else) for the compression
+     * round
      * @param x value of working variable e (temp[4]).
      * @param y value of working variable f (temp[5]).
      * @param x value of working variable g (temp[6]).
      * @return single 32 bit int from the bitwise if/then/else addition
-     * 
+     *
      */
     private int ch(int x, int y, int z) {
         return (x & y) | ((~x) & z);
@@ -467,7 +467,7 @@ public class SHA_256 {
 
     /**
      * Performs the Sigma 1 function.
-     * Takes working variable e and performs 3 rotate right functions to get 
+     * Takes working variable e and performs 3 rotate right functions to get
      * three values to use in modulo addition. (ROTR^6, ROTR^11, ROTR^25)
      * @param x value of working variable e (temp[4]).
      * @return single 32 bit int.
@@ -480,7 +480,7 @@ public class SHA_256 {
 
     /**
      * Performs the Small Sigma 0 function during message preparation.
-     * Takes second word in message block and performs 3 rotate right functions 
+     * Takes second word in message block and performs 3 rotate right functions
      * to get three values to use in modulo addition. (ROTR^7, ROTR^18, ROTR^3)
      * @param x value of second word in message block (w[2]).
      * @return single 32 bit int.
@@ -493,7 +493,7 @@ public class SHA_256 {
 
     /**
      * Performs the Small Sigma 1 function during message preparation.
-     * Takes fifteenth word in message block and performs 3 rotate right functions 
+     * Takes fifteenth word in message block and performs 3 rotate right functions
      * to get three values to use in modulo addition. (ROTR^17, ROTR^19, ROTR^14)
      * @param x value of fifteenth word in message block (w[14]).
      * @return single 32 bit int.
@@ -505,7 +505,7 @@ public class SHA_256 {
     }
 
     /**
-     * Returns the value of the given working variable at the end of the 
+     * Returns the value of the given working variable at the end of the
      * compression round in binary form
      * @param value value for index in array holding working variables.
      * @return Binary string representation of value.
@@ -515,7 +515,7 @@ public class SHA_256 {
     }
 
     /**
-     * Returns the value of the given working variable at the beginning of the 
+     * Returns the value of the given working variable at the beginning of the
      * compression round in binary form
      * @param value value for index in array holding working variables.
      * @return Binary string representation of value.
@@ -541,7 +541,7 @@ public class SHA_256 {
     }
 
     /**
-     * Returns the final value of the Sigma 0 function from compression round in 
+     * Returns the final value of the Sigma 0 function from compression round in
      * binary form
      * @return Binary string representation of value.
      */
@@ -550,7 +550,7 @@ public class SHA_256 {
     }
 
     /**
-     * Returns the final value of the Sigma 1 function from compression round in 
+     * Returns the final value of the Sigma 1 function from compression round in
      * binary form
      * @return Binary string representation of value.
      */
@@ -565,7 +565,7 @@ public class SHA_256 {
     public int getTempLength() {
         return temp.length;
     }
-    
+
     /**
      * Returns the constant value of variable K for a given round
      * @return Binary string representation of value.
@@ -583,7 +583,7 @@ public class SHA_256 {
     }
 
     /**
-     * Returns the final value of the T1 variable from a given compression round 
+     * Returns the final value of the T1 variable from a given compression round
      * in binary form
      * @return Binary string representation of value.
      */
@@ -592,7 +592,7 @@ public class SHA_256 {
     }
 
     /**
-     * Returns the final value of the T2 variable from a given compression round 
+     * Returns the final value of the T2 variable from a given compression round
      * in binary form
      * @return Binary string representation of value.
      */
@@ -607,7 +607,7 @@ public class SHA_256 {
     public String getMod2(){
         return Integer.toBinaryString(mod2);
     }
-    
+
     /**
      * Returns the final value of variable Mod3 in binary form
      * @return Binary string representation of value.
@@ -615,7 +615,7 @@ public class SHA_256 {
     public String getMod3(){
         return Integer.toBinaryString(mod3);
     }
-    
+
     // Rickb
     public String padLeftZeros(String inputString, int length) {
         if (inputString.length() >= length) {

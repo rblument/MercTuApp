@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -255,8 +255,8 @@ public class StateView extends JComponent implements MouseListener, MouseMotionL
 
     /**
      * Show the popup menu on a right click.
-     * 
-     * @param e 
+     *
+     * @param e
      */
     protected void maybeShowPopup(MouseEvent e) {
         if (popupEnabled && e.isPopupTrigger()) {
@@ -330,7 +330,7 @@ public class StateView extends JComponent implements MouseListener, MouseMotionL
     protected void fireSelectionChangeEvent() {
         // Guaranteed to return a non-null array
         Object[] listeners = listenerList.getListenerList();
-        
+
         // Process the listeners last to first, notifying
         // those that are interested in this event
         for (int i = listeners.length - 2; i >= 0; i -= 2) {

@@ -21,7 +21,7 @@ public class InteractiveLabel extends JLabel {
 
     /**
      * Constructs an interactive math label
-     * 
+     *
      * @param text        - the mathematical symbol to display (e.g., "x","λ" "0")
      * @param componentId
      */
@@ -55,7 +55,7 @@ public class InteractiveLabel extends JLabel {
 
     /**
      * Returns the database ID required for the server-side grading loop
-     * 
+     *
      * @return
      */
     public int getComponentId() {

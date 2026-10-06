@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -31,7 +31,7 @@ import java.util.ArrayList;
 /**
  * This is a data access object for loading recursive Lambda Calculus
  * Expressions from the database.
- * 
+ *
  * @author Ellis Langham
  */
 public class LCDAO extends MySqlDAO implements LCSvc {
@@ -47,7 +47,7 @@ public class LCDAO extends MySqlDAO implements LCSvc {
      * Retrieve the LC Expression using the given ID from the database.
      * This method manages the database connection and initiates the loading of
      * the expression tree.
-     * 
+     *
      * @param exprId - the unique ID fo the expression to be loaded
      * @return - fully loaded LCExpression object tree
      * @throws ObjNotFoundException    - the the expression ID does not exist
@@ -68,7 +68,7 @@ public class LCDAO extends MySqlDAO implements LCSvc {
     /**
      * Recursively determines the type of expression and delegate to the
      * specific loader.
-     * 
+     *
      * @param exprId - id of the expression to load
      * @param conn   - database connection
      * @return - the specific subclass of LCExpression (Variable,
@@ -113,7 +113,7 @@ public class LCDAO extends MySqlDAO implements LCSvc {
 
     /**
      * Helper method to load an LCVariable from the database
-     * 
+     *
      * @param id   - id of the Variable
      * @param conn
      * @return
@@ -142,7 +142,7 @@ public class LCDAO extends MySqlDAO implements LCSvc {
     /**
      * Helper method to load an LCAbstraction along with its parameter list and body
      * list.
-     * 
+     *
      * @param id   - id of the abstraction
      * @param conn
      * @return
@@ -199,7 +199,7 @@ public class LCDAO extends MySqlDAO implements LCSvc {
     /**
      * Helper method to load an LCApplication, recursively loading its function and
      * argument
-     * 
+     *
      * @param id   - id of the application
      * @param conn
      * @return

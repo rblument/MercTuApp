@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -35,9 +35,9 @@ import javax.swing.SwingConstants;
 
 /**
  * A panel (canvas) capable of displaying a Turing Machine state model.
- * 
+ *
  * The displayed states can be selected and repositioned using the mouse.
- * 
+ *
  * @author rickb
  */
 public class TuringMachineCanvas extends JPanel implements MouseListener, SelectionListener, Scrollable {
@@ -71,7 +71,7 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
 
     /**
      * Display the given Turing Machine in this canvas.
-     * 
+     *
      * @param model a Turing Machine whose state control model is displayed.
      */
     public void setModel(TuringMachine model) {
@@ -92,7 +92,7 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
     /**
      * Select the given state and display this selection in the corresponding
      * StateView for the given state.
-     * 
+     *
      * @param node a state to select
      */
     public void select(State node) {
@@ -120,7 +120,7 @@ public class TuringMachineCanvas extends JPanel implements MouseListener, Select
 
     /**
      * Utility that returns the id of the selected node or edge
-     * 
+     *
      * @return the id of the currently selected node or DEFAULT_ID if nothing is
      *         currently selected.
      */

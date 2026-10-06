@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -173,7 +173,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
                     String errMsg = "SessionDAO-ERR-103 problem " + problemId + " not found in session for " + userId;
                     throw new NonRecoverableException(errMsg);
                 }
-                
+
                 session.setTasks(retrievePendingTasks(session, conn));
 
                 return session;
@@ -221,7 +221,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * 1. Rename existing session file
      * 2. Create a new session file using the given update
      * 3. Delete the original, but now renamed file.
@@ -268,7 +268,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             close(conn, stmt);
         }
     }
-    
+
        /**
      * {@inheritDoc}
      */
@@ -570,7 +570,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
 
             while (rs.next()) {
                 taskId = rs.getInt(1);
-                
+
                 // Task task = courseSvc.retrieveTask(session.getCourse().getId(), taskId, conn);
                 Task task = session.getProblem().findTaskById(taskId);
 
@@ -643,7 +643,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     private boolean exists(int sessionId, Connection conn) throws NonRecoverableException {
         final String sql = "SELECT SessionId FROM TutoringSession WHERE SessionId = ?;";
-        
+
         PreparedStatement stmt = null;
 
         try {
@@ -659,7 +659,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             close(stmt);
         }
     }
-    
+
         /**
      * @param userId the id of the user whose session is being checked
      * @param conn an existing connection to the database
@@ -668,7 +668,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     private boolean exists(String userId, Connection conn) throws NonRecoverableException {
         final String sql = "SELECT Id FROM TutoringSession WHERE UserId = ?;";
-        
+
         PreparedStatement stmt = null;
 
         try {
@@ -684,6 +684,6 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             close(stmt);
         }
     }
-    
+
 }
 

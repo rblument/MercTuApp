@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -39,98 +39,98 @@ public class GuiCtx extends Model {
     public GuiCtx() {
         this(DEFAULT_ID);
     }
-    
+
     public GuiCtx(int id) {
         super(id);
     }
 
     public boolean getIsSelected() {
-	return isSelected;
+        return isSelected;
     }
 
     public void setIsSelected(boolean flag) {
-	isSelected = flag;
+        isSelected = flag;
     }
 
 
     public String getFontName() {
-	return fontName;
+        return fontName;
     }
 
     public void setFontName(String name) {
-	fontName = name;
+        fontName = name;
     }
 
     public int getX() {
-	return x;
+        return x;
     }
 
     public void setX(int x) {
-	this.x = x;
+        this.x = x;
     }
 
     public int getY() {
-	return y;
+        return y;
     }
 
     public void setY(int y) {
-	this.y = y;
+        this.y = y;
     }
 
     public int getWidth() {
-	return width;
+        return width;
     }
 
     public void setWidth(int width) {
-	this.width = width;
+        this.width = width;
     }
 
     public int getHeight() {
-	return height;
+        return height;
     }
 
     public void setHeight(int height) {
-	this.height = height;
+        this.height = height;
     }
 
     public int getFontStyle() {
-	return fontStyle;
+        return fontStyle;
     }
 
     public void setFontStyle(int style) {
-	this.fontStyle = style;
+        this.fontStyle = style;
     }
 
     public int getFontSize() {
-	return fontSize;
+        return fontSize;
     }
 
     public void setFontSize(int size) {
-	this.fontSize = size;
+        this.fontSize = size;
     }
 
     public int getBorderWidth() {
-	return borderWidth;
+        return borderWidth;
     }
 
     public void setBorderWidth(int borderWidth) {
-	this.borderWidth = borderWidth;
+        this.borderWidth = borderWidth;
     }
 
     public int getX2() {
-	return x2;
+        return x2;
     }
 
     public void setX2(int x) {
-	this.x2 = x;
+        this.x2 = x;
     }
 
     public int getY2() {
-	return y2;
+        return y2;
     }
 
     public void setY2(int y) {
-	this.y2 = y;
+        this.y2 = y;
     }
 
 }
