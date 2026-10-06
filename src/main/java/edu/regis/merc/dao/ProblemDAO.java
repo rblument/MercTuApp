@@ -11,7 +11,7 @@
  *  or conditions of any kind, either expressed or implied.
  */
 package edu.regis.merc.dao;
-import static edu.regis.merc.dao.MySqlDAO.URL;
+
 import edu.regis.merc.err.InconsistentDBException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
@@ -60,7 +60,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
     public Problem retrieve(int id) throws ObjNotFoundException, NonRecoverableException {
         Connection conn = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             return retrieve(id, conn);
         } catch (SQLException e) {
             throw new NonRecoverableException("ProblemDAO-ERR-1" + e.toString(), e);
@@ -81,7 +81,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
         ArrayList<Problem> problems = new ArrayList<>();
         int problemId = -1; // Here for better error messages
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
             stmt.setInt(1, unitId);
             ResultSet rs = stmt.executeQuery();
@@ -110,7 +110,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
         final String sql = "SELECT Title,Description,UnitId,SequenceIndex,TuringMachineId,LambdaCalculusId,MuRecursiveFunctionId FROM Problem WHERE Id = ?";
         PreparedStatement stmt = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();

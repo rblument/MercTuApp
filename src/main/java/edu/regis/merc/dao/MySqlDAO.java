@@ -16,6 +16,7 @@ import edu.regis.merc.err.MissingPropertyException;
 import edu.regis.merc.util.ResourceMgr;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -54,7 +55,7 @@ public abstract class MySqlDAO {
     /*
      * The URL used to obtain a JDBC connection.
      */
-    public static String URL;
+    private static String URL;
 
     private static final Logger LOGGER = Logger.getLogger(MySqlDAO.class.getName());
 
@@ -62,13 +63,17 @@ public abstract class MySqlDAO {
      * Utility indicating whether the DriverClass was explicitly loaded (in
      * order to overcome errors in certain JVMs).
      */
-    public static boolean IS_LOADED = false;
+    private static final AtomicBoolean isLoaded = new AtomicBoolean(false);
 
     /**
      * If it hasn't already been loaded, explicitly load the MySql driver.
      */
     public MySqlDAO() {
-        if (!IS_LOADED) {
+        atomicallySetURLFromProps();
+    }
+
+    static void atomicallySetURLFromProps() {
+        if (!isLoaded.get()) {
             try {
                 ResourceMgr rscr = ResourceMgr.instance();
 
@@ -77,15 +82,10 @@ public abstract class MySqlDAO {
                 String dbUser = rscr.getProp(DB_USER_PROP);
                 String dbPass = rscr.getProp(DB_PASS_PROP);
 
-                URL = "jdbc:mysql://" + dbHost + "/" + dbName + "?user=" +
-                        dbUser + "&password=" + dbPass;
-
-                Class.forName(DRIVER).newInstance(); // Old School
-
-                IS_LOADED = true;
+                atomicallySetURL(dbHost, dbName, dbUser, dbPass);
 
             } catch (MissingPropertyException e) {
-                LOGGER.log(Level.INFO, "Missing DB property: {0}", e.toString());
+                LOGGER.log(Level.SEVERE, "Missing DB property: {0}", e.toString());
             } catch (ClassNotFoundException e) {
                 LOGGER.log(Level.SEVERE, "MySqlDao-ERR-1: Illegal driver class name {0}", e.toString());
             } catch (InstantiationException e) {
@@ -94,6 +94,20 @@ public abstract class MySqlDAO {
                 LOGGER.log(Level.SEVERE, "MySqlDao-ERR-3: No create driver permission {0}", e.toString());
             }
         }
+    }
+
+    static void atomicallySetURL(String dbHost, String dbName, String dbUser, String dbPass)
+            throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+
+        if (isLoaded.compareAndSet(false, true)) {
+            URL = "jdbc:mysql://" + dbHost + "/" + dbName + "?user=" +
+                    dbUser + "&password=" + dbPass;;
+            Class.forName(DRIVER).newInstance(); // Old School
+        }
+    }
+
+    public static String getURL() {
+        return URL;
     }
 
     /**

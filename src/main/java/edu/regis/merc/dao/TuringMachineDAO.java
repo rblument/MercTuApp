@@ -53,7 +53,7 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         PreparedStatement stmt;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
             // 1. Save States and get their IDs
@@ -110,7 +110,7 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         PreparedStatement stmt = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
 
             return retrieve(id, conn);
 
@@ -135,7 +135,7 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         PreparedStatement stmt = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
 
             ResultSet rs = stmt.executeQuery();
@@ -165,7 +165,7 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         String sql = "DELETE FROM TuringMachine WHERE Id = ?";
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
 
             try {
@@ -191,7 +191,7 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         final String sql = "INSERT INTO State(TmId, Name, GuiCtxId) VALUES (?, ?, ?)";
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
 //            stmt.setInt(1, state.getMachineId());
@@ -223,7 +223,7 @@ public class TuringMachineDAO extends MySqlDAO implements TuringMachingSvc {
         final String sql = "UPDATE State SET Name = ? WHERE Id = ?";
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
            stmt = conn.prepareStatement(sql);
 
             stmt.setString(1, state.getName());

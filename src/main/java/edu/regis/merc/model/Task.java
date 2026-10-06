@@ -116,12 +116,10 @@ public class Task extends TitledModel {
     }
 
     public ArrayList<Step> getSteps() {
-        System.out.println("Task.getSteps: " + steps.size());
         return steps;
     }
 
     public void setSteps(ArrayList<Step> steps) {
-        System.out.println("Task.setSteps: " + steps);
         this.steps = steps;
     }
 
@@ -134,7 +132,6 @@ public class Task extends TitledModel {
     }
 
     public Step currentStep() {
-        System.out.println("*** Task.currentStep: " + steps.size());
         for (Step step : steps)
             if (step.getSequenceIndex() == currentStepIndex)
                 return step;

@@ -50,7 +50,7 @@ public class CourseDAO extends MySqlDAO implements CourseSvc {
         PreparedStatement stmt = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
 
             stmt.setInt(1, courseId);

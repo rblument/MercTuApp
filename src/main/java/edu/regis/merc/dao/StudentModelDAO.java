@@ -57,7 +57,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
         PreparedStatement stmt1 = null;
         PreparedStatement stmt2 = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt1 = conn.prepareStatement(sql1);
 
             stmt1.setString(1, userId);
@@ -101,7 +101,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
         Connection conn = null;
         PreparedStatement stmt = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
             stmt.setString(1, userId);
             ResultSet rs = stmt.executeQuery();
@@ -139,7 +139,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
         Connection conn = null;
         PreparedStatement stmt = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             switch (field) {
                 case ASSESSMENT_LEVEL:
                     sql = "UPDATE Assessment SET AssessmentLevel = ? WHERE KnowledgeComponentId = ? ";
@@ -208,7 +208,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
                     WHERE a.UserId = ?
                 """;
 
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getURL());
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, userId);
@@ -277,7 +277,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
                            "JOIN KnowledgeComponent kc ON a.KnowledgeComponentId = kc.Id " +
                            "WHERE a.UserId = ? AND kc.Id NOT IN (0, 10, 20) " +
                            "ORDER BY kc.Id";
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getURL());
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -307,7 +307,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
                            "FROM Assessment a " +
                            "JOIN KnowledgeComponent kc ON a.KnowledgeComponentId = kc.Id " +
                            "WHERE a.UserId = ? AND kc.Title = ?";
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getURL());
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, userId);
             stmt.setString(2, lesson);
@@ -333,7 +333,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
     public void updateScaffoldLevel(String userId, ScaffoldLevel level)
             throws ObjNotFoundException, NonRecoverableException {
         final String sql = "UPDATE StudentModel SET ScaffoldLevel = ? WHERE UserId = ?";
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getURL());
              PreparedStatement stmt = conn.prepareStatement(sql)) {
              stmt.setString(1, level.toString());
              stmt.setString(2, userId);

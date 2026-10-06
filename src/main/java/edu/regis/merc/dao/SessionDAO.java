@@ -73,7 +73,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         String userId = account.getUserId();
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
 
             if (exists(userId, conn))
                 throw new IllegalArgException("Tutoring session exists " + userId);
@@ -117,7 +117,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         PreparedStatement stmt = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
 
             stmt.setString(1, userId);
@@ -199,7 +199,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         PreparedStatement stmt = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
 
             stmt.setString(1, userId);
@@ -237,7 +237,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         String userId = account.getUserId();
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
 
             if (!exists(userId, conn))
                 throw new ObjNotFoundException("No TutoringSession matching " + userId + " found.");
@@ -280,7 +280,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         PreparedStatement stmt = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             conn.setAutoCommit(false);
             stmt = conn.prepareStatement(sql);
             stmt.setString(1, userId);
@@ -308,7 +308,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         Connection conn = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
 
             // The writes below are a single logical change: a half-applied
             // advance would leave the session pointing at the old step with an

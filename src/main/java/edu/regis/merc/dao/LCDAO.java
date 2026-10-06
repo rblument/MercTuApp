@@ -56,7 +56,7 @@ public class LCDAO extends MySqlDAO implements LCSvc {
     public LCExpression retrieve(int exprId) throws ObjNotFoundException, NonRecoverableException {
         Connection conn = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             return retrieveExpressionRecursive(exprId, conn);
         } catch (SQLException e) {
             throw new NonRecoverableException("LCDAO_ERR-1: " + e.toString(), e);

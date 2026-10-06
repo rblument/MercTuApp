@@ -88,7 +88,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
             acct.setPasswordHash(getPasswordHash(acct.getPassword(), acct.getSalt()));
 
             try {
-                conn = DriverManager.getConnection(URL);
+                conn = DriverManager.getConnection(getURL());
 
                 if (exists(userId, conn)) {
                     throw new IllegalArgException("User exists " + userId);
@@ -130,7 +130,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         PreparedStatement stmt = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
 
             stmt = conn.prepareStatement(sql);
 
@@ -153,7 +153,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         Connection conn = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             return exists(userId, conn);
 
         } catch (SQLException e) {
@@ -171,7 +171,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         Connection conn = null;
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
 
             return retrieve(userId, conn).orElseThrow(() -> new ObjNotFoundException("Student Id:" + userId));
 
@@ -195,7 +195,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         String userId = account.getUserId();
 
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
 
             Account dbAcct = retrieve(userId, conn).orElseThrow(() -> new ObjNotFoundException("Student Id:" + userId));
 
@@ -235,7 +235,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
      */
     @Override
     public Optional<Account> validatePassword(String userId, String password) throws NonRecoverableException {
-        try (Connection conn = DriverManager.getConnection(URL)){
+        try (Connection conn = DriverManager.getConnection(getURL())){
             Optional<Account> optDbAcct = retrieve(userId, conn);
 
             if (optDbAcct.isEmpty()) {

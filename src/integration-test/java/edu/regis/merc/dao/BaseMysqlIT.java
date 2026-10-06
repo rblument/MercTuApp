@@ -10,10 +10,8 @@
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
  */
-package edu.regis.merc;
+package edu.regis.merc.dao;
 
-import edu.regis.merc.dao.AccountDAO;
-import edu.regis.merc.dao.MySqlDAO;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -38,7 +36,7 @@ public abstract class BaseMysqlIT {
     protected static MySQLContainer<?> mysqlContainer;
 
     @BeforeAll
-    public static void setUpClass() {
+    public static void setUpClass() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
         // setupDB.sql uses the mysql client's SOURCE command, which cannot run
         // as a container init script, so the scripts it sources are copied
         // into /docker-entrypoint-initdb.d/ instead. The official image runs
@@ -60,9 +58,7 @@ public abstract class BaseMysqlIT {
                 "/docker-entrypoint-initdb.d/03_seed.sql");
 
         mysqlContainer.start();
-
-        MySqlDAO unused = new AccountDAO(); //have the MySqlDAO go through it's own startup and load the driver.
-        MySqlDAO.URL = String.format("%s?user=%s&password=%s", mysqlContainer.getJdbcUrl(), DB_USER, DB_PASS); //update with new connection information.
+        MySqlDAO.atomicallySetURL(mysqlContainer.getHost(), mysqlContainer.getDatabaseName(), DB_USER, DB_PASS);
     }
 
     @AfterAll
