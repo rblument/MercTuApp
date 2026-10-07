@@ -26,6 +26,7 @@ import edu.regis.merc.model.KnowledgeComponent;
 import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.PendingTask;
 import edu.regis.merc.model.Problem;
+import edu.regis.merc.model.RepresentationKind;
 import edu.regis.merc.model.SignInRequest;
 import edu.regis.merc.model.Step;
 import edu.regis.merc.model.Student;
@@ -555,13 +556,22 @@ public class MercTutor implements TutorSvc {
         }
 
         StepData expectedData = gson.fromJson(currentStep.getData(), StepData.class);
-        System.out.println("Expected ID: " + expectedData.correctComponentId);
 
         System.out.println("--- Grading Logic ---");
-        System.out.println("Student clicked ID: " + studentAnswerId);
-        System.out.println("Server Expected ID: " + expectedData.correctComponentId);
+        System.out.println("Student answered " + payload.representation
+                + " component " + studentAnswerId);
+        System.out.println("Step expects   " + expectedData.representation
+                + " component " + expectedData.correctComponentId);
 
-        if (studentAnswerId == expectedData.correctComponentId) {
+        if (expectedData.representation == null) {
+            // Grading on the component id alone would accept the same id from
+            // any representation, which is how a lambda question could be
+            // answered by clicking the mu-recursive function.
+            return new TutorReply(":ERR",
+                    "Step " + activeStepId + " does not say which representation it expects.");
+        }
+
+        if (isCorrect(expectedData, payload)) {
 
             pendingStep.setIsCompleted(true);
 
@@ -757,13 +767,51 @@ public class MercTutor implements TutorSvc {
         return new TutorReply(":ERR", errMsg);
     }
 
-    private class StudentPayload {
+    /**
+     * Decide whether a submitted answer matches what a step expects.
+     *
+     * A component id is only unique within one representation, so both the
+     * representation and the id have to agree. Checking the id alone let a
+     * student answer a lambda calculus question by clicking the mu-recursive
+     * function, because the lambda variable "s" and the mu parameter "x"
+     * were both numbered 101.
+     *
+     * A step whose data names no representation is treated as unanswerable
+     * rather than as matching anything: an answer accepted on the id alone is
+     * the defect this guards against.
+     *
+     * @param expected the step's grading data, parsed from Step.Data
+     * @param submitted the answer the client sent
+     * @return true if the answer is correct
+     */
+    static boolean isCorrect(StepData expected, StudentPayload submitted) {
+        if (expected == null || submitted == null) {
+            return false;
+        }
+
+        if (expected.representation == null || submitted.representation == null) {
+            return false;
+        }
+
+        return expected.representation == submitted.representation
+                && expected.correctComponentId == submitted.selectedComponentId;
+    }
+
+    /**
+     * An answer submitted by the client, parsed from the request's JSon data.
+     */
+    static class StudentPayload {
         int stepId;
+        RepresentationKind representation;
         int selectedComponentId;
         int hintIndex;
     }
 
-    private class StepData {
+    /**
+     * A step's grading data, parsed from the Step.Data column.
+     */
+    static class StepData {
+        RepresentationKind representation;
         int correctComponentId;
     }
 }
