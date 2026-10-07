@@ -28,6 +28,19 @@ public class LambdaCalcView extends GPanel {
         return selectedExpression;
     }
 
+    /**
+     * Discard the current selection, so that a selection made here cannot be
+     * submitted alongside one made in another representation.
+     */
+    public void clearSelection() {
+        if (selectedLabel != null) {
+            // Matches how mouseClicked resets the label it moves away from.
+            selectedLabel.setBackground(Color.WHITE);
+            selectedLabel = null;
+        }
+        selectedExpression = null;
+    }
+
     public LCExpression getModel() {
         return model;
     }

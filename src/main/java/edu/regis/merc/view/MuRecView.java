@@ -20,9 +20,23 @@ import java.awt.event.MouseEvent;
  */
 public class MuRecView extends JPanel {
 
+    /**
+     * The id given to the first selectable component of an equation. Chosen so
+     * that a mu component id read in a log or in seed data is recognisable as
+     * one, rather than being confused with a database key.
+     */
+    private static final int FIRST_COMPONENT_ID = 2000;
+
     private MuFunction model;
     private JPanel equationPanel;
     private InteractiveLabel selectedComponent = null;
+
+    /**
+     * The id the next selectable component will be given. Reset at the start of
+     * every render so ids depend only on the equation, not on how many times
+     * it has been drawn.
+     */
+    private int nextComponentId = FIRST_COMPONENT_ID;
 
     public MuRecView() {
         setBorder(BorderFactory.createTitledBorder("Mu Recursive"));
@@ -54,10 +68,36 @@ public class MuRecView extends JPanel {
     }
 
     /**
+     * Discard the current selection, so that a selection made here cannot be
+     * submitted alongside one made in another representation.
+     */
+    public void clearSelection() {
+        if (selectedComponent != null) {
+            selectedComponent.setSelected(false);
+            selectedComponent = null;
+        }
+    }
+
+    /**
      * Clears the current panel and rebuilds the interactive equation piece by piece
+     *
+     * Component ids are assigned in render order, starting at
+     * {@link #FIRST_COMPONENT_ID}: the function name, then the parameter list,
+     * then each clickable node of the right-hand side as the tree is walked.
+     * A mu function always renders the same way, so the same component keeps
+     * the same id across runs, which is what lets seed data name one as a
+     * step's expected answer.
+     *
+     * These ids are only unique within this representation. The lambda
+     * calculus view numbers its components from LC_EXPRESSION primary keys and
+     * the two ranges overlap, so an answer from this panel is only meaningful
+     * when it travels with
+     * {@link edu.regis.merc.model.RepresentationKind#MU_RECURSIVE}.
      */
     private void renderEquation() {
         equationPanel.removeAll();
+        clearSelection();
+        nextComponentId = FIRST_COMPONENT_ID;
 
         if (model == null) {
             equationPanel.add(new JLabel("No Mu-Recursive funciton loaded."));
@@ -65,11 +105,11 @@ public class MuRecView extends JPanel {
 
             LeftHandSide lhs = model.getLhs();
             if (lhs != null) {
-                equationPanel.add(createClickableLabel(lhs.getName(), 100));
+                equationPanel.add(createClickableLabel(lhs.getName()));
                 equationPanel.add(createStaticLabel("("));
 
                 String params = lhs.getParameters().toString().replace("[", "").replace("]", "");
-                equationPanel.add(createClickableLabel(params, 101));
+                equationPanel.add(createClickableLabel(params));
                 equationPanel.add(createStaticLabel(")"));
             }
 
@@ -95,7 +135,7 @@ public class MuRecView extends JPanel {
         switch (expr.getKind()) {
             case NUMBER:
             case VARIABLE:
-                equationPanel.add(createClickableLabel(expr.toString(), expr.hashCode()));
+                equationPanel.add(createClickableLabel(expr.toString()));
                 break;
 
             case OPERATION:
@@ -105,7 +145,7 @@ public class MuRecView extends JPanel {
                 if (left instanceof MuExpression) {
                     renderExpression((MuExpression) left);
                 } else if (left != null) {
-                    equationPanel.add(createClickableLabel(left.toString(), left.hashCode()));
+                    equationPanel.add(createClickableLabel(left.toString()));
                 }
 
                 equationPanel.add(createStaticLabel(" " + expr.getOpKind().toString() + " "));
@@ -114,7 +154,7 @@ public class MuRecView extends JPanel {
                 if (right instanceof MuExpression) {
                     renderExpression((MuExpression) right);
                 } else if (right != null) {
-                    equationPanel.add(createClickableLabel(right.toString(), right.hashCode()));
+                    equationPanel.add(createClickableLabel(right.toString()));
                 }
 
                 equationPanel.add(createStaticLabel(")"));
@@ -122,7 +162,15 @@ public class MuRecView extends JPanel {
         }
     }
 
-    private InteractiveLabel createClickableLabel(String text, int componentId) {
+    /**
+     * Create a selectable label and give it the next id in render order.
+     *
+     * @param text the label's text
+     * @return an InteractiveLabel carrying its component id
+     */
+    private InteractiveLabel createClickableLabel(String text) {
+        int componentId = nextComponentId++;
+
         InteractiveLabel label = new InteractiveLabel(text, componentId);
 
         label.addMouseListener(new MouseAdapter() {
