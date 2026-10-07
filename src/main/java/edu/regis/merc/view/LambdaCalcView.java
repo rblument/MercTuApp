@@ -17,6 +17,11 @@ public class LambdaCalcView extends GPanel {
     private JLabel selectedLabel = null; // used to track the piece currently selected
     private LCExpression selectedExpression = null;
 
+    /**
+     * Run when the student selects a component here. See setOnSelection.
+     */
+    private Runnable onSelection = null;
+
     public LambdaCalcView() {
 
         setBorder(BorderFactory.createTitledBorder("Lambda Calculus"));
@@ -29,8 +34,22 @@ public class LambdaCalcView extends GPanel {
     }
 
     /**
-     * Discard the current selection, so that a selection made here cannot be
-     * submitted alongside one made in another representation.
+     * Register a callback run whenever the student selects a component here.
+     *
+     * The three representation panels hold their selections independently, so
+     * whichever view owns them uses this to clear the others and keep exactly
+     * one component selected across the whole problem. The callback is not run
+     * by {@link #clearSelection()}, so wiring two views to each other does not
+     * recurse.
+     *
+     * @param onSelection a Runnable, or null to remove the callback
+     */
+    public void setOnSelection(Runnable onSelection) {
+        this.onSelection = onSelection;
+    }
+
+    /**
+     * Discard the current selection, without running the selection callback.
      */
     public void clearSelection() {
         if (selectedLabel != null) {
@@ -153,6 +172,10 @@ public class LambdaCalcView extends GPanel {
                 selectedExpression = expr;
                 label.setBackground(new Color(173, 216, 230));
                 System.out.println("Student selected: " + text + " (ID: " + expr.getId() + ")");
+
+                if (onSelection != null) {
+                    onSelection.run();
+                }
             }
         });
 

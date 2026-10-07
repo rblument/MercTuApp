@@ -143,6 +143,14 @@ public class TutoringSessionView extends GPanel {
         turingMachineView = new TuringMachineView();
         muRecView = new MuRecView();
         lambdaCalcView = new LambdaCalcView();
+
+        // A step is answered with one component in one representation, so
+        // selecting in either panel releases the other. Each view's callback
+        // clears the other, and clearSelection does not fire a callback, so
+        // this does not recurse. A third selectable panel -- the Turing
+        // machine has none yet -- has to be added here too.
+        lambdaCalcView.setOnSelection(muRecView::clearSelection);
+        muRecView.setOnSelection(lambdaCalcView::clearSelection);
     }
 
     private void initMercTutorPanel() {
@@ -196,15 +204,16 @@ public class TutoringSessionView extends GPanel {
             boolean muSelected = muRecView.getSelectedComponentId() != -1;
 
             if (lambdaSelected && muSelected) {
-                // Selecting in two representations at once is ambiguous. Clear
-                // both rather than silently grading one of them.
+                // Unreachable while initCoreViews has the panels release each
+                // other. Kept as a backstop: grading one of two selections
+                // silently is how a wrong-panel answer gets accepted, so
+                // refuse rather than guess if a future panel is left unwired.
                 lambdaCalcView.clearSelection();
                 muRecView.clearSelection();
 
                 JOptionPane.showMessageDialog(this,
-                        "You have a selection in more than one representation. "
-                                + "Both have been cleared -- please select a single component.",
-                        "Select one representation", JOptionPane.WARNING_MESSAGE);
+                        "Please select a single component, in one representation.",
+                        "Select one component", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 

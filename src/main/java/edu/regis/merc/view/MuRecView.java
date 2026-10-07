@@ -38,6 +38,11 @@ public class MuRecView extends JPanel {
      */
     private int nextComponentId = FIRST_COMPONENT_ID;
 
+    /**
+     * Run when the student selects a component here. See setOnSelection.
+     */
+    private Runnable onSelection = null;
+
     public MuRecView() {
         setBorder(BorderFactory.createTitledBorder("Mu Recursive"));
         setLayout(new BorderLayout());
@@ -68,8 +73,22 @@ public class MuRecView extends JPanel {
     }
 
     /**
-     * Discard the current selection, so that a selection made here cannot be
-     * submitted alongside one made in another representation.
+     * Register a callback run whenever the student selects a component here.
+     *
+     * The three representation panels hold their selections independently, so
+     * whichever view owns them uses this to clear the others and keep exactly
+     * one component selected across the whole problem. The callback is not run
+     * by {@link #clearSelection()}, so wiring two views to each other does not
+     * recurse.
+     *
+     * @param onSelection a Runnable, or null to remove the callback
+     */
+    public void setOnSelection(Runnable onSelection) {
+        this.onSelection = onSelection;
+    }
+
+    /**
+     * Discard the current selection, without running the selection callback.
      */
     public void clearSelection() {
         if (selectedComponent != null) {
@@ -186,6 +205,10 @@ public class MuRecView extends JPanel {
                 selectedComponent.setSelected(true);
 
                 System.out.println("Selected Mu-Recursive Component ID: " + componentId + " (Text: " + text + ")");
+
+                if (onSelection != null) {
+                    onSelection.run();
+                }
             }
         });
 
