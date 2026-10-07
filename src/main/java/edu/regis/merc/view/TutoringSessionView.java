@@ -16,6 +16,7 @@ import edu.regis.merc.MercApp;
 import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.PendingTask;
+import edu.regis.merc.model.RepresentationKind;
 import edu.regis.merc.model.TutoringSession;
 
 import edu.regis.merc.svc.ClientRequest;
@@ -186,32 +187,50 @@ public class TutoringSessionView extends GPanel {
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
         closeButton.addActionListener(e -> MercApp.shutdown());
 
-        /**
-         * The grading logic below implements a priority-based seleciton check. It
-         * currently prioritizes LC selections over Mu-Recursive.
-         * 
-         * todo: Implement an observer pattern between LambdaCalcView and MuRecView to
-         * ensure mutual exclusivity of selection states.
-         */
         submitButton.addActionListener(e -> {
+            // A component id only identifies a component within one
+            // representation -- the lambda view numbers from LC_EXPRESSION keys
+            // while the mu view numbers its own -- so the answer has to say
+            // which panel it came from or the tutor cannot tell them apart.
+            boolean lambdaSelected = lambdaCalcView.getSelectedExpression() != null;
+            boolean muSelected = muRecView.getSelectedComponentId() != -1;
+
+            if (lambdaSelected && muSelected) {
+                // Selecting in two representations at once is ambiguous. Clear
+                // both rather than silently grading one of them.
+                lambdaCalcView.clearSelection();
+                muRecView.clearSelection();
+
+                JOptionPane.showMessageDialog(this,
+                        "You have a selection in more than one representation. "
+                                + "Both have been cleared -- please select a single component.",
+                        "Select one representation", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            RepresentationKind representation = null;
             int selectedComponentId = -1;
 
-            if (lambdaCalcView.getSelectedExpression() != null) {
+            if (lambdaSelected) {
+                representation = RepresentationKind.LAMBDA_CALCULUS;
                 selectedComponentId = lambdaCalcView.getSelectedExpression().getId();
-            } else if (muRecView.getSelectedComponentId() != -1) {
+            } else if (muSelected) {
+                representation = RepresentationKind.MU_RECURSIVE;
                 selectedComponentId = muRecView.getSelectedComponentId();
             }
 
-            if (selectedComponentId != -1) {
-                System.out.println("Submitting answer for ID: " + selectedComponentId);
+            if (representation != null) {
+                System.out.println("Submitting answer for ID: " + selectedComponentId
+                        + " in " + representation.name());
 
                 ClientRequest request = new ClientRequest(ServerRequestType.COMPLETED_STEP);
                 request.setUserId(model.getStudent().getAccount().getUserId());
                 request.setSecurityToken(model.getSecurityToken());
 
                 int currentStepId = model.currentTask().currentStep().getStep().getId();
-                String jsonPayload = "{\"stepId\": " + currentStepId + ", \"selectedComponentId\": "
-                        + selectedComponentId + "}";
+                String jsonPayload = "{\"stepId\": " + currentStepId
+                        + ", \"representation\": \"" + representation.name() + "\""
+                        + ", \"selectedComponentId\": " + selectedComponentId + "}";
                 request.setData(jsonPayload);
 
                 TutorReply reply = SvcFacade.instance().tutorRequest(request);
