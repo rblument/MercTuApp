@@ -48,6 +48,16 @@ public abstract class MySqlDAO {
     public static final String DB_PASS_PROP = "edu.regis.merc.DB_PASS";
 
     /**
+     * The port the MySQL database is running on.  Can be omitted, defaults to 3306.
+     */
+    public static final String DB_PORT_PROP = "edu.regis.merc.DB_PORT";
+
+    /**
+     * The default port for MySQL connections.
+     */
+    public static final String DB_PORT_DEFAULT = "3306";
+
+    /**
      * Fully qualified name of the MySql JDBC driver class.
      */
     public static final String DRIVER = "com.mysql.cj.jdbc.Driver";
@@ -73,7 +83,7 @@ public abstract class MySqlDAO {
     }
 
     static void atomicallySetURLFromProps() {
-        if (!isLoaded.get()) {
+        if (!isLoaded.compareAndSet(false, true)) {
             try {
                 ResourceMgr rscr = ResourceMgr.instance();
 
@@ -81,8 +91,9 @@ public abstract class MySqlDAO {
                 String dbName = rscr.getProp(DB_NAME_PROP);
                 String dbUser = rscr.getProp(DB_USER_PROP);
                 String dbPass = rscr.getProp(DB_PASS_PROP);
+                Integer dbPort = Integer.valueOf(rscr.getPropOrDefault(DB_PORT_PROP, DB_PORT_DEFAULT));
 
-                atomicallySetURL(dbHost, dbName, dbUser, dbPass);
+                setURL(dbHost, dbName, dbUser, dbPass, dbPort);
 
             } catch (MissingPropertyException e) {
                 LOGGER.log(Level.SEVERE, "Missing DB property: {0}", e.toString());
@@ -96,14 +107,12 @@ public abstract class MySqlDAO {
         }
     }
 
-    static void atomicallySetURL(String dbHost, String dbName, String dbUser, String dbPass)
+    static void setURL(String dbHost, String dbName, String dbUser, String dbPass, Integer dbPort)
             throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 
-        if (isLoaded.compareAndSet(false, true)) {
-            URL = "jdbc:mysql://" + dbHost + "/" + dbName + "?user=" +
-                    dbUser + "&password=" + dbPass;;
-            Class.forName(DRIVER).newInstance(); // Old School
-        }
+        URL = "jdbc:mysql://" + dbHost + ":" + dbPort.toString() + "/" + dbName + "?user=" +
+                dbUser + "&password=" + dbPass;;
+        Class.forName(DRIVER).newInstance(); // Old School
     }
 
     public static String getURL() {

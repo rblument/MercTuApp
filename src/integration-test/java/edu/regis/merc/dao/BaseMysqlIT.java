@@ -58,7 +58,7 @@ public abstract class BaseMysqlIT {
                 "/docker-entrypoint-initdb.d/03_seed.sql");
 
         mysqlContainer.start();
-        MySqlDAO.atomicallySetURL(mysqlContainer.getHost(), mysqlContainer.getDatabaseName(), DB_USER, DB_PASS);
+        MySqlDAO.setURL(mysqlContainer.getHost(), mysqlContainer.getDatabaseName(), DB_USER, DB_PASS, mysqlContainer.getMappedPort(mysqlContainer.MYSQL_PORT));
     }
 
     @AfterAll

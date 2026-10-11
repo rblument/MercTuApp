@@ -149,6 +149,14 @@ public class ResourceMgr {
         }
     }
 
+    public String getPropOrDefault(String name, String def) {
+        if (properties.containsKey(name)) {
+            return properties.getProperty(name);
+        } else {
+            return def;
+        }
+    }
+
     /**
      * Load and cache the properties found in the given properties file.
      *
