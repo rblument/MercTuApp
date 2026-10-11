@@ -79,11 +79,12 @@ public abstract class MySqlDAO {
      * If it hasn't already been loaded, explicitly load the MySql driver.
      */
     public MySqlDAO() {
-        atomicallySetURLFromProps();
+        setURLFromProps();
+        atomicallyLoadDriver();
     }
 
-    static void atomicallySetURLFromProps() {
-        if (!isLoaded.compareAndSet(false, true)) {
+    static void setURLFromProps() {
+        if (URL == null || URL.isEmpty()) {
             try {
                 ResourceMgr rscr = ResourceMgr.instance();
 
@@ -97,22 +98,27 @@ public abstract class MySqlDAO {
 
             } catch (MissingPropertyException e) {
                 LOGGER.log(Level.SEVERE, "Missing DB property: {0}", e.toString());
-            } catch (ClassNotFoundException e) {
-                LOGGER.log(Level.SEVERE, "MySqlDao-ERR-1: Illegal driver class name {0}", e.toString());
-            } catch (InstantiationException e) {
-                LOGGER.log(Level.SEVERE, "MySqlDao-ERR-2: Illegal instance {0}", e.toString());
-            } catch (IllegalAccessException e) {
-                LOGGER.log(Level.SEVERE, "MySqlDao-ERR-3: No create driver permission {0}", e.toString());
             }
         }
     }
 
-    static void setURL(String dbHost, String dbName, String dbUser, String dbPass, Integer dbPort)
-            throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-
+    static void setURL(String dbHost, String dbName, String dbUser, String dbPass, Integer dbPort) {
         URL = "jdbc:mysql://" + dbHost + ":" + dbPort.toString() + "/" + dbName + "?user=" +
                 dbUser + "&password=" + dbPass;;
-        Class.forName(DRIVER).newInstance(); // Old School
+    }
+
+    static void atomicallyLoadDriver() {
+        try {
+            if (isLoaded.compareAndSet(false, true)) {
+                Class.forName(DRIVER).newInstance(); // Old School
+            }
+        } catch (ClassNotFoundException e) {
+            LOGGER.log(Level.SEVERE, "MySqlDao-ERR-1: Illegal driver class name {0}", e.toString());
+        } catch (InstantiationException e) {
+            LOGGER.log(Level.SEVERE, "MySqlDao-ERR-2: Illegal instance {0}", e.toString());
+        } catch (IllegalAccessException e) {
+            LOGGER.log(Level.SEVERE, "MySqlDao-ERR-3: No create driver permission {0}", e.toString());
+        }
     }
 
     public static String getURL() {
