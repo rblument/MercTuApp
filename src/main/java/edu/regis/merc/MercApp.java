@@ -67,6 +67,12 @@ public class MercApp {
     private static final int THREAD_WAIT_MILLIS = 4000;
 
     /**
+     * Configuration instances (created during parseArgs for use during startup).
+     */
+    private static ServerConfig serverConfig;
+    private static ClientConfig clientConfig;
+
+    /**
      * Parse command line arguments to determine execution mode and config file.
      *
      * @param args the command line arguments
@@ -83,21 +89,34 @@ public class MercApp {
                 mode = ExecutionMode.CLIENT;
             } else if (arg.startsWith("--config=")) {
                 configPath = arg.substring(9);
+                try {
+                    if (mode == ExecutionMode.SERVER) {
+                        serverConfig = new ServerConfig(configPath);
+                    } else if (mode == ExecutionMode.CLIENT) {
+                        clientConfig = new ClientConfig(configPath);
+                    } else {
+                        serverConfig = new ServerConfig(configPath);
+                        clientConfig = new ClientConfig(configPath);
+                    }
+                } catch (IOException e) {
+                    LOGGER.severe("Error loading config file: " + e.getMessage());
+                }
             }
         }
 
-        if (configPath != null) {
+        if (serverConfig == null) {
             try {
-                if (mode == ExecutionMode.SERVER) {
-                    new ServerConfig(configPath);
-                } else if (mode == ExecutionMode.CLIENT) {
-                    new ClientConfig(configPath);
-                } else {
-                    new ServerConfig(configPath);
-                    new ClientConfig(configPath);
-                }
+                serverConfig = new ServerConfig();
             } catch (IOException e) {
-                LOGGER.severe("Error loading config file: " + e.getMessage());
+                LOGGER.severe("Error loading server config: " + e.getMessage());
+            }
+        }
+
+        if (clientConfig == null) {
+            try {
+                clientConfig = new ClientConfig();
+            } catch (IOException e) {
+                LOGGER.severe("Error loading client config: " + e.getMessage());
             }
         }
 
@@ -112,7 +131,7 @@ public class MercApp {
     private static void startServer(boolean inBackground) {
         LOGGER.info(" Starting Merc Server (Tutoring Service)...");
 
-        mercServer = new MercServer();
+        mercServer = new MercServer(serverConfig);
 
         if (inBackground) {
             mercServerThread = new Thread(mercServer, "merc-server");

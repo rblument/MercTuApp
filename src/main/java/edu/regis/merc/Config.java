@@ -8,14 +8,14 @@ public abstract class Config {
     protected final Properties props = new Properties();
 
     protected void load(String defaultResource, String externalFile) throws IOException {
-        if (externalFile != null) {
-            try (InputStream is = new java.io.FileInputStream(externalFile)) {
+        try (InputStream is = getClass().getResourceAsStream(defaultResource)) {
+            if (is != null) {
                 props.load(is);
             }
         }
 
-        try (InputStream is = getClass().getResourceAsStream(defaultResource)) {
-            if (is != null) {
+        if (externalFile != null) {
+            try (InputStream is = new java.io.FileInputStream(externalFile)) {
                 props.load(is);
             }
         }

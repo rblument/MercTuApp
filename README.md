@@ -135,8 +135,8 @@ mvn -Pclient exec:java
 ```
 
 Client configuration is read from `client.properties`:
-- `edu.regis.merc.client.host` (default: `localhost`)
-- `edu.regis.merc.client.port` (default: `53640`)
+- `client.host` (default: `localhost`)
+- `client.port` (default: `53640`)
 
 ### Configuration
 
@@ -145,12 +145,21 @@ Server and client use separate configuration files in
 
 | File | Properties |
 | --- | --- |
-| `server.properties` | `edu.regis.merc.server.port` |
-| `client.properties` | `edu.regis.merc.client.host`, `edu.regis.merc.client.port` |
+| `server.properties` | `server.port` |
+| `client.properties` | `client.host`, `client.port` |
 
-Override defaults by placing an external properties file on the classpath or
-passing it via `--config=<path>` (classpath defaults + external file override,
-external wins).
+Override defaults by passing an external properties file via `--config=<path>`.
+External file overrides classpath defaults.
+
+**Example:**
+
+```bash
+# Create custom config file
+echo "server.port=9999" > custom-server.properties
+
+# Run server with custom config
+mvn -Pserver exec:java -Dexec.args="--config=custom-server.properties"
+```
 
 On startup the app initializes logging, loads properties, starts `MercServer` on
 port **53640**, waits four seconds for it to come up, then shows the splash
