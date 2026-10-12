@@ -105,16 +105,21 @@ public class MercApp {
     }
 
     /**
-     * Start the server in a separate thread.
+     * Start the server, optionally in a separate thread.
+     *
+     * @param inBackground true to start server in a separate thread, false to run in current thread
      */
-    private static void startServer() {
+    private static void startServer(boolean inBackground) {
         LOGGER.info(" Starting Merc Server (Tutoring Service)...");
 
         mercServer = new MercServer();
 
-        mercServerThread = new Thread(mercServer, "merc-server");
-
-        mercServerThread.start();
+        if (inBackground) {
+            mercServerThread = new Thread(mercServer, "merc-server");
+            mercServerThread.start();
+        } else {
+            mercServer.run();
+        }
 
         Runtime.getRuntime().addShutdownHook(
                 new Thread(() -> {
@@ -140,6 +145,43 @@ public class MercApp {
     }
 
     /**
+     * Shutdown the server if it was started.
+     */
+    private static void shutdownServer() {
+        if (mercServer != null) {
+            mercServer.close();
+        }
+
+        if (mercServerThread != null
+                && mercServerThread != Thread.currentThread()) {
+
+            try {
+                mercServerThread.join(THREAD_WAIT_MILLIS);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+
+                LOGGER.log(
+                        Level.WARNING,
+                        "Interrupted while waiting for MERC server to stop.",
+                        e);
+            }
+        }
+    }
+
+    /**
+     * Shutdown the client GUI components.
+     */
+    private static void shutdownClient() {
+        AbandonedConnectionCleanupThread.checkedShutdown();
+
+        MainFrame.instance().dispose();
+        SplashFrame.instance().dispose();
+
+        LOGGER.info("MERC application windows closed.");
+    }
+
+    /**
      * Gracefully shut down based on execution mode.
      *
      * @param mode the execution mode
@@ -154,33 +196,12 @@ public class MercApp {
         LOGGER.info("MERC shutdown initiated.");
 
         if (mode == ExecutionMode.SERVER || mode == ExecutionMode.BOTH) {
-            if (mercServer != null) {
-                mercServer.close();
-            }
-
-            if (mercServerThread != null
-                    && mercServerThread != Thread.currentThread()) {
-
-            try {
-                mercServerThread.join(THREAD_WAIT_MILLIS);
-
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-
-                    LOGGER.log(
-                            Level.WARNING,
-                            "Interrupted while waiting for MERC server to stop.",
-                            e);
-                }
-            }
+            shutdownServer();
         }
 
-        AbandonedConnectionCleanupThread.checkedShutdown();
-
-        MainFrame.instance().dispose();
-        SplashFrame.instance().dispose();
-
-        LOGGER.info("MERC application windows closed.");
+        if (mode == ExecutionMode.CLIENT || mode == ExecutionMode.BOTH) {
+            shutdownClient();
+        }
     }
 
     /**
@@ -228,8 +249,10 @@ public class MercApp {
 
         ExecutionMode mode = parseArgs(args);
 
+        boolean startServerInBackground = (mode == ExecutionMode.BOTH);
+
         if (mode == ExecutionMode.SERVER || mode == ExecutionMode.BOTH) {
-            startServer();
+            startServer(startServerInBackground);
         }
 
         if (mode == ExecutionMode.CLIENT || mode == ExecutionMode.BOTH) {
