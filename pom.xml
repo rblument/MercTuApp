@@ -11,6 +11,22 @@
 	<exec.mainClass>edu.regis.merc.MercApp</exec.mainClass>
 	<testcontainers.version>1.21.4</testcontainers.version>
     </properties>
+    <profiles>
+        <profile>
+            <id>server</id>
+            <properties>
+                <exec.mainClass>edu.regis.merc.MercApp</exec.mainClass>
+                <exec.args>--server</exec.args>
+            </properties>
+        </profile>
+        <profile>
+            <id>client</id>
+            <properties>
+                <exec.mainClass>edu.regis.merc.MercApp</exec.mainClass>
+                <exec.args>--client</exec.args>
+            </properties>
+        </profile>
+    </profiles>
      <build>
         <resources>
         <resource>

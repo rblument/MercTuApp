@@ -104,6 +104,54 @@ mvn exec:java          # main class comes from the exec.mainClass property
 Or run `edu.regis.merc.MercApp` from your IDE — NetBeans, IntelliJ, and VS Code
 configurations are all checked in.
 
+### Execution modes
+
+The application supports three modes: **both** (default), **server**, and **client**.
+
+| Mode | Command | Description |
+| --- | --- | --- |
+| Both (default) | `mvn exec:java` | Starts server in background, then client GUI |
+| Server only | `mvn -Pserver exec:java` | Runs server in foreground (no GUI) |
+| Client only | `mvn -Pclient exec:java` | Connects to existing server (no server startup) |
+
+#### Server mode
+
+Server-only mode runs in the foreground and does not start a GUI:
+
+```bash
+mvn -Pserver exec:java
+```
+
+The server reads port configuration from `server.properties` (default: 53640).
+Shutdown with `Ctrl+C` or send SIGTERM.
+
+#### Client mode
+
+Client-only mode connects to an existing server and requires the server to be
+running first:
+
+```bash
+mvn -Pclient exec:java
+```
+
+Client configuration is read from `client.properties`:
+- `edu.regis.merc.client.host` (default: `localhost`)
+- `edu.regis.merc.client.port` (default: `53640`)
+
+### Configuration
+
+Server and client use separate configuration files in
+`src/main/java/resources/`:
+
+| File | Properties |
+| --- | --- |
+| `server.properties` | `edu.regis.merc.server.port` |
+| `client.properties` | `edu.regis.merc.client.host`, `edu.regis.merc.client.port` |
+
+Override defaults by placing an external properties file on the classpath or
+passing it via `--config=<path>` (classpath defaults + external file override,
+external wins).
+
 On startup the app initializes logging, loads properties, starts `MercServer` on
 port **53640**, waits four seconds for it to come up, then shows the splash
 screen. Sign in or create an account; a successful sign-in opens the main
