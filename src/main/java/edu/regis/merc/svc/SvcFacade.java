@@ -13,6 +13,7 @@
 package edu.regis.merc.svc;
 
 import com.google.gson.Gson;
+import edu.regis.merc.ClientConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -91,13 +92,13 @@ public class SvcFacade {
      *
      * That is, the ShaTuServer is executing on this host.
      */
-    private static final String SERVER = "localhost";
-
+    private static final String DEFAULT_SERVER = "localhost";
+    
     /**
      * Socket port supporting the MERC tutoring service protocol
      */
-    private static final int PORT = 53640;
-
+    private static final int DEFAULT_PORT = 53640;
+    
     /**
      * Utility reference to Gson for converting between Java and JSon objects.
      */
@@ -156,8 +157,9 @@ public class SvcFacade {
         PrintWriter out = null;
 
         try {
-            client = new Socket(SERVER, PORT);
-
+            ClientConfig config = new ClientConfig();
+            client = new Socket(config.getHost(), config.getPort());
+            
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
             out = new PrintWriter(client.getOutputStream());
