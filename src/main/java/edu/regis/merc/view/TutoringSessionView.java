@@ -16,10 +16,12 @@ import edu.regis.merc.MercApp;
 import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.PendingTask;
+import edu.regis.merc.model.RepresentationKind;
 import edu.regis.merc.model.TutoringSession;
 
 import edu.regis.merc.svc.ClientRequest;
 import edu.regis.merc.svc.ServerRequestType;
+import edu.regis.merc.svc.StudentPayload;
 import edu.regis.merc.svc.SvcFacade;
 import edu.regis.merc.svc.TutorReply;
 
@@ -98,6 +100,27 @@ public class TutoringSessionView extends GPanel {
     private JButton closeButton;
 
     /**
+     * Converts request payloads to JSon.
+     */
+    private final Gson gson = new Gson();
+
+    /**
+     * The representation the student most recently selected a component in, or
+     * null if nothing is selected.
+     *
+     * Held here rather than read back from the panels at submit time. The
+     * panels release each other on selection, so recording the selection as it
+     * happens means there is only ever one.
+     */
+    private RepresentationKind selectedRepresentation = null;
+
+    /**
+     * The id of the selected component, unique only within
+     * selectedRepresentation.
+     */
+    private int selectedComponentId = -1;
+
+    /**
      * Initialize this view including creating and laying out its child components.
      */
     public TutoringSessionView() {
@@ -124,6 +147,12 @@ public class TutoringSessionView extends GPanel {
     public void setModel(TutoringSession model) {
         this.model = model;
 
+        // Re-rendering the panels clears their own selections, so the
+        // selection recorded here has to go too. Otherwise a selection made
+        // for the previous step would still be submitted against this one.
+        selectedRepresentation = null;
+        selectedComponentId = -1;
+
         // update the lambda view
         if (model.getProblem() != null) {
             lambdaCalcView.setModel(model.getProblem().getExpression());
@@ -142,6 +171,33 @@ public class TutoringSessionView extends GPanel {
         turingMachineView = new TuringMachineView();
         muRecView = new MuRecView();
         lambdaCalcView = new LambdaCalcView();
+
+        // A step is answered with one component in one representation, so
+        // selecting in either panel releases the other and records what was
+        // chosen. clearSelection does not notify a listener, so this does not
+        // recurse. A third selectable panel has to be registered here too, 
+        // and until it is its selections are simply never reported.
+        lambdaCalcView.setSelectionListener((representation, componentId) -> {
+            muRecView.clearSelection();
+            recordSelection(representation, componentId);
+        });
+
+        muRecView.setSelectionListener((representation, componentId) -> {
+            lambdaCalcView.clearSelection();
+            recordSelection(representation, componentId);
+        });
+    }
+
+    /**
+     * Remember the component a student selected, so that submitting does not
+     * have to ask each panel in turn which one holds a selection.
+     *
+     * @param representation the panel the selection was made in
+     * @param componentId the id of the component within that representation
+     */
+    private void recordSelection(RepresentationKind representation, int componentId) {
+        this.selectedRepresentation = representation;
+        this.selectedComponentId = componentId;
     }
 
     private void initMercTutorPanel() {
@@ -186,33 +242,21 @@ public class TutoringSessionView extends GPanel {
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
         closeButton.addActionListener(e -> MercApp.shutdown());
 
-        /**
-         * The grading logic below implements a priority-based seleciton check. It
-         * currently prioritizes LC selections over Mu-Recursive.
-         * 
-         * todo: Implement an observer pattern between LambdaCalcView and MuRecView to
-         * ensure mutual exclusivity of selection states.
-         */
         submitButton.addActionListener(e -> {
-            int selectedComponentId = -1;
-
-            if (lambdaCalcView.getSelectedExpression() != null) {
-                selectedComponentId = lambdaCalcView.getSelectedExpression().getId();
-            } else if (muRecView.getSelectedComponentId() != -1) {
-                selectedComponentId = muRecView.getSelectedComponentId();
-            }
-
-            if (selectedComponentId != -1) {
-                System.out.println("Submitting answer for ID: " + selectedComponentId);
+            if (selectedRepresentation != null) {
+                System.out.println("Submitting answer for ID: " + selectedComponentId
+                        + " in " + selectedRepresentation.name());
 
                 ClientRequest request = new ClientRequest(ServerRequestType.COMPLETED_STEP);
                 request.setUserId(model.getStudent().getAccount().getUserId());
                 request.setSecurityToken(model.getSecurityToken());
 
                 int currentStepId = model.currentTask().currentStep().getStep().getId();
-                String jsonPayload = "{\"stepId\": " + currentStepId + ", \"selectedComponentId\": "
-                        + selectedComponentId + "}";
-                request.setData(jsonPayload);
+
+                StudentPayload payload = new StudentPayload(currentStepId);
+                payload.setRepresentation(selectedRepresentation);
+                payload.setSelectedComponentId(selectedComponentId);
+                request.setData(gson.toJson(payload));
 
                 TutorReply reply = SvcFacade.instance().tutorRequest(request);
 
@@ -252,7 +296,9 @@ public class TutoringSessionView extends GPanel {
             int currentHintIndex = pStep.getCurrentHintIndex();
 
             // send the step ID and the hint index
-            String jsonPayload = "{\"stepId\": " + currentStepId + ", \"hintIndex\": " + currentHintIndex + "}";
+            StudentPayload payload = new StudentPayload(currentStepId);
+            payload.setHintIndex(currentHintIndex);
+            String jsonPayload = gson.toJson(payload);
 
             ClientRequest request = new ClientRequest(ServerRequestType.REQUEST_HINT);
             request.setUserId(model.getStudent().getAccount().getUserId());
@@ -283,7 +329,7 @@ public class TutoringSessionView extends GPanel {
             }
 
             int currentStepId = model.currentTask().currentStep().getStep().getId();
-            String jsonPayload = "{\"stepId\": " + currentStepId + "}";
+            String jsonPayload = gson.toJson(new StudentPayload(currentStepId));
 
             ClientRequest request = new ClientRequest(ServerRequestType.MODEL_REQUEST);
 
