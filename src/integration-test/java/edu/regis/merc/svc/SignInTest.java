@@ -14,10 +14,9 @@ package edu.regis.merc.svc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
-import edu.regis.merc.BaseMysqlIT;
+import edu.regis.merc.dao.BaseMysqlIT;
 import edu.regis.merc.ServerConfig;
 import edu.regis.merc.model.Account;
 import edu.regis.merc.model.TutoringSession;
@@ -58,7 +57,7 @@ public class SignInTest extends BaseMysqlIT {
         // Delete child rows first so repeated runs on a reused container do
         // not accumulate orphans.
         String[] tables = { "TutoringSession", "Assessment", "StudentModel", "Account" };
-        try (java.sql.Connection conn = java.sql.DriverManager.getConnection(edu.regis.merc.dao.MySqlDAO.URL)) {
+        try (java.sql.Connection conn = java.sql.DriverManager.getConnection(edu.regis.merc.dao.MySqlDAO.getURL())) {
             for (String table : tables) {
                 try (java.sql.PreparedStatement stmt = conn.prepareStatement("DELETE FROM " + table + " WHERE UserId LIKE ?")) {
                     stmt.setString(1, "test_signin_%");

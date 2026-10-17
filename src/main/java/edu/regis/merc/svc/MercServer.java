@@ -46,6 +46,8 @@ public class MercServer implements Runnable {
      */
     private static final Logger LOGGER = Logger.getLogger(MercServer.class.getName());
 
+    private static final int DEFAULT_PORT = 53640;
+
     /**
      * The socket listening for connections from the client.
      */
@@ -63,7 +65,7 @@ public class MercServer implements Runnable {
 
     /**
      * Create a server with the given configuration.
-     * 
+     *
      * @param config the server configuration
      */
     public MercServer(ServerConfig config) {
@@ -78,7 +80,7 @@ public class MercServer implements Runnable {
             port = new ServerConfig().getPort();
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to load server config, using default port", e);
-            port = 53640;
+            port = DEFAULT_PORT;
         }
     }
 

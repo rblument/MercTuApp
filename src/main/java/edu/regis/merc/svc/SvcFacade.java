@@ -88,18 +88,6 @@ public class SvcFacade {
     private static final Logger LOGGER = Logger.getLogger(SvcFacade.class.getName());
 
     /**
-     * The computer host to which ShaTu tutor requests are delegated.
-     *
-     * That is, the ShaTuServer is executing on this host.
-     */
-    private static final String DEFAULT_SERVER = "localhost";
-    
-    /**
-     * Socket port supporting the MERC tutoring service protocol
-     */
-    private static final int DEFAULT_PORT = 53640;
-    
-    /**
      * Utility reference to Gson for converting between Java and JSon objects.
      */
     private Gson gson;
@@ -159,7 +147,7 @@ public class SvcFacade {
         try {
             ClientConfig config = new ClientConfig();
             client = new Socket(config.getHost(), config.getPort());
-            
+
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
             out = new PrintWriter(client.getOutputStream());

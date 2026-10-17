@@ -88,7 +88,7 @@ public class MercApp {
             } else if ("--client".equals(arg)) {
                 mode = ExecutionMode.CLIENT;
             } else if (arg.startsWith("--config=")) {
-                configPath = arg.substring(9);
+                configPath = arg.substring("--config".length() + 1);
                 try {
                     if (mode == ExecutionMode.SERVER) {
                         serverConfig = new ServerConfig(configPath);
