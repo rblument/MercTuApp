@@ -3,6 +3,7 @@ package edu.regis.merc.view;
 import edu.regis.merc.model.MuFunction;
 import edu.regis.merc.model.MuExpression;
 import edu.regis.merc.model.LeftHandSide;
+import edu.regis.merc.model.RepresentationKind;
 
 import javax.swing.*;
 import java.awt.*;
@@ -39,9 +40,10 @@ public class MuRecView extends JPanel {
     private int nextComponentId = FIRST_COMPONENT_ID;
 
     /**
-     * Run when the student selects a component here. See setOnSelection.
+     * Notified when the student selects a component here. See
+     * setSelectionListener.
      */
-    private Runnable onSelection = null;
+    private ComponentSelectionListener selectionListener = null;
 
     public MuRecView() {
         setBorder(BorderFactory.createTitledBorder("Mu Recursive"));
@@ -73,18 +75,19 @@ public class MuRecView extends JPanel {
     }
 
     /**
-     * Register a callback run whenever the student selects a component here.
+     * Register the listener notified whenever the student selects a component
+     * here.
      *
      * The three representation panels hold their selections independently, so
-     * whichever view owns them uses this to clear the others and keep exactly
-     * one component selected across the whole problem. The callback is not run
-     * by {@link #clearSelection()}, so wiring two views to each other does not
+     * whichever view owns them uses this to record what was chosen and release
+     * the other panels. The listener is not notified by
+     * {@link #clearSelection()}, so panels that release each other do not
      * recurse.
      *
-     * @param onSelection a Runnable, or null to remove the callback
+     * @param selectionListener the listener, or null to remove it
      */
-    public void setOnSelection(Runnable onSelection) {
-        this.onSelection = onSelection;
+    public void setSelectionListener(ComponentSelectionListener selectionListener) {
+        this.selectionListener = selectionListener;
     }
 
     /**
@@ -206,8 +209,9 @@ public class MuRecView extends JPanel {
 
                 System.out.println("Selected Mu-Recursive Component ID: " + componentId + " (Text: " + text + ")");
 
-                if (onSelection != null) {
-                    onSelection.run();
+                if (selectionListener != null) {
+                    selectionListener.componentSelected(
+                            RepresentationKind.MU_RECURSIVE, componentId);
                 }
             }
         });
