@@ -13,6 +13,7 @@
 package edu.regis.merc.svc;
 
 import com.google.gson.Gson;
+import edu.regis.merc.ServerConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -38,12 +39,14 @@ public class MercServer implements Runnable {
     /**
      * Port on which this server (Merc tutor) is listening for client connections.
      */
-    public static final int PORT = 53640;
+    private int port;
 
     /**
      * Handler for logging messages.
      */
     private static final Logger LOGGER = Logger.getLogger(MercServer.class.getName());
+
+    private static final int DEFAULT_PORT = 53640;
 
     /**
      * The socket listening for connections from the client.
@@ -61,9 +64,24 @@ public class MercServer implements Runnable {
     private volatile boolean running = true;
 
     /**
-     * A no-op
+     * Create a server with the given configuration.
+     *
+     * @param config the server configuration
+     */
+    public MercServer(ServerConfig config) {
+        port = config.getPort();
+    }
+
+    /**
+     * Create a server with default configuration.
      */
     public MercServer() {
+        try {
+            port = new ServerConfig().getPort();
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to load server config, using default port", e);
+            port = DEFAULT_PORT;
+        }
     }
 
     /**
@@ -74,7 +92,7 @@ public class MercServer implements Runnable {
      */
     @Override
     public void run() {
-        try (ServerSocket listener = new ServerSocket(PORT)) {
+        try (ServerSocket listener = new ServerSocket(port)) {
             server = listener;
 
             while (running) {

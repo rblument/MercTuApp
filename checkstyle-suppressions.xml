@@ -8,5 +8,6 @@
 	<suppress files=".*edu.*merc.*dao.*" checks="MagicNumber"/> <!-- Also exempt arguments to creating SQL statements. -->
 	<suppress files=".*edu.*merc.*model.*" checks="VisibilityModifier" /> <!-- Exempt warnings about protected fields for polymorphic types. -->
 	<suppress files=".*edu.*merc.*svc.*MercTutor.*" checks ="VisibilityModifier" /> <!-- Exempt warning about protected fields for DTO in this class. -->
-	<suppress files=".*edu.*merc.*util.*SHA.*" checks="MagicNumber" /> 
+	<suppress files=".*edu.*merc.*Config.*" checks="VisibilityModifier" /> <!-- TODO - exempt the protected field props...for now. -->
+	<suppress files=".*edu.*merc.*util.*SHA.*" checks="MagicNumber" />
 </suppressions>
