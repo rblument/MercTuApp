@@ -181,11 +181,8 @@ public class MuRecView extends JPanel {
 
                 equationPanel.add(createStaticLabel(")"));
                 break;
-
-            case NUMBER:
-            case VARIABLE:
             default:
-                equationPanel.add(createClickableLabel(expr.toString(), expr.hashCode()));
+                equationPanel.add(createClickableLabel(expr.toString()));
                 break;
         }
     }
