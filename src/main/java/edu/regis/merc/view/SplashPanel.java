@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -37,9 +37,9 @@ import javax.swing.text.Document;
 /**
  * A splash panel introducing the MERC tutor, which also allows the user to
  * sign-in or navigate to another screen to create a new student account.
- * 
+ *
  * This panel also provides a simple view of a User model.
- * 
+ *
  * @author rickb
  */
 public class SplashPanel extends GPanel {
@@ -57,32 +57,32 @@ public class SplashPanel extends GPanel {
     /**
      * The user's id of the form "user@university.edu".
      */
-    protected JTextField userId;
+    private JTextField userId;
 
     /**
      * Hidden display of the user's password: *******.
      */
-    protected JPasswordField password;
+    private JPasswordField password;
 
     /**
      * Allows the user to attempt to sign-in using their id and password.
      */
-    protected JButton signInBut;
+    private JButton signInBut;
 
     /**
      * Displays a panel allowing the user to create a new student account.
      */
-    protected JButton createAcctBut;
+    private JButton createAcctBut;
 
     /**
      * Displays a panel allowing the user to reset their password.
      */
-    protected JButton forgotPasswordBut;
+    private JButton forgotPasswordBut;
 
     /**
      * Displays a close button closing the application.
      */
-    protected JButton closeBut;
+    private JButton closeBut;
 
     /**
      * Create and layout the child GUI components in this panel.
@@ -105,7 +105,7 @@ public class SplashPanel extends GPanel {
 
     /**
      * Update and return the model with the user login information in this view.
-     * 
+     *
      * @return a User model with the user id and password fields set (the
      *         password is encrypted)
      */
@@ -118,7 +118,7 @@ public class SplashPanel extends GPanel {
     /**
      * Display the given user (id) in this view, but the encrypted password
      * is not displayed.
-     * 
+     *
      * @param model the user (id) to display
      */
     public void setModel(Account model) {
@@ -137,7 +137,7 @@ public class SplashPanel extends GPanel {
     /**
      * Return a reference to the sign-in button (used by the WelcomeFrame
      * to make it the default button, when this panel is displayed).
-     * 
+     *
      * @return
      */
     public JButton getSigninButton() {
@@ -151,7 +151,7 @@ public class SplashPanel extends GPanel {
 
     /**
      * Creates an account instance for the user upon successful sign-in.
-     * 
+     *
      * @param userId
      * @param encryptedPass
      * @return A TutoringSession instance set with the signed-in user's account

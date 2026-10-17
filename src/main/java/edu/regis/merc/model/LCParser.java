@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -157,9 +157,9 @@ public class LCParser {
     }
 
     /**
-     * As a Lambda '\\' was read and is at the current position, begin parsing 
+     * As a Lambda '\\' was read and is at the current position, begin parsing
      * the remainder of the Abstraction returning it as an LCAbstraction.
-     * 
+     *
      * @return an LCAbstraction
      * @throws LCParseException see the note on the parse() method exception.
      */
@@ -184,11 +184,11 @@ public class LCParser {
     }
 
     /**
-     * As a Lambda '\\' was read and is at the current position, begin parsing 
+     * As a Lambda '\\' was read and is at the current position, begin parsing
      * the parameters in the Abstraction adding them to the given LCAbstraction.
-     * 
+     *
      * There must be at least one parameter to read, otherwise a parse exception.
-     * 
+     *
      * @param abstraction the LCAbstraction that is being parsed.
      * @throws LCParseException see the note on the parse() method exception.
      */
@@ -197,7 +197,7 @@ public class LCParser {
 
         try {
             // We're currently parsing the '\\', so move past it to the first
-            // character of the first parameter. 
+            // character of the first parameter.
             char ch = nextChar();
 
             do {
@@ -224,7 +224,7 @@ public class LCParser {
     /**
      * Assumed that we're sitting at the first letter of a variable token,
      * parse it and add it to the given LCAbstraction
-     * 
+     *
      * @param abstraction the LCAbstraction whose parameter is being parsed.
      * @throws LCParseException see the note on the parse() method exception.
      */
@@ -235,7 +235,7 @@ public class LCParser {
     /**
      * As a '.' was read and is at the current position, begin parsing the
      * Abstraction's body adding it to the given LCAbstraction.
-     * 
+     *
      * @param abstraction
      * @throws LCParseException see the note on the parse() method exception.
      */
@@ -254,7 +254,7 @@ public class LCParser {
 
         do {
             LCExpression bodyPart = parseLCExpression();
-            
+
             abstraction.addBodyPart(bodyPart);
 
             try {
@@ -276,7 +276,7 @@ public class LCParser {
      * As we've just parsed an Abstraction, it's possible that it's followed by
      * arguments, in which case they are parsed and an LCApplication is returned,
      * otherwise, return the given LCAbstraction.
-     * 
+     *
      * @param abstraction a recently parsed LCAbstraction.
      * @return either the given LCAbstraction or an LCApplication with the
      *         given LCAbstraction as its function.
@@ -290,7 +290,7 @@ public class LCParser {
 
             if (ch == ')') { // Cannot be the start of an application
                 pos--;
-                return abstraction; // return the abstraction   
+                return abstraction; // return the abstraction
             }
 
             // Peeked one too far, push it back, should be the start
@@ -314,7 +314,7 @@ public class LCParser {
      * Beginning at the current position (pos), parse a Variable, it's expected
      * that the current position corresponds to the first character in the
      * variable.
-     * 
+     *
      * @return an LCVariable
      * @throws LCParseException see the note on the parse() method exception.
      */
@@ -325,7 +325,7 @@ public class LCParser {
     /**
      * If the given received character doesn't match the expected character,
      * throw a parsing exception
-     * 
+     *
      * @param received the char that was just read in the expression input.
      * @param expected the char that was expected.
      * @throws LCParseException see the note on the parse() method exception.
@@ -359,7 +359,7 @@ public class LCParser {
         // For an applied calculus look for the remainder of a variable name.
         if (isApplied) {
             boolean isAppliedToken = true;
-                    
+
             do {
                 try {
                     ch = nextChar();
@@ -383,7 +383,7 @@ public class LCParser {
     /**
      * Increment to the next position in the expression and return the next
      * non white space char.
-     * 
+     *
      * @return a non white space char
      * @throws EtxException the end of the expression was reached, which isn't
      *                      necessarily an error depending on where we are in

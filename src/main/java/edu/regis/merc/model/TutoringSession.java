@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -17,7 +17,7 @@ import java.util.GregorianCalendar;
 
 /**
  * A SHA tutoring session, which is displayed in the tutor.
- * 
+ *
  * @author rickb
  */
 public class TutoringSession {
@@ -65,7 +65,7 @@ public class TutoringSession {
 
     /**
      * The current task list.
-     * 
+     *
      * If there are multiple tasks, the first one is the current task and the
      * remaining tasks are pending. Multiple tasks occur when a student
      * overrides the task proposed by the tutor.
@@ -74,7 +74,7 @@ public class TutoringSession {
 
     /**
      * Initialize this session with default information.
-     * 
+     *
      * @param student the Student being tutored in this session.
      */
     public TutoringSession(Student student) {

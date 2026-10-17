@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -33,7 +33,7 @@ import static javax.swing.Action.MNEMONIC_KEY;
 import static javax.swing.Action.SHORT_DESCRIPTION;
 import javax.swing.JOptionPane;
 
-// imports added to build a deserializer 
+// imports added to build a deserializer
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

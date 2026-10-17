@@ -49,14 +49,14 @@ public class MuEvaluator{
                 if (rightVal == 0) throw new ArithmeticException("Division by zero");
                 return leftVal / rightVal;
 
-            case ZERO: 
-                return 0; 
+            case ZERO:
+                return 0;
 
-            case SUCCESSOR: 
-                return leftVal + 1; 
-            
-            case PROJECTION: 
-                return rightVal; 
+            case SUCCESSOR:
+                return leftVal + 1;
+
+            case PROJECTION:
+                return rightVal;
 
             default:
                 throw new UnsupportedOperationException("Unsupported operator: " + expr.getOpKind());

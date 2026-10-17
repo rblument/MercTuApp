@@ -9,9 +9,9 @@ public enum OpKind {
     SUB("-"),
     MUL("*"),
     DIV("/"),
-    ZERO("0"), 
-    SUCCESSOR("S"), 
-    PROJECTION("P"); 
+    ZERO("0"),
+    SUCCESSOR("S"),
+    PROJECTION("P");
 
     private final String symbol;
 

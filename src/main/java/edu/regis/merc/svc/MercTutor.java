@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -51,7 +51,7 @@ import java.util.logging.Logger;
  */
 public class MercTutor implements TutorSvc {
     /**
-     * The id of the default course taught by the this tutor.
+     * The id of the default course taught by this tutor.
      */
     private static final int DEFAULT_COURSE_ID = 0;
 
@@ -95,10 +95,10 @@ public class MercTutor implements TutorSvc {
         Logger.getLogger(MercTutor.class.getName()).log(Level.INFO, request.getRequestType().getRequestName());
 
         // Efficiently produce "signIn" from ":SignIn", for example.
-        char c[] = request.getRequestType().getRequestName().toCharArray();
+        char[] c = request.getRequestType().getRequestName().toCharArray();
         c[1] = Character.toLowerCase(c[1]);
 
-        char m[] = new char[c.length - 1];
+        char[] m = new char[c.length - 1];
         for (int i = 1; i < c.length; i++) {
             m[i - 1] = c[i];
         }
@@ -295,7 +295,7 @@ public class MercTutor implements TutorSvc {
         }
 
         AccountSvc acctSvc = ServiceFactory.findAccountSvc();
-        
+
         if (!acctSvc.exists(acct.getUserId())) {
             return new TutorReply("IllegalUserId");
         }
@@ -392,23 +392,23 @@ public class MercTutor implements TutorSvc {
     /*
      * public TuringMachine createTestModel() {
      * TuringMachine tm = new TuringMachine();
-     * 
+     *
      * ArrayList<State> states = new ArrayList<>();
-     * 
+     *
      * State state = new State("Q0");
-     * 
+     *
      * GuiCtx ctx = new GuiCtx();
      * ctx.setX(100);
      * ctx.setY(100);
      * ctx.setWidth(30);
      * ctx.setHeight(30);
-     * 
+     *
      * state.setGuiCtx(ctx);
-     * 
+     *
      * states.add(state);
-     * 
+     *
      * tm.setStates(states);
-     * 
+     *
      * return tm;
      * }
      */
@@ -472,7 +472,7 @@ public class MercTutor implements TutorSvc {
      * 'server amnesia,' the client must pass the current stepId and hintIndex in
      * the JSON payload. This makes sure synchonization across asynch socket
      * connections without relying on session memory
-     * 
+     *
      * @param jsonObj
      * @return
      */
@@ -717,30 +717,30 @@ public class MercTutor implements TutorSvc {
      * switch (course.getPrimaryPedagogy()) {
      * case STUDENT_CHOICE:
      * return null; // ToDo
-     * 
+     *
      * case FIXED_SEQUENCE:
      * Unit unit = course.findUnitBySequenceId(0);
-     * 
+     *
      * if (unit == null) {
      * throw new NonRecoverableException("Unit 0 not found in course: " +
      * course.getId());
      * }
-     * 
+     *
      * Task task = unit.findTaskBySequence(0);
-     * 
+     *
      * if (task == null) {
      * throw new NonRecoverableException("Task 0 not found in Unit 0 of course: " +
      * course.getId());
      * }
-     * 
+     *
      * return task;
-     * 
+     *
      * case MASTERY_LEARNING:
      * return null; // ToDo
-     * 
+     *
      * case MICROADAPTATION:
      * return null; // ToDo
-     * 
+     *
      * default:
      * throw new NonRecoverableException("Unknwon task selection in course: " +
      * course.getId());

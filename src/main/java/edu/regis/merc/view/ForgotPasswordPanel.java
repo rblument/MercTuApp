@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -21,6 +21,9 @@ import java.awt.GridBagConstraints;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -43,7 +46,7 @@ import javax.swing.text.Document;
  * @author mandyroskelley
  */
 public class ForgotPasswordPanel extends GPanel{
-    
+
     /**
      * A regex pattern used to validate user email ids (e.g. "rick@regis.edu").
      */
@@ -58,15 +61,15 @@ public class ForgotPasswordPanel extends GPanel{
     /**
      * The editable fields appearing in this dialog.
      */
-    protected HintTextField userId;
-    protected JPasswordField secAnswer;
-    protected JComboBox securityQuestions;
+    private HintTextField userId;
+    private JPasswordField secAnswer;
+    private JComboBox<String> securityQuestions;
 
-    protected JLabel strength;
-    protected JLabel msg;
+    private JLabel strength;
+    private JLabel msg;
 
-    protected JButton verifyBut;
-    protected JButton backBut;
+    private JButton verifyBut;
+    private JButton backBut;
 
     public ForgotPasswordPanel() {
         super();
@@ -85,7 +88,7 @@ public class ForgotPasswordPanel extends GPanel{
      * @return
      */
     public Account getModel() {
-        
+
         updateModel();
         return model;
     }
@@ -109,7 +112,7 @@ public class ForgotPasswordPanel extends GPanel{
     public void updateFocus() {
         userId.requestFocusInWindow();
     }
-    
+
     /**
      * Set all of the text fields in this view to the empty string.
      */
@@ -137,7 +140,7 @@ public class ForgotPasswordPanel extends GPanel{
         secAnswer.setText("");
         securityQuestions.setSelectedIndex(0);
     }
-    
+
     private void initComponents() {
         LoginDocumentListener docListener = new LoginDocumentListener();
 
@@ -145,10 +148,8 @@ public class ForgotPasswordPanel extends GPanel{
         userId.setIsEmailAddr(true);
         userId.getDocument().addDocumentListener(docListener);
 
-        
-        String s1[] = {"What city were you born in?", "What is your mother's maiden name?"};
-        securityQuestions = new JComboBox(s1);
-        
+        securityQuestions = new JComboBox<>(new String[] {"What city were you born in?", "What is your mother's maiden name?"});
+
         secAnswer = new JPasswordField(20);
         secAnswer.getDocument().addDocumentListener(docListener);
 
@@ -163,7 +164,7 @@ public class ForgotPasswordPanel extends GPanel{
           clearFields();
           SplashFrame.instance().selectSplash();
         });
-        
+
         strength = new JLabel("(Strength: very poor)");
         strength.setForeground(new Color(173,7,1));
         strength.setFont(new Font("Dialog", Font.PLAIN, 10));
@@ -238,8 +239,8 @@ public class ForgotPasswordPanel extends GPanel{
         descr.setWrapStyleWord(true);
         descr.setBackground(new Color(241,196,0));
         descr.setFont(new Font("Dialog", Font.PLAIN, 12));
-	descr.append("ShaTu provides individualized tutoring practice focused ");
-	descr.append("on understanding the SHA-256 digest algorithm and the");
+        descr.append("ShaTu provides individualized tutoring practice focused ");
+        descr.append("on understanding the SHA-256 digest algorithm and the");
         descr.append("underlying computer science concepts upon which it is ");
         descr.append("based.\n\n");
         descr.append("Please sign in or use 'New User' to create a student account.");
@@ -270,7 +271,7 @@ public class ForgotPasswordPanel extends GPanel{
 
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 5));
 
-       
+
         JLabel label = new JLabel("User Id:");
         label.setLabelFor(userId);
 
@@ -288,18 +289,18 @@ public class ForgotPasswordPanel extends GPanel{
         panel.addc(label, 0, 4, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 15, 5, 5, 5);
-        
+
         panel.addc(securityQuestions, 0, 5, 2, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 0, 5, 5, 5);
-        
+
         label = new JLabel("Answer:");
         label.setLabelFor(secAnswer);
 
         panel.addc(label, 0, 6, 2, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 15, 5, 5, 5);
-        
+
         panel.addc(secAnswer, 0, 7, 2, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 0, 5, 5, 5);
@@ -316,7 +317,7 @@ public class ForgotPasswordPanel extends GPanel{
         panel.addc(msg, 0, 12, 2, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 5, 5, 5, 5);
-        
+
         panel.addc(backBut, 0, 9, 1, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 10, 5, 5, 5);
@@ -333,7 +334,7 @@ public class ForgotPasswordPanel extends GPanel{
         return panel;
     }
 
-    
+
 
     /**
      * If the userId or security answer fields are empty, disable the OK 'Login'
@@ -361,10 +362,10 @@ public class ForgotPasswordPanel extends GPanel{
         } else {
             userId.setBorder(BorderFactory.createLineBorder(new Color(173,7,1)));
         }
-        
+
         boolean isValidAnswer = false;
             Document secAnswerDoc = secAnswer.getDocument();
-            
+
             String answer = "";
         try {
             answer = secAnswerDoc.getText(0, secAnswerDoc.getLength());
@@ -376,7 +377,7 @@ public class ForgotPasswordPanel extends GPanel{
             }
         } catch (BadLocationException ex) {
             Logger.getLogger(ForgotPasswordPanel.class.getName()).log(Level.SEVERE, null, ex);
-        }  
+        }
         if (isValidUserId && isValidAnswer) {
             verifyBut.setEnabled(true);
             msg.setText("");
@@ -398,7 +399,7 @@ public class ForgotPasswordPanel extends GPanel{
          */
         @Override
         public void insertUpdate(DocumentEvent e) {
-            
+
             enableButtons(e.getDocument());
         }
 
@@ -408,7 +409,7 @@ public class ForgotPasswordPanel extends GPanel{
          */
         @Override
         public void removeUpdate(DocumentEvent e) {
-            
+
             enableButtons(e.getDocument());
         }
 
@@ -418,7 +419,7 @@ public class ForgotPasswordPanel extends GPanel{
          */
         @Override
         public void changedUpdate(DocumentEvent e) {
-            
+
             enableButtons(e.getDocument());
         }
     }
@@ -447,5 +448,5 @@ public class ForgotPasswordPanel extends GPanel{
             throw new RuntimeException(ex);
         }
     }
-    
+
 }

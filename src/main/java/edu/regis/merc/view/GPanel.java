@@ -1,12 +1,12 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) David Flanagan (Java in a Nutshell 1.0)
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -21,9 +21,9 @@ import javax.swing.JPanel;
 
 /**
  * A utility JPanel with a GridBagLayout and a convenience addc method.
- * 
+ *
  * Adopted from Java in a Nutshell (1st Ed.). David Flanagan
- * 
+ *
  * @author rickb
  */
 public class GPanel extends JPanel {
@@ -31,7 +31,7 @@ public class GPanel extends JPanel {
      * Initialize this panel with a GridBagLayout.
      */
     public GPanel() {
-	setLayout(new GridBagLayout());
+        setLayout(new GridBagLayout());
     }
 
     /**
@@ -40,7 +40,7 @@ public class GPanel extends JPanel {
      * addc(this, JComponent, 0,0, 1,1, 1.0,1.0,<BR>
      * &nbsp;&nbsp; GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH,
      * &nbsp;&nbsp; 5,5,5,5);
-     * @param c the child component 
+     * @param c the child component
      * @param gridX the row in which the child component is anchored
      * @param gridY the column in which the child component is anchored
      * @param gridWidth the rows spanned by the child component in the bag
@@ -55,29 +55,29 @@ public class GPanel extends JPanel {
      * @param right padding added to the inset for the child
      */
     public void addc(Component c,
-		     int gridX, int gridY,
-		     int gridWidth, int gridHeight,
-		     double weightx, double weighty,
-		     int anchor, int fill,
-		     int top, int left, int bottom, int right) {
+                     int gridX, int gridY,
+                     int gridWidth, int gridHeight,
+                     double weightx, double weighty,
+                     int anchor, int fill,
+                     int top, int left, int bottom, int right) {
 
-	Insets insets = new Insets(top, left, bottom, right);
+        Insets insets = new Insets(top, left, bottom, right);
 
-	GridBagConstraints cnstr = new GridBagConstraints(gridX,
-							  gridY,
-							  gridWidth,
-							  gridHeight,
-							  weightx,
-							  weighty,
-							  anchor,
-							  fill,
-							  insets,
-							  0,
-							  0);
+        GridBagConstraints cnstr = new GridBagConstraints(gridX,
+                                                          gridY,
+                                                          gridWidth,
+                                                          gridHeight,
+                                                          weightx,
+                                                          weighty,
+                                                          anchor,
+                                                          fill,
+                                                          insets,
+                                                          0,
+                                                          0);
 
-	GridBagLayout l = (GridBagLayout) getLayout();
-	l.setConstraints(c, cnstr);
+        GridBagLayout l = (GridBagLayout) getLayout();
+        l.setConstraints(c, cnstr);
 
-	add(c);
+        add(c);
     }
 }

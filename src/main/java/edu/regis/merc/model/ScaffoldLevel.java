@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -50,26 +50,26 @@ public enum ScaffoldLevel {
      *           the tutor in the first SeeOne scenario.
      */
     EXTREME("Extreme");
-     
+
 
     /**
      * A GUI displayable string identifying this scaffold level.
      */
     private final String title;
-    
+
     ScaffoldLevel(String title) {
         this.title = title;
     }
-     
+
     /**
      * Return the scaffold level
-     * 
+     *
      * @return aString for display in the GUI
      */
     public String title() {
         return title;
     }
-    
+
     /**
      * Return the corresponding enum value for the given title
      * @param title
@@ -80,7 +80,7 @@ public enum ScaffoldLevel {
         for (ScaffoldLevel enumVal : ScaffoldLevel.values())
             if (enumVal.title().equalsIgnoreCase(title))
                 return enumVal;
-            
+
         return null;
     }
 }

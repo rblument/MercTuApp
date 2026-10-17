@@ -1,7 +1,7 @@
 package edu.regis.merc.model;
 
 /**
- * 
+ *
  * @author oscar
  */
 public enum LCStepSubType {
@@ -19,7 +19,7 @@ public enum LCStepSubType {
     SELECT_APPLICATION("Select Application"),
     DISPLAY_ARG("Display Arguments"),
     SELECT_ARG("Select Arguments"),
-    ERROR("Error"); 
+    ERROR("Error");
 
 
     /**

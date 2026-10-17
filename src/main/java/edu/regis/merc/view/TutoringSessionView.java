@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -35,7 +35,7 @@ import com.google.gson.Gson;
  *
  * The "Do One" view that allows either a student to select a task to practice
  * or the tutor selects a task based on the current student model.
- * 
+ *
  * Various aspects of the tutoring session are displayed in the child components
  * of this view.
  *
@@ -175,7 +175,7 @@ public class TutoringSessionView extends GPanel {
         // A step is answered with one component in one representation, so
         // selecting in either panel releases the other and records what was
         // chosen. clearSelection does not notify a listener, so this does not
-        // recurse. A third selectable panel has to be registered here too, 
+        // recurse. A third selectable panel has to be registered here too,
         // and until it is its selections are simply never reported.
         lambdaCalcView.setSelectionListener((representation, componentId) -> {
             muRecView.clearSelection();

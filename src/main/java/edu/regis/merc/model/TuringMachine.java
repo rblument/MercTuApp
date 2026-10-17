@@ -25,8 +25,8 @@ public class TuringMachine extends GraphicalComponent {
      * Default character representing a blank on the tape.
      */
     public static final char BLANK = '-';
-    
-    
+
+
     /**
      * The sates in this Turing Machine.
      */
@@ -36,7 +36,9 @@ public class TuringMachine extends GraphicalComponent {
     private LinkedList<Character> inputTape; // Copy of original input string - used to reset
     private ArrayList<Character> inputAlphabet; // List of allowed symbols
     private ArrayList<Character> tapeAlphabet; // List of allowed symbols on tape
-    private State startState, acceptState, rejectState; // Special states
+    private State startState; // Special states
+    private State acceptState;
+    private State rejectState;
     private State currentState; // Current state of machine
     private int head; // Current index of tape
 
@@ -77,7 +79,14 @@ public class TuringMachine extends GraphicalComponent {
         reset();
     }
 
-    public TuringMachine(int id, String name, String description, ArrayList<Character> inputAlphabet, ArrayList<Character> tapeAlphabet, State startState, State acceptState, State rejectState) {
+    public TuringMachine(int id,
+                         String name,
+                         String description,
+                         ArrayList<Character> inputAlphabet,
+                         ArrayList<Character> tapeAlphabet,
+                         State startState,
+                         State acceptState,
+                         State rejectState) {
         super(id);
         super.setTitle(name);
         super.setDescription(description);
@@ -99,7 +108,7 @@ public class TuringMachine extends GraphicalComponent {
     public void addState(State state) {
         states.add(state);
     }
-    
+
     public State findState(int id) throws ObjNotFoundException {
         for (State state : states) {
             if (state.getId() == id) {
@@ -109,14 +118,14 @@ public class TuringMachine extends GraphicalComponent {
 
         throw new ObjNotFoundException("State " + id + " not found in TM " + this.id);
     }
-    
+
     public State findState(String name) throws ObjNotFoundException {
         for (State state : states) {
             if (state.getName().equalsIgnoreCase(name)) {
                 return state;
             }
         }
-        
+
         throw new ObjNotFoundException("State " + name + " not found in TM " + this.id);
     }
 
@@ -224,7 +233,7 @@ public class TuringMachine extends GraphicalComponent {
 
     public void setTransitions(ArrayList<Transition> transitions) {
         this.transitions = transitions;
-        
+
         for (Transition transition : transitions)
             cachedTransitions.add(transition);
 

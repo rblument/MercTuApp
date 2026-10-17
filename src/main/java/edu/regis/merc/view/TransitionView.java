@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -30,7 +30,7 @@ import javax.swing.JPopupMenu;
  * A view of an Edge model for a TuringTransition component displayed as an arrow.
  *
  * The view's location is set in ChartCanvas.setEdgeViews(...)
- * 
+ *
  * ToDo: Mimic the StateView, as required.
  *
  * @author Rickb
@@ -39,41 +39,41 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
     /**
      * The model displayed by this view
      */
-    protected Transition model;
+    private Transition model;
 
-    protected Font font;
+    private Font font;
 
-    protected int halfW;
-    protected int halfH;
-    
+    private int halfW;
+    private int halfH;
+
     private int dragX;
     private int dragY;
-    
+
     private boolean isHighlighted;
 
-    JPopupMenu popupMenu;
+    private JPopupMenu popupMenu;
 
     public TransitionView(Transition model) {
         isHighlighted = false;
-        
-        
-	setModel(model);
+
+
+        setModel(model);
 
         addMouseListener(this);
     }
 
     public Edge getModel() {
-	return model;
+        return model;
     }
 
     public void setModel(Transition model) {
-	this.model = model;
-	updateView();
+        this.model = model;
+        updateView();
     }
 
     /**
      * Add a changeListener to listen for changes.
-     * 
+     *
      * @param l
      *            Listener to add
      */
@@ -83,7 +83,7 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
 
     /**
      * Remove a changeListener.
-     * 
+     *
      * @param l
      *            Listener to remove
      */
@@ -93,66 +93,66 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
 
 
     public void updateView() {
-    	//Font f = new Font("Dialog", Font.PLAIN, fontPtSize);
-	GuiCtx ctx = model.getGuiCtx();
-	Font f = new Font(ctx.getFontName(), 
-			  ctx.getFontStyle(), 
-			  ctx.getFontSize());
+        //Font f = new Font("Dialog", Font.PLAIN, fontPtSize);
+        GuiCtx ctx = model.getGuiCtx();
+        Font f = new Font(ctx.getFontName(),
+                          ctx.getFontStyle(),
+                          ctx.getFontSize());
 
-	setFont(f);
+        setFont(f);
 
-	FontMetrics metrics = getFontMetrics(f);
+        FontMetrics metrics = getFontMetrics(f);
 
-	int maxH = 0;
-	int maxW = 0;
+        int maxH = 0;
+        int maxW = 0;
 
-	int x1 = ctx.getX();
-	int y1 = ctx.getY();
-	int x2 = ctx.getX2();
-	int y2 = ctx.getY2();
+        int x1 = ctx.getX();
+        int y1 = ctx.getY();
+        int x2 = ctx.getX2();
+        int y2 = ctx.getY2();
 
-	if (x1 == x2) { // Vertical line
-	    maxW = metrics.stringWidth(model.getType()) + 16;
-	    maxH = Math.abs(y2 - y1);
+        if (x1 == x2) { // Vertical line
+            maxW = metrics.stringWidth(model.getType()) + 16;
+            maxH = Math.abs(y2 - y1);
 
-	} else {        // Horixontal line
-	    maxH  = metrics.getHeight() + 16;
-	    maxW = Math.abs(x2 - x1);
-	}
+        } else {        // Horixontal line
+            maxH  = metrics.getHeight() + 16;
+            maxW = Math.abs(x2 - x1);
+        }
 
-	halfH = maxH / 2;
-	halfW = maxW / 2;
+        halfH = maxH / 2;
+        halfW = maxW / 2;
 
 
-	Dimension d = new Dimension(maxW, maxH);
+        Dimension d = new Dimension(maxW, maxH);
 
-	setPreferredSize(d);
-	setSize(d);
+        setPreferredSize(d);
+        setSize(d);
     }
 
     private void paintBackground(Graphics g) {
-	/*
-	GuiCtx ctx = model.getGuiCtx();
+        /*
+        GuiCtx ctx = model.getGuiCtx();
 
-	int h = ctx.getHeight() - 1;
-	int w = ctx.getWidth() - 1;
-	
-	// Paint the background
-	if (!isBeingDragged) {
-	  g.setColor(bkgColour);
-	  g.fillRect(0,0, w, h);
+        int h = ctx.getHeight() - 1;
+        int w = ctx.getWidth() - 1;
 
-	  //g.fillRect(0,0, w, d.height-1);
-	}
+        // Paint the background
+        if (!isBeingDragged) {
+            g.setColor(bkgColour);
+            g.fillRect(0,0, w, h);
 
-	if (ctx.getIsSelected()) {
-	    g.setColor(stripeColor);
+            //g.fillRect(0,0, w, d.height-1);
+        }
+
+        if (ctx.getIsSelected()) {
+            g.setColor(stripeColor);
             stripeRect(g, 0, GAP, w, h, 8, 3);
-    
+
             g.setColor(bkgColour);
             g.fillRect(7, GAP+7, w-14, h-14);
-	}
-	*/
+        }
+        */
     }
 
     /**
@@ -160,51 +160,51 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
      * look and feel of this component.
      */
     protected void paintComponent(Graphics g) {
-	GuiCtx ctx = model.getGuiCtx();
+        GuiCtx ctx = model.getGuiCtx();
 
-	FontMetrics metrics = getFontMetrics(getFont());
-	int fontH = metrics.getHeight();
+        FontMetrics metrics = getFontMetrics(getFont());
+        int fontH = metrics.getHeight();
 
-	Dimension d = getPreferredSize();
+        Dimension d = getPreferredSize();
 
-	paintBackground(g);
+        paintBackground(g);
 
-	// Paint the enclosing frame
-	g.setColor(Color.black);
-	if (ctx.getX() == ctx.getX2()) {              // vertical line
-	    //System.out.println("height: " + d.height);
-	    g.drawLine(6, 0, 6, d.height-1);
-	    // TBD upside down line
+        // Paint the enclosing frame
+        g.setColor(Color.black);
+        if (ctx.getX() == ctx.getX2()) {              // vertical line
+            //System.out.println("height: " + d.height);
+            g.drawLine(6, 0, 6, d.height-1);
+            // TBD upside down line
 
-	    int baseline = 2;
-	    if (ctx.getY() > ctx.getY2()) {                // upward arrow
-		g.drawLine(6, 0, 12, 6); // rarrowhead
-		g.drawLine(6, 0, 0,  6);  // larrowhead
-		baseline = d.height - fontH;
-	    } else {                                       // down arrow
-		g.drawLine(6, d.height-1, 12, d.height-6); // rarrowhead
-		g.drawLine(6, d.height-1, 0, d.height-6);  // larrowhead
-	    }
+            int baseline = 2;
+            if (ctx.getY() > ctx.getY2()) {                // upward arrow
+                g.drawLine(6, 0, 12, 6); // rarrowhead
+                g.drawLine(6, 0, 0,  6);  // larrowhead
+                baseline = d.height - fontH;
+            } else {                                       // down arrow
+                g.drawLine(6, d.height-1, 12, d.height-6); // rarrowhead
+                g.drawLine(6, d.height-1, 0, d.height-6);  // larrowhead
+            }
 
-	    if (model.getType().equals("yes"))
-		g.drawString("yes", 7, baseline);
-	    if (model.getType().equals("no"))
-		g.drawString("no",  7, baseline);
-		
+            if (model.getType().equals("yes"))
+                g.drawString("yes", 7, baseline);
+            if (model.getType().equals("no"))
+                g.drawString("no",  7, baseline);
 
-	} else {                                      // horizontal
-	    int baseline = fontH + 1;
-	    g.drawLine(0, baseline, d.width-1, baseline);
 
-	    // TBD backgrounds sline
-	    g.drawLine(d.width-1, baseline, d.width-6 , baseline - 6); // arrow
-	    g.drawLine(d.width-1, baseline, d.width-6 , baseline + 6); // arrow
+        } else {                                      // horizontal
+            int baseline = fontH + 1;
+            g.drawLine(0, baseline, d.width-1, baseline);
 
-	    if (model.getType().equals("yes"))
-		g.drawString("yes", 4, fontH);
-	    else if (model.getType().equals("no"))
-		g.drawString("no", 4, fontH);
-	}
+            // TBD backgrounds sline
+            g.drawLine(d.width-1, baseline, d.width-6 , baseline - 6); // arrow
+            g.drawLine(d.width-1, baseline, d.width-6 , baseline + 6); // arrow
+
+            if (model.getType().equals("yes"))
+                g.drawString("yes", 4, fontH);
+            else if (model.getType().equals("no"))
+                g.drawString("no", 4, fontH);
+        }
     }
 
     /**
@@ -215,7 +215,10 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
     {
         for (int offset = 0; offset < width + height; offset += separation)
             for (int i = 0; i < thickness; i++, offset++) {
-                int x1, y1, x2, y2;
+                int x1;
+                int y1;
+                int x2;
+                int y2;
 
                 if (offset < height) {
                     x1 = x;
@@ -261,12 +264,12 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
 
     @Override
     public boolean isSelected() {
-	return model.getGuiCtx().getIsSelected();
+        return model.getGuiCtx().getIsSelected();
     }
 
     @Override
     public void select()   {
-	model.getGuiCtx().setIsSelected(true);
+        model.getGuiCtx().setIsSelected(true);
 
         fireSelectionChangeEvent();
     }
@@ -274,11 +277,11 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
     @Override
     public void deselect() {
         if (isSelected()) {
-	    model.getGuiCtx().setIsSelected(false);
+            model.getGuiCtx().setIsSelected(false);
             fireSelectionChangeEvent();
         }
     }
-    
+
      /**
      * {@inheritDoc}
      */
@@ -287,7 +290,7 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
         isHighlighted = true;
         fireSelectionChangeEvent();
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -296,12 +299,12 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
         isHighlighted = false;
         fireSelectionChangeEvent();
     }
-    
+
     @Override
     public int getDragX() {
         return dragX;
     }
-    
+
     @Override
     public int getDragY() {
         return dragY;

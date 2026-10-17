@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -22,13 +22,13 @@ import java.sql.Connection;
 
 /**
  * Specifies the API for Course life-cycle maintenance (database persistence).
- * 
+ *
  * @author rickb
  */
 public interface CourseSvc {
     /**
      * Locate and return the course with the given id.
-     * 
+     *
      * The method is similar to {@link #retrieveDigest()} except it returns
      * the entire course content.
      *
@@ -38,10 +38,10 @@ public interface CourseSvc {
      * @throws NonRecoverableException also see getCause().getErrorCode()..
      */
     Course retrieve(int courseId) throws ObjNotFoundException, NonRecoverableException;
-    
+
     /**
      * Locate and return a digest of the course with the given id.
-     * 
+     *
      * Use {@link #retrieve()} except it returns to return the entire course.
      *
      * @param courseId  integer key of the course to load.
@@ -50,12 +50,12 @@ public interface CourseSvc {
      * @exception ObjNotFoundException No course with the given id exists.
      * @throws NonRecoverableException also see getCause().getErrorCode().
      */
-    CourseDigest retrieveDigest(int courseId, Connection conn) 
+    CourseDigest retrieveDigest(int courseId, Connection conn)
             throws ObjNotFoundException, NonRecoverableException;
-    
+
         /**
      * Locate and return a digest of the unit with the given course and unit ids.
-     * 
+     *
      * Use {@link #retrieve()} except it returns to return the entire course.
      *
      * @param unitId  integer key of the course to load.
