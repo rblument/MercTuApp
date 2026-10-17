@@ -12,9 +12,11 @@
  */
 package edu.regis.merc.svc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.Gson;
 import edu.regis.merc.model.RepresentationKind;
 import org.junit.jupiter.api.Test;
 
@@ -40,10 +42,10 @@ public class GradingTest {
         return data;
     }
 
-    private static MercTutor.StudentPayload answering(RepresentationKind kind, int componentId) {
-        MercTutor.StudentPayload payload = new MercTutor.StudentPayload();
-        payload.representation = kind;
-        payload.selectedComponentId = componentId;
+    private static StudentPayload answering(RepresentationKind kind, int componentId) {
+        StudentPayload payload = new StudentPayload();
+        payload.setRepresentation(kind);
+        payload.setSelectedComponentId(componentId);
         return payload;
     }
 
@@ -84,6 +86,25 @@ public class GradingTest {
         assertFalse(MercTutor.isCorrect(
                 expecting(null, LAMBDA_S),
                 answering(RepresentationKind.LAMBDA_CALCULUS, LAMBDA_S)));
+    }
+
+    @Test
+    void payloadSurvivesTheJsonRoundTrip() {
+        // The client serializes a StudentPayload and the server deserializes
+        // one, so the two only stay in agreement if this holds. Enum fields
+        // travel as name(), not toString() -- RepresentationKind overrides
+        // toString to return "Lambda Calculus", which would not parse back.
+        Gson gson = new Gson();
+
+        StudentPayload sent = new StudentPayload(50);
+        sent.setRepresentation(RepresentationKind.LAMBDA_CALCULUS);
+        sent.setSelectedComponentId(LAMBDA_S);
+
+        StudentPayload received = gson.fromJson(gson.toJson(sent), StudentPayload.class);
+
+        assertEquals(50, received.getStepId());
+        assertEquals(RepresentationKind.LAMBDA_CALCULUS, received.getRepresentation());
+        assertEquals(LAMBDA_S, received.getSelectedComponentId());
     }
 
     @Test
