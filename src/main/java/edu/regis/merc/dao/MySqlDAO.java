@@ -92,7 +92,14 @@ public abstract class MySqlDAO {
                 String dbName = rscr.getProp(DB_NAME_PROP);
                 String dbUser = rscr.getProp(DB_USER_PROP);
                 String dbPass = rscr.getProp(DB_PASS_PROP);
-                Integer dbPort = Integer.valueOf(rscr.getPropOrDefault(DB_PORT_PROP, DB_PORT_DEFAULT));
+
+                Integer dbPort;
+
+                try {
+                    dbPort = Integer.valueOf(rscr.getProp(DB_PORT_PROP));
+                } catch (NumberFormatException|MissingPropertyException e) {
+                    dbPort = Integer.valueOf(DB_PORT_DEFAULT);
+                }
 
                 setURL(dbHost, dbName, dbUser, dbPass, dbPort);
 
@@ -104,7 +111,7 @@ public abstract class MySqlDAO {
 
     static void setURL(String dbHost, String dbName, String dbUser, String dbPass, Integer dbPort) {
         URL = "jdbc:mysql://" + dbHost + ":" + dbPort.toString() + "/" + dbName + "?user=" +
-                dbUser + "&password=" + dbPass;;
+                dbUser + "&password=" + dbPass;
     }
 
     static void atomicallyLoadDriver() {
@@ -114,10 +121,13 @@ public abstract class MySqlDAO {
             }
         } catch (ClassNotFoundException e) {
             LOGGER.log(Level.SEVERE, "MySqlDao-ERR-1: Illegal driver class name {0}", e.toString());
+            System.exit(1);
         } catch (InstantiationException e) {
             LOGGER.log(Level.SEVERE, "MySqlDao-ERR-2: Illegal instance {0}", e.toString());
+            System.exit(1);
         } catch (IllegalAccessException e) {
             LOGGER.log(Level.SEVERE, "MySqlDao-ERR-3: No create driver permission {0}", e.toString());
+            System.exit(1);
         }
     }
 
