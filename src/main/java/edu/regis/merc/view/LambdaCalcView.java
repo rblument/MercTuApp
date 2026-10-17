@@ -4,6 +4,7 @@ import edu.regis.merc.model.LCAbstraction;
 import edu.regis.merc.model.LCApplication;
 import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.model.LCVariable;
+import edu.regis.merc.model.RepresentationKind;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,9 +19,10 @@ public class LambdaCalcView extends GPanel {
     private LCExpression selectedExpression = null;
 
     /**
-     * Run when the student selects a component here. See setOnSelection.
+     * Notified when the student selects a component here. See
+     * setSelectionListener.
      */
-    private Runnable onSelection = null;
+    private ComponentSelectionListener selectionListener = null;
 
     public LambdaCalcView() {
 
@@ -34,18 +36,19 @@ public class LambdaCalcView extends GPanel {
     }
 
     /**
-     * Register a callback run whenever the student selects a component here.
+     * Register the listener notified whenever the student selects a component
+     * here.
      *
      * The three representation panels hold their selections independently, so
-     * whichever view owns them uses this to clear the others and keep exactly
-     * one component selected across the whole problem. The callback is not run
-     * by {@link #clearSelection()}, so wiring two views to each other does not
+     * whichever view owns them uses this to record what was chosen and release
+     * the other panels. The listener is not notified by
+     * {@link #clearSelection()}, so panels that release each other do not
      * recurse.
      *
-     * @param onSelection a Runnable, or null to remove the callback
+     * @param selectionListener the listener, or null to remove it
      */
-    public void setOnSelection(Runnable onSelection) {
-        this.onSelection = onSelection;
+    public void setSelectionListener(ComponentSelectionListener selectionListener) {
+        this.selectionListener = selectionListener;
     }
 
     /**
@@ -173,8 +176,9 @@ public class LambdaCalcView extends GPanel {
                 label.setBackground(new Color(173, 216, 230));
                 System.out.println("Student selected: " + text + " (ID: " + expr.getId() + ")");
 
-                if (onSelection != null) {
-                    onSelection.run();
+                if (selectionListener != null) {
+                    selectionListener.componentSelected(
+                            RepresentationKind.LAMBDA_CALCULUS, expr.getId());
                 }
             }
         });

@@ -428,8 +428,8 @@ public class MercTutor implements TutorSvc {
         // unpack the json to find out which step the student is on
         StudentPayload payload = gson.fromJson(jsonObj,
                 StudentPayload.class);
-        int activeStepId = payload.stepId;
-        int requestedHintIndex = payload.hintIndex;
+        int activeStepId = payload.getStepId();
+        int requestedHintIndex = payload.getHintIndex();
 
         System.out.println("Client requested hint index " + requestedHintIndex + " for Step ID: " + activeStepId);
         System.out.println("Student requested a hint for Step ID: " + activeStepId);
@@ -481,7 +481,7 @@ public class MercTutor implements TutorSvc {
 
         // find out which step the student is asking about
         StudentPayload payload = gson.fromJson(jsonObj, StudentPayload.class);
-        int activeStepId = payload.stepId;
+        int activeStepId = payload.getStepId();
 
         System.out.println("Client requested the answer for Step ID: " + activeStepId);
 
@@ -521,8 +521,8 @@ public class MercTutor implements TutorSvc {
 
         // parse the JSON into the helper object
         StudentPayload payload = gson.fromJson(jsonObj, StudentPayload.class);
-        int studentAnswerId = payload.selectedComponentId;
-        int activeStepId = payload.stepId;
+        int studentAnswerId = payload.getSelectedComponentId();
+        int activeStepId = payload.getStepId();
 
         System.out.println("Client is grading Step ID: " + activeStepId);
         System.out.println("Student clicked ID: " + studentAnswerId);
@@ -558,7 +558,7 @@ public class MercTutor implements TutorSvc {
         StepData expectedData = gson.fromJson(currentStep.getData(), StepData.class);
 
         System.out.println("--- Grading Logic ---");
-        System.out.println("Student answered " + payload.representation
+        System.out.println("Student answered " + payload.getRepresentation()
                 + " component " + studentAnswerId);
         System.out.println("Step expects   " + expectedData.representation
                 + " component " + expectedData.correctComponentId);
@@ -789,26 +789,20 @@ public class MercTutor implements TutorSvc {
             return false;
         }
 
-        if (expected.representation == null || submitted.representation == null) {
+        if (expected.representation == null || submitted.getRepresentation() == null) {
             return false;
         }
 
-        return expected.representation == submitted.representation
-                && expected.correctComponentId == submitted.selectedComponentId;
-    }
-
-    /**
-     * An answer submitted by the client, parsed from the request's JSon data.
-     */
-    static class StudentPayload {
-        int stepId;
-        RepresentationKind representation;
-        int selectedComponentId;
-        int hintIndex;
+        return expected.representation == submitted.getRepresentation()
+                && expected.correctComponentId == submitted.getSelectedComponentId();
     }
 
     /**
      * A step's grading data, parsed from the Step.Data column.
+     *
+     * Unlike StudentPayload this is not part of the client protocol. it's
+     * read from the database and never leaves the server so it stays here
+     * with the only code that uses it.
      */
     static class StepData {
         RepresentationKind representation;
