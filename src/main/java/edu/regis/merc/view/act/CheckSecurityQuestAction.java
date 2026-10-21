@@ -20,18 +20,11 @@ package edu.regis.merc.view.act;
  * @author mandyroskelley
  */
 
-import com.google.gson.Gson;
-import edu.regis.merc.model.Account;
-import edu.regis.merc.svc.ClientRequest;
-import edu.regis.merc.svc.ServerRequestType;
-import edu.regis.merc.svc.SvcFacade;
-import edu.regis.merc.svc.TutorReply;
 import edu.regis.merc.view.SplashFrame;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import static javax.swing.Action.MNEMONIC_KEY;
 import static javax.swing.Action.SHORT_DESCRIPTION;
-import javax.swing.JOptionPane;
 
 public class CheckSecurityQuestAction extends MercGuiAction {
     /**
@@ -42,9 +35,7 @@ public class CheckSecurityQuestAction extends MercGuiAction {
      * referenced by executing CheckSecurityQuestAction.instance() in the
      * initializeComponents() method of the SplashPanel class.
      */
-    private static final CheckSecurityQuestAction SINGLETON = new CheckSecurityQuestAction();;
-
-    private  Account model;
+    private static final CheckSecurityQuestAction SINGLETON = new CheckSecurityQuestAction();
 
     /**
      * Return the singleton instance of this check security question action.
@@ -59,8 +50,8 @@ public class CheckSecurityQuestAction extends MercGuiAction {
      * Initialize this check security question action.
      */
     public CheckSecurityQuestAction() {
-        super("Verify User");
-        putValue(SHORT_DESCRIPTION, "Verify user with security question and answer");
+        super("Verify answer");
+        putValue(SHORT_DESCRIPTION, "Verify the answer to the stored security question");
         putValue(MNEMONIC_KEY, KeyEvent.VK_U);
     }
 
@@ -72,48 +63,6 @@ public class CheckSecurityQuestAction extends MercGuiAction {
      */
     @Override
     public void actionPerformed(ActionEvent evt) {
-        Gson gson = new Gson();
-
-        SplashFrame frame = SplashFrame.instance();
-        Account account = frame.getAccount();
-
-
-        ClientRequest request = new ClientRequest(ServerRequestType.VERIFY_USER);
-        request.setData(gson.toJson(account));
-
-        TutorReply reply = SvcFacade.instance().tutorRequest(request);
-
-        String msg;
-        switch (reply.getStatus()) {
-            case "Verified":
-            // Extract token from reply data
-            String token = gson.fromJson(reply.getData(), String.class);
-
-            frame.initializeResetPassword(account.getUserId(), token);
-            frame.selectResetPassword(account.getUserId());
-
-            break;
-
-            case "IllegalUserId":
-                msg = "User id does not exist: " + account.getUserId();
-                JOptionPane.showMessageDialog(null, msg, "Information",
-                                              JOptionPane.INFORMATION_MESSAGE);
-                break;
-            case "InvalidAnswer":
-                msg = "Answer does not match, please try again. ";
-                JOptionPane.showMessageDialog(null, msg, "Information",
-                                              JOptionPane.INFORMATION_MESSAGE);
-                break;
-            case "UnknownUser":
-                msg = "UnknownUser ";
-                JOptionPane.showMessageDialog(null, msg, "Information",
-                                              JOptionPane.INFORMATION_MESSAGE);
-                break;
-            default: // "ERR" Error should have been logged in tutor.
-                msg = "An unexpected error occurred. Please contact ShaTu support";
-                JOptionPane.showMessageDialog(null, msg, "Error",
-                                              JOptionPane.ERROR_MESSAGE);
-
-    }
+        SplashFrame.instance().verifyRecoveryAnswer();
     }
 }

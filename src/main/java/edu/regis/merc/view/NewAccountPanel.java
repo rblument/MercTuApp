@@ -13,6 +13,7 @@
 package edu.regis.merc.view;
 
 import edu.regis.merc.model.Account;
+import edu.regis.merc.model.SecurityQuestion;
 import edu.regis.merc.view.act.CreateAccountAction;
 import edu.regis.merc.view.act.SignInAction;
 import java.awt.Color;
@@ -70,7 +71,7 @@ public class NewAccountPanel extends GPanel {
     private HintTextField userId;
     private JPasswordField pass1;
     private JPasswordField pass2;
-    private JComboBox<String> secQuestions;
+    private JComboBox<SecurityQuestion> secQuestions;
     private JPasswordField secAnswer;
 
     private JLabel strength;
@@ -143,7 +144,7 @@ public class NewAccountPanel extends GPanel {
         model.setFirstName(fName.getText());
         model.setLastName(lName.getText());
         model.setPassword(new String(pass1.getPassword()));
-        model.setSecurityQuestion(secQuestions.getSelectedIndex());
+        model.setSecurityQuestion(((SecurityQuestion) secQuestions.getSelectedItem()).getId());
         model.setSecurityAnswer(encryptSHA256(new String(secAnswer.getPassword())));
     }
 
@@ -180,7 +181,7 @@ public class NewAccountPanel extends GPanel {
         pass2 = new JPasswordField(20);
         pass2.getDocument().addDocumentListener(docListener);
 
-        secQuestions = new JComboBox(new String[]{"What city were you born in?", "What is your mother's maiden name?"});
+        secQuestions = new JComboBox<>(SecurityQuestion.values());
 
         secAnswer = new JPasswordField(20);
         secAnswer.getDocument().addDocumentListener(docListener);

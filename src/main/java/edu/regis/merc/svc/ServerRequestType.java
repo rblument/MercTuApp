@@ -82,6 +82,9 @@ public enum ServerRequestType {
      */
     VERIFY_USER(":VerifyUser"),
 
+    /** Look up the stored question by email, without exposing credentials. */
+    GET_SECURITY_QUESTION(":GetSecurityQuestion"),
+
     /**
      * Get the current task of the user
      */

@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import javax.swing.SwingUtilities;
 
 /**
  * A standalone implementation of the MERC intelligent tutoring application.
@@ -137,16 +138,15 @@ public class MercApp {
 
             LOGGER.info(" Starting Client GUI...");
 
-            // Force the creation of the MainFrame singleton, which is not
-            // made visible to the user until after they sign-in.
-            MainFrame.instance();
+            // Create and display Swing components on the event dispatch thread.
+            SwingUtilities.invokeLater(() -> {
+                // The main tutoring window stays hidden until sign-in succeeds.
+                MainFrame.instance();
+                // The splash window provides sign-in and account recovery.
+                SplashFrame.instance();
 
-            // Force the creation of the SplashFrame, which is displayed and
-            // allows the user to sign-in or create a new student account.
-            // If sign-in is successful the MainFrame is displayed.
-            SplashFrame.instance();
-
-            LOGGER.info("Merc Initialization successful.");
+                LOGGER.info("Merc Initialization successful.");
+            });
 
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
