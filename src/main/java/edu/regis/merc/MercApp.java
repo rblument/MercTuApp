@@ -14,6 +14,7 @@ package edu.regis.merc;
 
 import com.mysql.cj.jdbc.AbandonedConnectionCleanupThread;
 import edu.regis.merc.svc.MercServer;
+import edu.regis.merc.svc.SvcFacade;
 import edu.regis.merc.util.ResourceMgr;
 import edu.regis.merc.view.MainFrame;
 import edu.regis.merc.view.SplashFrame;
@@ -71,6 +72,7 @@ public class MercApp {
      */
     private static ServerConfig serverConfig;
     private static ClientConfig clientConfig;
+    private static ExecutionMode executionMode = ExecutionMode.BOTH;
 
     /**
      * Parse command line arguments to determine execution mode and config file.
@@ -78,48 +80,22 @@ public class MercApp {
      * @param args the command line arguments
      * @return an ExecutionMode enum value
      */
-    private static ExecutionMode parseArgs(String[] args) {
+    private static ExecutionMode parseArgs(String[] args) throws IOException {
         ExecutionMode mode = ExecutionMode.BOTH;
         String configPath = null;
-
         for (String arg : args) {
             if ("--server".equals(arg)) {
                 mode = ExecutionMode.SERVER;
             } else if ("--client".equals(arg)) {
                 mode = ExecutionMode.CLIENT;
             } else if (arg.startsWith("--config=")) {
-                configPath = arg.substring("--config".length() + 1);
-                try {
-                    if (mode == ExecutionMode.SERVER) {
-                        serverConfig = new ServerConfig(configPath);
-                    } else if (mode == ExecutionMode.CLIENT) {
-                        clientConfig = new ClientConfig(configPath);
-                    } else {
-                        serverConfig = new ServerConfig(configPath);
-                        clientConfig = new ClientConfig(configPath);
-                    }
-                } catch (IOException e) {
-                    LOGGER.severe("Error loading config file: " + e.getMessage());
-                }
+                configPath = arg.substring("--config=".length());
+                if (configPath.isBlank()) throw new IllegalArgumentException("--config requires a file path.");
             }
         }
-
-        if (serverConfig == null) {
-            try {
-                serverConfig = new ServerConfig();
-            } catch (IOException e) {
-                LOGGER.severe("Error loading server config: " + e.getMessage());
-            }
-        }
-
-        if (clientConfig == null) {
-            try {
-                clientConfig = new ClientConfig();
-            } catch (IOException e) {
-                LOGGER.severe("Error loading client config: " + e.getMessage());
-            }
-        }
-
+        // Resolve the mode before loading configuration; never fall back from a failed TLS config.
+        if (mode != ExecutionMode.CLIENT) serverConfig = new ServerConfig(configPath);
+        if (mode != ExecutionMode.SERVER) clientConfig = new ClientConfig(configPath);
         return mode;
     }
 
@@ -128,17 +104,10 @@ public class MercApp {
      *
      * @param inBackground true to start server in a separate thread, false to run in current thread
      */
-    private static void startServer(boolean inBackground) {
+    private static void startServer(boolean inBackground) throws IOException {
         LOGGER.info(" Starting Merc Server (Tutoring Service)...");
 
         mercServer = new MercServer(serverConfig);
-
-        if (inBackground) {
-            mercServerThread = new Thread(mercServer, "merc-server");
-            mercServerThread.start();
-        } else {
-            mercServer.run();
-        }
 
         Runtime.getRuntime().addShutdownHook(
                 new Thread(() -> {
@@ -147,7 +116,15 @@ public class MercApp {
                     }
                 }, "merc-server-shutdown"));
 
+        mercServer.startListening();
         LOGGER.info(" Server is running.");
+        if (inBackground) {
+            mercServerThread = new Thread(mercServer, "merc-server");
+            mercServerThread.start();
+        } else {
+            mercServer.run();
+        }
+
     }
 
     /**
@@ -266,16 +243,16 @@ public class MercApp {
 
         System.out.println("Finished initializing");
 
-        ExecutionMode mode = parseArgs(args);
-
-        boolean startServerInBackground = (mode == ExecutionMode.BOTH);
-
-        if (mode == ExecutionMode.SERVER || mode == ExecutionMode.BOTH) {
-            startServer(startServerInBackground);
-        }
-
-        if (mode == ExecutionMode.CLIENT || mode == ExecutionMode.BOTH) {
-            startClient();
+        try {
+            executionMode = parseArgs(args);
+            // Validate client trust before starting a local listener or showing the GUI.
+            if (executionMode != ExecutionMode.SERVER) SvcFacade.instance().configure(clientConfig);
+            boolean startServerInBackground = (executionMode == ExecutionMode.BOTH);
+            if (executionMode != ExecutionMode.CLIENT) startServer(startServerInBackground);
+            if (executionMode != ExecutionMode.SERVER) startClient();
+        } catch (IOException | IllegalArgumentException ex) {
+            LOGGER.severe("Merc startup failed: " + ex.getMessage());
+            if (mercServer != null) mercServer.close();
         }
     }
 
@@ -291,6 +268,6 @@ public class MercApp {
      * application windows.
      */
     public static synchronized void shutdown() {
-        shutdown(ExecutionMode.BOTH);
+        shutdown(executionMode);
     }
 }

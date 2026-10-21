@@ -87,6 +87,18 @@ public class SvcFacade {
      */
     private static final Logger LOGGER = Logger.getLogger(SvcFacade.class.getName());
 
+    private volatile TransportSockets sockets;
+
+    /** Use the resolved external client configuration, including TLS, before GUI startup. */
+    public void configure(ClientConfig config) throws IOException {
+        configure(TransportSockets.create(config));
+    }
+
+    /** Install startup transport before the GUI can issue requests. */
+    void configure(TransportSockets sockets) {
+        this.sockets = java.util.Objects.requireNonNull(sockets);
+    }
+
     /**
      * Utility reference to Gson for converting between Java and JSon objects.
      */
@@ -101,6 +113,12 @@ public class SvcFacade {
         gson = new Gson();
         transport = this::send;
         debug = IS_DEBUG;
+    }
+
+    /** A configured client, also usable by local socket tests without changing the singleton. */
+    SvcFacade(TransportSockets sockets) {
+        this();
+        configure(sockets);
     }
 
     /** Allows testing the protocol and logging without a live socket server. */
@@ -134,59 +152,38 @@ public class SvcFacade {
     /**
      * Send the given request to the ShaTu server and return the reply.
      *
-     * Communication with the SERVER occurs via the socket connection on port PORT.
+     * Communication uses the host, port, and transport selected at startup.
      *
      * @param request a JSon encoded ClientRequest object
      * @return a JSon encoded TutorReply from the tutor
      */
     private String send(String request) {
-        Socket client = null;
-        BufferedReader in = null;
-        PrintWriter out = null;
-
         try {
-            ClientConfig config = new ClientConfig();
-            client = new Socket(config.getHost(), config.getPort());
-
-            in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-
-            out = new PrintWriter(client.getOutputStream());
-            out.println(request);
-
-            out.flush();
-
-            return in.readLine();
-
-        } catch (UnknownHostException e) {
-            LOGGER.log(Level.SEVERE, "Unknown Host", e);
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "IOException client", e);
-        } finally {
-            // Kludgy, but tries to close an open socket and its associated
-            // input and output streams in every possible error scenario
-            // If we didn't, it's possible that we're leaking memory.
-            try {
-                if (out != null)
-                    out.close();
-            } finally {
-                try {
-                    if (in != null)
-                        in.close();
-                } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, "Unable to close client socket in", e);
-                } finally {
-                    try {
-                        if (client != null)
-                            client.close();
-                    } catch (IOException e) {
-                        LOGGER.log(Level.SEVERE, "Unable to close client socket in", e);
-                    }
-                }
-            }
+            TransportSockets selected = sockets == null ? TransportSockets.create(new ClientConfig()) : sockets;
+            return send(request, selected);
+        } catch (IOException | IllegalArgumentException ex) {
+            LOGGER.severe("Client configuration failed; check transport settings and JSSE stores.");
+            return connectionError();
         }
+    }
 
-        // Return this as a JSon encoded TutorReply object string.
+    private String send(String request, TransportSockets selected) {
+        try (Socket client = selected.connect();
+                BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                PrintWriter out = new PrintWriter(client.getOutputStream())) {
+            out.println(request);
+            out.flush();
+            if (out.checkError()) throw new IOException("Request write failed.");
+            return in.readLine();
+        } catch (UnknownHostException e) {
+            LOGGER.severe("Cannot resolve the configured server host.");
+        } catch (IOException e) {
+            LOGGER.severe("Server connection failed; check the host, port, TLS trust, and certificate hostname.");
+        }
+        return connectionError();
+    }
+
+    private String connectionError() {
         return "{'status':':ERR','data':'A non-recoverable error occurred in the socket connection (see logs)'}";
     }
 }
-
