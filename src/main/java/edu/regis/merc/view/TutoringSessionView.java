@@ -124,7 +124,20 @@ public class TutoringSessionView extends GPanel {
     /**
      * Initialize this view including creating and laying out its child components.
      */
+    private final java.util.function.Function<ClientRequest, TutorReply> logoutRequests;
+    private final Runnable loggedOut;
+    private final java.util.function.Consumer<String> logoutError;
+
     public TutoringSessionView() {
+        this(request -> SvcFacade.instance().tutorRequest(request), () -> SplashFrame.instance().logout(),
+                message -> JOptionPane.showMessageDialog(null, message, "Logout", JOptionPane.ERROR_MESSAGE));
+    }
+
+    TutoringSessionView(java.util.function.Function<ClientRequest, TutorReply> requests, Runnable loggedOut,
+            java.util.function.Consumer<String> error) {
+        this.logoutRequests = requests;
+        this.loggedOut = loggedOut;
+        this.logoutError = error;
         initCoreViews();
         initMercTutorPanel();
         initSplits();
@@ -212,6 +225,8 @@ public class TutoringSessionView extends GPanel {
         submitButton = new JButton("Submit");
         showAnswerButton = new JButton("Show Answer");
         closeButton = new JButton("Close");
+        logoutButton = new JButton("Logout");
+        logoutButton.addActionListener(e -> logout());
 
         Dimension p1 = hintButton.getPreferredSize();
         Dimension p2 = submitButton.getPreferredSize();
@@ -220,7 +235,7 @@ public class TutoringSessionView extends GPanel {
         int h = Math.max(Math.max(p1.height, p2.height), p3.height);
         Dimension uniform = new Dimension(w, h);
 
-        for (JButton b : new JButton[] { hintButton, submitButton, showAnswerButton, closeButton }) {
+        for (JButton b : new JButton[] { hintButton, submitButton, showAnswerButton, logoutButton, closeButton }) {
             b.setPreferredSize(uniform);
             b.setMinimumSize(uniform);
             b.setMaximumSize(uniform);
@@ -236,6 +251,8 @@ public class TutoringSessionView extends GPanel {
         buttonColumn.add(showAnswerButton);
         buttonColumn.add(Box.createVerticalStrut(12));
         buttonColumn.add(submitButton);
+        buttonColumn.add(Box.createVerticalStrut(12));
+        buttonColumn.add(logoutButton);
         buttonColumn.add(Box.createVerticalStrut(12));
         buttonColumn.add(closeButton);
         buttonColumn.add(Box.createVerticalGlue());
@@ -413,6 +430,41 @@ public class TutoringSessionView extends GPanel {
      * A class called by logout Button to logout
      */
     public void logout() {
-        SplashFrame.instance().logout();
+        if (model == null || !logoutButton.isEnabled()) return;
+        TutoringSession current = model;
+        ClientRequest request = new ClientRequest(ServerRequestType.LOGOUT);
+        request.setUserId(current.getStudent().getAccount().getUserId());
+        request.setSecurityToken(current.getSecurityToken());
+        setLogoutBusy(true);
+        new SwingWorker<TutorReply, Void>() {
+            @Override protected TutorReply doInBackground() { return logoutRequests.apply(request); }
+            @Override protected void done() {
+                if (model != current) return;
+                try {
+                    TutorReply reply = get();
+                    if (reply != null && "LoggedOut".equals(reply.getStatus())) {
+                        current.setSecurityToken("");
+                        model = null;
+                        loggedOut.run();
+                    } else {
+                        logoutError.accept("Logout was not confirmed. Please try again; your session has not been cleared.");
+                    }
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    logoutError.accept("Logout was interrupted. Please try again.");
+                } catch (java.util.concurrent.ExecutionException | RuntimeException ex) {
+                    logoutError.accept("Unable to log out. Check the server connection and try again.");
+                } finally {
+                    setLogoutBusy(false);
+                }
+            }
+        }.execute();
+    }
+
+    private void setLogoutBusy(boolean busy) {
+        logoutButton.setEnabled(!busy);
+        submitButton.setEnabled(!busy);
+        hintButton.setEnabled(!busy);
+        showAnswerButton.setEnabled(!busy);
     }
 }
