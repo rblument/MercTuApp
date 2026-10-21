@@ -423,7 +423,7 @@ public class TutoringSessionView extends GPanel {
         request.setUserId(current.getStudent().getAccount().getUserId());
         request.setSecurityToken(current.getSecurityToken());
         setLogoutBusy(true);
-        new SwingWorker<TutorReply, Void>() {
+        SwingWorker<TutorReply, Void> worker = new SwingWorker<>() {
             @Override protected TutorReply doInBackground() { return logoutRequests.apply(request); }
             @Override protected void done() {
                 if (model != current) return;
@@ -445,7 +445,11 @@ public class TutoringSessionView extends GPanel {
                     setLogoutBusy(false);
                 }
             }
-        }.execute();
+        };
+        // A request-owned thread exits after completion; SwingWorker.execute() leaves an idle shared pool under exec:java.
+        Thread thread = new Thread(worker, "merc-logout-request");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void setLogoutBusy(boolean busy) {

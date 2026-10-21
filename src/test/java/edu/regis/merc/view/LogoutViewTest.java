@@ -41,8 +41,10 @@ class LogoutViewTest {
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         AtomicReference<ClientRequest> sent = new AtomicReference<>();
+        AtomicReference<Thread> requestThread = new AtomicReference<>();
         TutoringSessionView view = view(request -> {
             assertFalse(SwingUtilities.isEventDispatchThread());
+            requestThread.set(Thread.currentThread());
             sent.set(request);
             started.countDown();
             try { assertTrue(release.await(3, TimeUnit.SECONDS)); } catch (InterruptedException ex) { throw new AssertionError(ex); }
@@ -58,6 +60,9 @@ class LogoutViewTest {
             });
         } finally { release.countDown(); }
         await(returnedToSignIn::get);
+        requestThread.get().join(1000);
+        assertTrue(requestThread.get().isDaemon());
+        assertFalse(requestThread.get().isAlive(), "Completed logout must not leave an idle request thread");
         SwingUtilities.invokeAndWait(() -> assertNull(view.getModel()));
         assertEquals(ServerRequestType.LOGOUT, sent.get().getRequestType());
         assertEquals("student@example.com", sent.get().getUserId());
