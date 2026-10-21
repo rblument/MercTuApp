@@ -166,6 +166,26 @@ class LogoutSessionTest {
         assertFalse(SecurityTokens.matches("aBc", "AbC"));
     }
 
+    @Test
+    @org.junit.jupiter.api.parallel.ResourceLock("console-and-loggers")
+    void logoutLogsRequestTypeWithoutCredentialsOrPayload() {
+        Fixture f = new Fixture();
+        String token = f.stored;
+        ClientRequest request = new ClientRequest(ServerRequestType.LOGOUT);
+        request.setUserId(EMAIL);
+        request.setSecurityToken(token);
+        request.setData("{\"password\":\"TEST_PASSWORD_DO_NOT_LOG\",\"securityAnswer\":\"TEST_ANSWER_DO_NOT_LOG\"}");
+        try (edu.regis.merc.test.LogCapture logs = new edu.regis.merc.test.LogCapture(MercTutor.class)) {
+            assertEquals("LoggedOut", f.tutor.request(request).getStatus());
+            String output = logs.output();
+            assertTrue(output.contains(":Logout"));
+            assertFalse(output.contains(token));
+            assertFalse(output.contains("TEST_PASSWORD_DO_NOT_LOG"));
+            assertFalse(output.contains("TEST_ANSWER_DO_NOT_LOG"));
+            assertFalse(output.contains(request.getData()));
+        }
+    }
+
     private interface Call { Object invoke(String name, Object[] args) throws Throwable; }
 
     private static <T> T proxy(Class<T> type, Call call) {

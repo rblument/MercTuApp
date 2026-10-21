@@ -122,6 +122,7 @@ public class MercTutor implements TutorSvc {
      */
     @Override
     public TutorReply request(ClientRequest request) {
+        Logger.getLogger(MercTutor.class.getName()).log(Level.INFO, request.getRequestType().getRequestName());
         // Logout authenticates and revokes in one conditional DB operation; no progress load is needed.
         if (request.getRequestType() == ServerRequestType.LOGOUT) {
             if (request.getUserId() == null || request.getUserId().isBlank()
@@ -132,7 +133,6 @@ public class MercTutor implements TutorSvc {
         }
         // Uses reflection to invoke a method derived from the request name in
         // the client request (e.g., ":SignIn" invokes "signIn(...)").
-        Logger.getLogger(MercTutor.class.getName()).log(Level.INFO, request.getRequestType().getRequestName());
 
         // Efficiently produce "signIn" from ":SignIn", for example.
         char[] c = request.getRequestType().getRequestName().toCharArray();
