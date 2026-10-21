@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -26,9 +26,9 @@ import javax.swing.Timer;
 
 /**
  * The primary GUI window in the ShaTu application.
- * 
+ *
  * Most of the display functionality is handled by child component views.
- * 
+ *
  * @author rickb
  */
 public class MainFrame extends JFrame {
@@ -36,40 +36,35 @@ public class MainFrame extends JFrame {
     /**
      * The singleton instance of this frame.
      */
-    private final static MainFrame SINGLETON;
-    
-    // Invoked when this class is loaded
-    static {     
-        SINGLETON = new MainFrame();
-    }
-    
+    private final static MainFrame SINGLETON = new MainFrame();
+
     /**
      * Return the singleton instance of this frame.
-     * 
+     *
      * @return the MainFrame singleton
      */
     public static MainFrame instance() {
         return SINGLETON;
     }
-    
+
     /**
      * The size of this frame will the size of the user's screen minus this
      * screen size inset.
      */
     private static final int SCREEN_SIZE_INSET = 50;
-    
+
     /**
      * The SHA tutoring session displayed in this frame.
      */
     private TutoringSession model;
-    
+
     /**
      * The primary view displayed in this frame.
      */
     private TutoringSessionView view;
-    
+
     private Timer inactivityTimer; // Timer for inactivity tracking
-    
+
     /**
      * Initialize and layout the child components displayed in this frame.
      */
@@ -100,22 +95,22 @@ public class MainFrame extends JFrame {
 
         setVisible(false);
     }
-  
+
     /**
      * Update the current model with changes made in this frame and return it.
-     * 
-     * @return the Session model 
+     *
+     * @return the Session model
      */
     public TutoringSession getModel() {
         // ToDo: Ask to update?
         updateModel();
-        
+
         return model;
     }
 
     /**
      * Display the given model in this frame.
-     * 
+     *
      * @param model a Session model
      */
     public void setModel(TutoringSession model) {
@@ -123,7 +118,7 @@ public class MainFrame extends JFrame {
         this.model = model;
         view.setModel(model);
     }
-    
+
     /**
      * Create the child components used in this frame.
      */
@@ -131,44 +126,44 @@ public class MainFrame extends JFrame {
         view = new TutoringSessionView();
 
     }
-    
+
     /**
      * Layout the child components used in this frame.
      */
     private void layoutComponents() {
         setContentPane(view);
     }
-    
+
     /**
      * Update the current model with any changes made in this frame's view.
      */
     private void updateModel() {
-        
+
     }
-    
+
     /**
      * Display the current model in this frame's view.
      */
     private void updateView() {
     }
-    
+
     /**
      * Create the File menu appearing in the menubar
      */
     private JMenuBar createMenuBar() {
         // ToDo: Do we need a menu bar?
         JMenuBar menuBar = new JMenuBar();
-        
+
         JMenu menu = new JMenu("File");
-        
+
         JMenuItem item = new JMenuItem("File");
 
         menu.add(item);
-        
+
         menu.addSeparator();
-        
+
         menuBar.add(menu);
-        
+
         return menuBar;
     }
 }

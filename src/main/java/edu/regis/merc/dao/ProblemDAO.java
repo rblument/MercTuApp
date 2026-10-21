@@ -11,7 +11,7 @@
  *  or conditions of any kind, either expressed or implied.
  */
 package edu.regis.merc.dao;
-import static edu.regis.merc.dao.MySqlDAO.URL;
+
 import edu.regis.merc.err.InconsistentDBException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
@@ -60,7 +60,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
     public Problem retrieve(int id) throws ObjNotFoundException, NonRecoverableException {
         Connection conn = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             return retrieve(id, conn);
         } catch (SQLException e) {
             throw new NonRecoverableException("ProblemDAO-ERR-1" + e.toString(), e);
@@ -68,7 +68,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
             close(conn);
         }
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -81,7 +81,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
         ArrayList<Problem> problems = new ArrayList<>();
         int problemId = -1; // Here for better error messages
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
             stmt.setInt(1, unitId);
             ResultSet rs = stmt.executeQuery();
@@ -110,7 +110,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
         final String sql = "SELECT Title,Description,UnitId,SequenceIndex,TuringMachineId,LambdaCalculusId,MuRecursiveFunctionId FROM Problem WHERE Id = ?";
         PreparedStatement stmt = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
@@ -269,7 +269,11 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
 
     private ArrayList<Step> retrieveSteps(int taskId, Connection conn)
             throws NonRecoverableException {
-        final String sql = "SELECT Id,Title,Description,SequenceIndex,Context,Prompt,Data,ExercisedComponentId,ViewConfigId,StudentAction,ActionId,TimeoutId FROM Step WHERE TaskId = ?";
+        final String sql = """
+                SELECT Id,Title,Description,SequenceIndex,Context,Prompt,Data,ExercisedComponentId,ViewConfigId,StudentAction,ActionId,TimeoutId
+                FROM Step
+                WHERE TaskId = ?
+                """;
         ArrayList<Step> steps = new ArrayList<>();
         PreparedStatement stmt = null;
         try {
@@ -310,7 +314,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
      *             method.
      * @return an ArrayList of Hint
      */
-    
+
     private ArrayList<Hint> retrieveHints(int stepId, Connection conn)
             throws NonRecoverableException {
         final String sql = "SELECT Id,Text,SequenceIndex FROM Hint WHERE StepId = ?";
@@ -363,7 +367,11 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
 
     private TmViewConfiguration retrieveTmViewConfiguration(int tmViewConfigId, Connection conn)
             throws InconsistentDBException, NonRecoverableException {
-        final String sql = "SELECT StateIds,TransitionIds,TapeCellIds,AcceptStateIndicatorIds,RejectStateIndicatorIds,DisplayStartIndicator,DisplayTapeHead FROM TmViewConfiguration WHERE Id = ?";
+        final String sql = """
+            SELECT StateIds,TransitionIds,TapeCellIds,AcceptStateIndicatorIds,RejectStateIndicatorIds,DisplayStartIndicator,DisplayTapeHead
+            FROM TmViewConfiguration
+            WHERE Id = ?
+            """;
         PreparedStatement stmt = null;
         try {
             stmt = conn.prepareStatement(sql);

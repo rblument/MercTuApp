@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -25,10 +25,10 @@ import java.sql.Connection;
  * @author ellis
  */
 public interface LCSvc {
-    
+
     /**
      * Retrieve the LC Expression using the given ID.
-     * 
+     *
      * @param exprId
      * @return the fully loaded LCExpression object tree
      * @throws ObjNotFoundException if the ID does not exist

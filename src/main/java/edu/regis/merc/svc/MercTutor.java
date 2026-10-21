@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -27,6 +27,7 @@ import edu.regis.merc.model.KnowledgeComponent;
 import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.PendingTask;
 import edu.regis.merc.model.Problem;
+import edu.regis.merc.model.RepresentationKind;
 import edu.regis.merc.model.SignInRequest;
 import edu.regis.merc.model.Step;
 import edu.regis.merc.model.Student;
@@ -51,7 +52,7 @@ import java.util.logging.Logger;
  */
 public class MercTutor implements TutorSvc {
     /**
-     * The id of the default course taught by the this tutor.
+     * The id of the default course taught by this tutor.
      */
     private static final int DEFAULT_COURSE_ID = 0;
 
@@ -95,10 +96,10 @@ public class MercTutor implements TutorSvc {
         Logger.getLogger(MercTutor.class.getName()).log(Level.INFO, request.getRequestType().getRequestName());
 
         // Efficiently produce "signIn" from ":SignIn", for example.
-        char c[] = request.getRequestType().getRequestName().toCharArray();
+        char[] c = request.getRequestType().getRequestName().toCharArray();
         c[1] = Character.toLowerCase(c[1]);
 
-        char m[] = new char[c.length - 1];
+        char[] m = new char[c.length - 1];
         for (int i = 1; i < c.length; i++) {
             m[i - 1] = c[i];
         }
@@ -296,7 +297,7 @@ public class MercTutor implements TutorSvc {
         }
 
         AccountSvc acctSvc = ServiceFactory.findAccountSvc();
-        
+
         if (!acctSvc.exists(acct.getUserId())) {
             return new TutorReply("IllegalUserId");
         }
@@ -393,23 +394,23 @@ public class MercTutor implements TutorSvc {
     /*
      * public TuringMachine createTestModel() {
      * TuringMachine tm = new TuringMachine();
-     * 
+     *
      * ArrayList<State> states = new ArrayList<>();
-     * 
+     *
      * State state = new State("Q0");
-     * 
+     *
      * GuiCtx ctx = new GuiCtx();
      * ctx.setX(100);
      * ctx.setY(100);
      * ctx.setWidth(30);
      * ctx.setHeight(30);
-     * 
+     *
      * state.setGuiCtx(ctx);
-     * 
+     *
      * states.add(state);
-     * 
+     *
      * tm.setStates(states);
-     * 
+     *
      * return tm;
      * }
      */
@@ -429,8 +430,8 @@ public class MercTutor implements TutorSvc {
         // unpack the json to find out which step the student is on
         StudentPayload payload = gson.fromJson(jsonObj,
                 StudentPayload.class);
-        int activeStepId = payload.stepId;
-        int requestedHintIndex = payload.hintIndex;
+        int activeStepId = payload.getStepId();
+        int requestedHintIndex = payload.getHintIndex();
 
         System.out.println("Client requested hint index " + requestedHintIndex + " for Step ID: " + activeStepId);
         System.out.println("Student requested a hint for Step ID: " + activeStepId);
@@ -473,7 +474,7 @@ public class MercTutor implements TutorSvc {
      * 'server amnesia,' the client must pass the current stepId and hintIndex in
      * the JSON payload. This makes sure synchonization across asynch socket
      * connections without relying on session memory
-     * 
+     *
      * @param jsonObj
      * @return
      */
@@ -482,7 +483,7 @@ public class MercTutor implements TutorSvc {
 
         // find out which step the student is asking about
         StudentPayload payload = gson.fromJson(jsonObj, StudentPayload.class);
-        int activeStepId = payload.stepId;
+        int activeStepId = payload.getStepId();
 
         System.out.println("Client requested the answer for Step ID: " + activeStepId);
 
@@ -522,8 +523,8 @@ public class MercTutor implements TutorSvc {
 
         // parse the JSON into the helper object
         StudentPayload payload = gson.fromJson(jsonObj, StudentPayload.class);
-        int studentAnswerId = payload.selectedComponentId;
-        int activeStepId = payload.stepId;
+        int studentAnswerId = payload.getSelectedComponentId();
+        int activeStepId = payload.getStepId();
 
         System.out.println("Client is grading Step ID: " + activeStepId);
         System.out.println("Student clicked ID: " + studentAnswerId);
@@ -557,13 +558,22 @@ public class MercTutor implements TutorSvc {
         }
 
         StepData expectedData = gson.fromJson(currentStep.getData(), StepData.class);
-        System.out.println("Expected ID: " + expectedData.correctComponentId);
 
         System.out.println("--- Grading Logic ---");
-        System.out.println("Student clicked ID: " + studentAnswerId);
-        System.out.println("Server Expected ID: " + expectedData.correctComponentId);
+        System.out.println("Student answered " + payload.getRepresentation()
+                + " component " + studentAnswerId);
+        System.out.println("Step expects   " + expectedData.representation
+                + " component " + expectedData.correctComponentId);
 
-        if (studentAnswerId == expectedData.correctComponentId) {
+        if (expectedData.representation == null) {
+            // Grading on the component id alone would accept the same id from
+            // any representation, which is how a lambda question could be
+            // answered by clicking the mu-recursive function.
+            return new TutorReply(":ERR",
+                    "Step " + activeStepId + " does not say which representation it expects.");
+        }
+
+        if (isCorrect(expectedData, payload)) {
 
             pendingStep.setIsCompleted(true);
 
@@ -709,30 +719,30 @@ public class MercTutor implements TutorSvc {
      * switch (course.getPrimaryPedagogy()) {
      * case STUDENT_CHOICE:
      * return null; // ToDo
-     * 
+     *
      * case FIXED_SEQUENCE:
      * Unit unit = course.findUnitBySequenceId(0);
-     * 
+     *
      * if (unit == null) {
      * throw new NonRecoverableException("Unit 0 not found in course: " +
      * course.getId());
      * }
-     * 
+     *
      * Task task = unit.findTaskBySequence(0);
-     * 
+     *
      * if (task == null) {
      * throw new NonRecoverableException("Task 0 not found in Unit 0 of course: " +
      * course.getId());
      * }
-     * 
+     *
      * return task;
-     * 
+     *
      * case MASTERY_LEARNING:
      * return null; // ToDo
-     * 
+     *
      * case MICROADAPTATION:
      * return null; // ToDo
-     * 
+     *
      * default:
      * throw new NonRecoverableException("Unknwon task selection in course: " +
      * course.getId());
@@ -759,13 +769,45 @@ public class MercTutor implements TutorSvc {
         return new TutorReply(":ERR", errMsg);
     }
 
-    private class StudentPayload {
-        int stepId;
-        int selectedComponentId;
-        int hintIndex;
+    /**
+     * Decide whether a submitted answer matches what a step expects.
+     *
+     * A component id is only unique within one representation, so both the
+     * representation and the id have to agree. Checking the id alone let a
+     * student answer a lambda calculus question by clicking the mu-recursive
+     * function, because the lambda variable "s" and the mu parameter "x"
+     * were both numbered 101.
+     *
+     * A step whose data names no representation is treated as unanswerable
+     * rather than as matching anything: an answer accepted on the id alone is
+     * the defect this guards against.
+     *
+     * @param expected the step's grading data, parsed from Step.Data
+     * @param submitted the answer the client sent
+     * @return true if the answer is correct
+     */
+    static boolean isCorrect(StepData expected, StudentPayload submitted) {
+        if (expected == null || submitted == null) {
+            return false;
+        }
+
+        if (expected.representation == null || submitted.getRepresentation() == null) {
+            return false;
+        }
+
+        return expected.representation == submitted.getRepresentation()
+                && expected.correctComponentId == submitted.getSelectedComponentId();
     }
 
-    private class StepData {
+    /**
+     * A step's grading data, parsed from the Step.Data column.
+     *
+     * Unlike StudentPayload this is not part of the client protocol. it's
+     * read from the database and never leaves the server so it stays here
+     * with the only code that uses it.
+     */
+    static class StepData {
+        RepresentationKind representation;
         int correctComponentId;
     }
 }

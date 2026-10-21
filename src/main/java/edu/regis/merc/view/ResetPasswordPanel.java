@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -38,9 +38,9 @@ import javax.swing.text.Document;
  * @author mandyroskelley
  */
 public class ResetPasswordPanel extends GPanel{
-    
+
     private String securityToken;
-    
+
     public void setSecurityToken(String token) {
         this.securityToken = token;
     }
@@ -48,7 +48,7 @@ public class ResetPasswordPanel extends GPanel{
     public String getSecurityToken() {
         return securityToken;
     }
-    
+
     /**
      * Events of interest occurring in this class are logged to this logger.
      */
@@ -64,21 +64,21 @@ public class ResetPasswordPanel extends GPanel{
      * The account being created and displayed in this panel.
      */
     private Account model;
-    
+
     /**
      * The editable fields appearing in this dialog.
      */
-    protected JTextField userId;
-    protected JPasswordField pass1;
-    protected JPasswordField pass2;
-    
-    public String userEmail = "";
+    private JTextField userId;
+    private JPasswordField pass1;
+    private JPasswordField pass2;
 
-    protected JLabel strength;
-    protected JLabel msg;
+    private String userEmail = "";
 
-    protected JButton resetBut;
-    protected JButton backBut;
+    private JLabel strength;
+    private JLabel msg;
+
+    private JButton resetBut;
+    private JButton backBut;
 
     public ResetPasswordPanel(String email) {
         super();
@@ -121,7 +121,7 @@ public class ResetPasswordPanel extends GPanel{
     public void updateFocus() {
         userId.requestFocusInWindow();
     }
-    
+
     /**
      * Set all of the text fields in this view to the empty string.
      */
@@ -148,11 +148,11 @@ public class ResetPasswordPanel extends GPanel{
         pass1.setText("");
         pass2.setText("");
     }
-    
+
     private void initComponents() {
-        
+
         LoginDocumentListener docListener = new LoginDocumentListener();
-        
+
         userId = new JTextField(userEmail, 10);
         userId.setEditable(false);
         userId.getDocument().addDocumentListener(docListener);
@@ -175,7 +175,7 @@ public class ResetPasswordPanel extends GPanel{
           setSecurityToken(null);
           SplashFrame.instance().selectSplash();
         });
-        
+
         strength = new JLabel("(Strength: very poor)");
         strength.setForeground(new Color(173,7,1));
         strength.setFont(new Font("Dialog", Font.PLAIN, 10));
@@ -250,8 +250,8 @@ public class ResetPasswordPanel extends GPanel{
         descr.setWrapStyleWord(true);
         descr.setBackground(new Color(241,196,0));
         descr.setFont(new Font("Dialog", Font.PLAIN, 12));
-	descr.append("ShaTu provides individualized tutoring practice focused ");
-	descr.append("on understanding the SHA-256 digest algorithm and the");
+        descr.append("ShaTu provides individualized tutoring practice focused ");
+        descr.append("on understanding the SHA-256 digest algorithm and the");
         descr.append("underlying computer science concepts upon which it is ");
         descr.append("based.\n\n");
         descr.append("Please sign in or use 'New User' to create a student account.");
@@ -346,7 +346,7 @@ public class ResetPasswordPanel extends GPanel{
         panel.addc(msg, 0, 12, 2, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 5, 5, 5, 5);
-        
+
         panel.addc(backBut, 0, 9, 1, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 10, 5, 5, 5);

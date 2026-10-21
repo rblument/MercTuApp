@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -45,8 +45,8 @@ public class CreateAccountAction extends MercGuiAction {
 
     /**
      * Create the singleton for this action, which occurs when this class
-     * is loaded by the Java class loaded, as a result of the class being 
-     * referenced by executing CreateAcctAction.instance() in the 
+     * is loaded by the Java class loaded, as a result of the class being
+     * referenced by executing CreateAcctAction.instance() in the
      * initializeComponents() method of the NewAccountPanel class.
      */
     static {
@@ -81,14 +81,14 @@ public class CreateAccountAction extends MercGuiAction {
     @Override
     public void actionPerformed(ActionEvent evt) {
         Gson gson = new Gson();
-        
+
         SplashFrame frame = SplashFrame.instance();
-        
+
         Account account = frame.getAccount();
 
         ClientRequest request = new ClientRequest(ServerRequestType.CREATE_ACCOUNT);
         request.setData(gson.toJson(account));
-       
+
         TutorReply reply = SvcFacade.instance().tutorRequest(request);
 
         String msg;

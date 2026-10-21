@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -26,10 +26,12 @@ import javax.swing.SwingUtilities;
 
 /**
  * A standalone implementation of the MERC intelligent tutoring application.
- * 
+ *
  * @author rickb
  */
 public class MercApp {
+
+    private MercApp() {}
 
     /**
      * Property file located on the CLASSPATH, which is used to configure the LOGGER.
@@ -55,6 +57,8 @@ public class MercApp {
      * Prevents shutdown from being initiated more than once.
      */
     private static boolean shuttingDown = false;
+
+    private static final int THREAD_WAIT_MILLIS = 4000;
 
     /**
      * Configure the LOGGER with the properties found in the LOGGER_PROPERTIES
@@ -128,7 +132,7 @@ public class MercApp {
             // we separate the server into its own application that executes
             // on a different host from the GUI client since the server should
             // "always" be running.
-            Thread.sleep(4000);
+            Thread.sleep(THREAD_WAIT_MILLIS);
 
             LOGGER.info(" Server is running.");
 
@@ -173,7 +177,7 @@ public class MercApp {
                 && mercServerThread != Thread.currentThread()) {
 
             try {
-                mercServerThread.join(2000);
+                mercServerThread.join(THREAD_WAIT_MILLIS);
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -16,13 +16,14 @@ import edu.regis.merc.err.MissingPropertyException;
 import edu.regis.merc.util.ResourceMgr;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * A root Data Access Object that provides some utility operations and ensures
  * the MySQL JDBC driver is loaded.
- * 
+ *
  * @author Rickb
  */
 public abstract class MySqlDAO {
@@ -30,31 +31,41 @@ public abstract class MySqlDAO {
      * The host where MySQL resides (see /resources/Merc.Properties).
      */
     public static final String DB_HOST_PROP = "edu.regis.merc.DB_HOST";
-    
+
     /**
      * The name of the DpTu database (see /resources/Merc.Properties).
      */
     public static final String DB_NAME_PROP = "edu.regis.merc.DB_NAME";
-    
+
     /**
      * The DB user used by DpTu to login (see /resources/Merc.Properties).
      */
     public static final String DB_USER_PROP = "edu.regis.merc.DB_USER";
-    
+
     /**
      * The password used by DpTu to login into the DB.
      */
     public static final String DB_PASS_PROP = "edu.regis.merc.DB_PASS";
-    
+
+    /**
+     * The port the MySQL database is running on.  Can be omitted, defaults to 3306.
+     */
+    public static final String DB_PORT_PROP = "edu.regis.merc.DB_PORT";
+
+    /**
+     * The default port for MySQL connections.
+     */
+    public static final String DB_PORT_DEFAULT = "3306";
+
     /**
      * Fully qualified name of the MySql JDBC driver class.
      */
-    public static String DRIVER = "com.mysql.cj.jdbc.Driver";
+    public static final String DRIVER = "com.mysql.cj.jdbc.Driver";
 
     /*
      * The URL used to obtain a JDBC connection.
      */
-    public static String URL;
+    private static String URL;
 
     private static final Logger LOGGER = Logger.getLogger(MySqlDAO.class.getName());
 
@@ -62,38 +73,66 @@ public abstract class MySqlDAO {
      * Utility indicating whether the DriverClass was explicitly loaded (in
      * order to overcome errors in certain JVMs).
      */
-    public static boolean IS_LOADED = false;
+    private static final AtomicBoolean isLoaded = new AtomicBoolean(false);
 
     /**
      * If it hasn't already been loaded, explicitly load the MySql driver.
      */
     public MySqlDAO() {
-	if (!IS_LOADED) {
-	    try {
+        setURLFromProps();
+        atomicallyLoadDriver();
+    }
+
+    static void setURLFromProps() {
+        if (URL == null || URL.isEmpty()) {
+            try {
                 ResourceMgr rscr = ResourceMgr.instance();
-                
+
                 String dbHost = rscr.getProp(DB_HOST_PROP);
                 String dbName = rscr.getProp(DB_NAME_PROP);
                 String dbUser = rscr.getProp(DB_USER_PROP);
                 String dbPass = rscr.getProp(DB_PASS_PROP);
-                
-                URL = "jdbc:mysql://" + dbHost + "/" + dbName + "?user=" +
-                        dbUser + "&password=" + dbPass;
 
-		Class.forName(DRIVER).newInstance(); // Old School
+                Integer dbPort;
 
-		IS_LOADED = true;
+                try {
+                    dbPort = Integer.valueOf(rscr.getProp(DB_PORT_PROP));
+                } catch (NumberFormatException|MissingPropertyException e) {
+                    dbPort = Integer.valueOf(DB_PORT_DEFAULT);
+                }
 
-	    } catch (MissingPropertyException e) {
-                LOGGER.log(Level.INFO, "Missing DB property: {0}", e.toString());
-            } catch (ClassNotFoundException e) {
-		LOGGER.log(Level.SEVERE, "MySqlDao-ERR-1: Illegal driver class name {0}", e.toString());
-	    } catch (InstantiationException e) {
-		LOGGER.log(Level.SEVERE, "MySqlDao-ERR-2: Illegal instance {0}", e.toString());
-	    } catch (IllegalAccessException e) {
-		LOGGER.log(Level.SEVERE, "MySqlDao-ERR-3: No create driver permission {0}", e.toString());
-	    }
-	}
+                setURL(dbHost, dbName, dbUser, dbPass, dbPort);
+
+            } catch (MissingPropertyException e) {
+                LOGGER.log(Level.SEVERE, "Missing DB property: {0}", e.toString());
+            }
+        }
+    }
+
+    static void setURL(String dbHost, String dbName, String dbUser, String dbPass, Integer dbPort) {
+        URL = "jdbc:mysql://" + dbHost + ":" + dbPort.toString() + "/" + dbName + "?user=" +
+                dbUser + "&password=" + dbPass;
+    }
+
+    static void atomicallyLoadDriver() {
+        try {
+            if (isLoaded.compareAndSet(false, true)) {
+                Class.forName(DRIVER).newInstance(); // Old School
+            }
+        } catch (ClassNotFoundException e) {
+            LOGGER.log(Level.SEVERE, "MySqlDao-ERR-1: Illegal driver class name {0}", e.toString());
+            System.exit(1);
+        } catch (InstantiationException e) {
+            LOGGER.log(Level.SEVERE, "MySqlDao-ERR-2: Illegal instance {0}", e.toString());
+            System.exit(1);
+        } catch (IllegalAccessException e) {
+            LOGGER.log(Level.SEVERE, "MySqlDao-ERR-3: No create driver permission {0}", e.toString());
+            System.exit(1);
+        }
+    }
+
+    public static String getURL() {
+        return URL;
     }
 
     /**
@@ -104,21 +143,21 @@ public abstract class MySqlDAO {
      * @param stmt An JDBC Statement that will be closed.
      */
     protected void close(Connection conn, Statement stmt) {
-	if (stmt != null) {
-	    try {
-		stmt.close();
-	    } catch (Exception e){
-		LOGGER.log(Level.INFO, "MySqlDao-ERR-4: stmt.close() {0}", e.toString());
-	    }
-	}
+        if (stmt != null) {
+            try {
+                stmt.close();
+            } catch (Exception e){
+                LOGGER.log(Level.INFO, "MySqlDao-ERR-4: stmt.close() {0}", e.toString());
+            }
+        }
 
-	if (conn != null) {
-	    try {
-		conn.close();
-	    } catch (Exception e){
-		LOGGER.log(Level.INFO, "MySqlDao-ERR-5: close() {0}", e.toString());
-	    }
-	}
+        if (conn != null) {
+            try {
+                conn.close();
+            } catch (Exception e){
+                LOGGER.log(Level.INFO, "MySqlDao-ERR-5: close() {0}", e.toString());
+            }
+        }
     }
 
     /**
@@ -127,14 +166,14 @@ public abstract class MySqlDAO {
      * @param conn
      */
     protected void close(Connection conn) {
-	if (conn != null) {
-	    try {
-		conn.setAutoCommit(true);    // Convenience
-		conn.close();
-	    } catch (Exception e){
-		LOGGER.log(Level.INFO, "MySqlDao-ERR-6: close() {0}", e.toString());
-	    }
-	}
+        if (conn != null) {
+            try {
+                conn.setAutoCommit(true);    // Convenience
+                conn.close();
+            } catch (Exception e){
+                LOGGER.log(Level.INFO, "MySqlDao-ERR-6: close() {0}", e.toString());
+            }
+        }
     }
 
     /**
@@ -143,13 +182,13 @@ public abstract class MySqlDAO {
      * @param stmt
      */
     protected void close(Statement stmt) {
-	if (stmt != null) {
-	    try {
-		stmt.close();
-	    } catch (Exception e){
-		LOGGER.log(Level.INFO, "MySqlDao-ERR-7: close() {0}", e.toString());
-	    }
-	}
+        if (stmt != null) {
+            try {
+                stmt.close();
+            } catch (Exception e){
+                LOGGER.log(Level.INFO, "MySqlDao-ERR-7: close() {0}", e.toString());
+            }
+        }
     }
 }
 

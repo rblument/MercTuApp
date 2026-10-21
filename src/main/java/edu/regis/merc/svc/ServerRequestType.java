@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -14,7 +14,7 @@ package edu.regis.merc.svc;
 
 /**
  * The legal requests that can be made to the server (tutor).
- * 
+ *
  * @author rickb
  */
 public enum ServerRequestType {
@@ -25,9 +25,9 @@ public enum ServerRequestType {
 
     /**
      * A new user is requesting to create a new account
-     * 
+     *
      * The ClientRequest data is a JSon Account object
-     * 
+     *
      * The TutorReply status will be:
      * "Created" with no data
      * "ERR"
@@ -36,15 +36,15 @@ public enum ServerRequestType {
 
     /**
      * The student or client requested another example
-     * 
+     *
      */
     NEW_EXAMPLE(":NewExample"),
 
     /**
      * An existing student is attempting to sign in.
-     * 
+     *
      * The ClientRequest data is a JSon User object.
-     * 
+     *
      * The TutorReply status will be:
      * "Authenticated",
      * The TutorReply data is a JSon TutoringSession object
@@ -57,8 +57,8 @@ public enum ServerRequestType {
 
     /**
      * The student is requesting a hint for the current step.
-     * 
-     * 
+     *
+     *
      * The TutorReply status will be:
      * "Hint"
      * The TutorReply data is a JSon Hint object
@@ -97,7 +97,7 @@ public enum ServerRequestType {
 
     /**
      * Initialize this enum object with the given title.
-     * 
+     *
      * @param requestName
      */
     ServerRequestType(String requestName) {
@@ -106,7 +106,7 @@ public enum ServerRequestType {
 
     /**
      * Return the request name that is used by the server.
-     * 
+     *
      * @return a String
      */
     public String getRequestName() {
@@ -115,7 +115,7 @@ public enum ServerRequestType {
 
     /**
      * Return the request name that is used by the server
-     * 
+     *
      * @return a String
      */
     @Override

@@ -23,7 +23,6 @@ import java.sql.PreparedStatement;
 import java.sql.Connection;
 import java.util.Optional;
 
-import edu.regis.merc.BaseMysqlIT;
 import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.model.Account;
 import org.junit.jupiter.api.AfterEach;
@@ -53,7 +52,7 @@ public class AccountDAOTest extends BaseMysqlIT {
 
     private void cleanupTestAccounts() {
         String sql = "DELETE FROM Account WHERE UserId LIKE ?";
-        try (Connection conn = DriverManager.getConnection(MySqlDAO.URL);
+        try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL());
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, "test_%");
             stmt.executeUpdate();

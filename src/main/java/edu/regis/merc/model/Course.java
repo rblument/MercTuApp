@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -17,52 +17,52 @@ import java.util.ArrayList;
 
 /**
  * A course that may be taught by the ShaTu tutor.
- * 
+ *
  * @author rickb
  */
-public class Course extends TitledModel {  
+public class Course extends TitledModel {
     /**
      * The primary pedagogical approach initially used to start task selection.
-     * 
+     *
      * A value of FIXED_SEQUENCE or MASTERY_LEARNING will begin with the
      * first unit sequenced in this course.
      */
     private TaskSelectionKind primaryPedagogy;
-    
+
     /**
      * If non-empty, mastery learning is used in this course to assign tasks
      * from the pool of tasks in these units, which must be completed in order.
-     * 
+     *
      * The first unit in this list is the current unit.
      */
     private ArrayList<Unit> units;
-    
+
     /**
      * The knowledge component learning outcomes associated with this course.
      */
     protected ArrayList<KnowledgeComponent> outcomes;
-    
+
     /**
      * A convenience list of mappings between outcomes and the locations (tasks
      * and step) within this course where these outcomes are addressed.
      */
     protected ArrayList<ExercisingLocation> exercisingLocations;
-    
+
     /**
      * Initialize this course with a default id, empty units, and outcomes
      */
     public Course() {
         this(DEFAULT_ID);
     }
-    
+
     /**
      * Initialize this course with the given id, empty units, and outcomes.
-     * 
+     *
      * @param id an int specifying the unique database id of this course.
      */
     public Course(int id) {
         super(id);
-        
+
         units = new ArrayList<>();
         outcomes = new ArrayList<>();
         exercisingLocations = new ArrayList<>();
@@ -78,39 +78,39 @@ public class Course extends TitledModel {
 
     public CourseDigest getDigest() {
         CourseDigest digest = new CourseDigest(id, title);
-        
+
         digest.setDescription(description);
-        
+
         return digest;
     }
-    
+
     /**
      * Return the current unit, if any.
-     * 
+     *
      * It's possible that there are no units since PedagogyKind.MICORADAPTATION
      * may be used to select the next task for the student to complete.
-     * 
+     *
      * @return the current unit, or null.
      */
     public Unit currentUnit() {
         return units.get(0); // first unit is the current unit.
     }
-    
+
     public void addUnit(Unit module) {
         units.add(module);
     }
-    
+
     public Unit findUnit(int id) throws ObjNotFoundException {
         for (Unit unit : units)
             if (unit.getId() == id)
                 return unit;
-        
+
         throw new ObjNotFoundException(String.valueOf(id));
     }
-    
+
     /**
      * Return the unit with the given sequence id.
-     * 
+     *
      * @param sequenceId the sequence position of the unit to find
      * @return a Unit, or null if no Unit was found.
      */
@@ -118,10 +118,10 @@ public class Course extends TitledModel {
         for (Unit unit : units)
             if (unit.getSequenceId() == sequenceId)
                 return unit;
-                
+
         return null;
     }
-    
+
     public ArrayList<Unit> getUnits() {
         return units;
     }
@@ -129,7 +129,7 @@ public class Course extends TitledModel {
     public void setUnits(ArrayList<Unit> units) {
         this.units = units;
     }
-    
+
     public void addOutcome(KnowledgeComponent outcome) {
         outcomes.add(outcome);
     }
@@ -141,19 +141,19 @@ public class Course extends TitledModel {
     public void setOutcomes(ArrayList<KnowledgeComponent> outcomes) {
         this.outcomes = outcomes;
     }
-    
+
     public KnowledgeComponent findOutcome(int knowledgeComponentId) {
-        for (KnowledgeComponent outcome : outcomes) 
+        for (KnowledgeComponent outcome : outcomes)
             if (outcome.getId() == knowledgeComponentId)
                 return outcome;
-        
+
         return null;
     }
-    
+
     /**
      * Return the knowledge component, if any, in this entity with the given
      * component id.
-     * 
+     *
      * @param componentId the unique id of a knowledge component
      * @throws ObjNotFoundException no outcome with the given id exists in this course.
      * @return KnowledgeComponent
@@ -162,7 +162,7 @@ public class Course extends TitledModel {
         for (KnowledgeComponent outcome : outcomes)
             if (outcome.getId() == componentId)
                 return outcome;
-    
+
         throw new ObjNotFoundException("KnowledgeComponent: " + componentId);
     }
 
@@ -173,10 +173,10 @@ public class Course extends TitledModel {
     public void setExercisingLocations(ArrayList<ExercisingLocation> exercisingLocations) {
         this.exercisingLocations = exercisingLocations;
     }
-    
+
     /**
      * Return the exercising location, if any, in this course with the given id.
-     * 
+     *
      * @param id the id of an exercising location
      * @return an ExercisingLocation or null
      */
@@ -184,7 +184,7 @@ public class Course extends TitledModel {
         for (ExercisingLocation location : exercisingLocations)
             if (location.getId() == id)
                 return location;
-        
+
         return null;
     }
 }

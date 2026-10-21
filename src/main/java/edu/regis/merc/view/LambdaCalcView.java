@@ -4,6 +4,7 @@ import edu.regis.merc.model.LCAbstraction;
 import edu.regis.merc.model.LCApplication;
 import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.model.LCVariable;
+import edu.regis.merc.model.RepresentationKind;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,6 +18,12 @@ public class LambdaCalcView extends GPanel {
     private JLabel selectedLabel = null; // used to track the piece currently selected
     private LCExpression selectedExpression = null;
 
+    /**
+     * Notified when the student selects a component here. See
+     * setSelectionListener.
+     */
+    private ComponentSelectionListener selectionListener = null;
+
     public LambdaCalcView() {
 
         setBorder(BorderFactory.createTitledBorder("Lambda Calculus"));
@@ -26,6 +33,34 @@ public class LambdaCalcView extends GPanel {
 
     public LCExpression getSelectedExpression() {
         return selectedExpression;
+    }
+
+    /**
+     * Register the listener notified whenever the student selects a component
+     * here.
+     *
+     * The three representation panels hold their selections independently, so
+     * whichever view owns them uses this to record what was chosen and release
+     * the other panels. The listener is not notified by
+     * {@link #clearSelection()}, so panels that release each other do not
+     * recurse.
+     *
+     * @param selectionListener the listener, or null to remove it
+     */
+    public void setSelectionListener(ComponentSelectionListener selectionListener) {
+        this.selectionListener = selectionListener;
+    }
+
+    /**
+     * Discard the current selection, without running the selection callback.
+     */
+    public void clearSelection() {
+        if (selectedLabel != null) {
+            // Matches how mouseClicked resets the label it moves away from.
+            selectedLabel.setBackground(Color.WHITE);
+            selectedLabel = null;
+        }
+        selectedExpression = null;
     }
 
     public LCExpression getModel() {
@@ -140,6 +175,11 @@ public class LambdaCalcView extends GPanel {
                 selectedExpression = expr;
                 label.setBackground(new Color(173, 216, 230));
                 System.out.println("Student selected: " + text + " (ID: " + expr.getId() + ")");
+
+                if (selectionListener != null) {
+                    selectionListener.componentSelected(
+                            RepresentationKind.LAMBDA_CALCULUS, expr.getId());
+                }
             }
         });
 

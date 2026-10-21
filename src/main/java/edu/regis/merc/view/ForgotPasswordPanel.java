@@ -42,13 +42,13 @@ public class ForgotPasswordPanel extends GPanel {
     public static final Pattern VALID_EMAIL_ADDRESS_REGEX =
             Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
-    protected final JTextField userId = new JTextField(25);
-    protected final JPasswordField secAnswer = new JPasswordField(25);
-    protected final JTextArea questionText = new JTextArea(2, 35);
-    protected final JButton lookupBut = new JButton("Continue");
-    protected final JButton verifyBut = new JButton("Verify answer");
-    protected final JButton backBut = new JButton("Back");
-    protected final JTextArea msg = new JTextArea("Enter your account email to retrieve your security question.", 2, 30);
+    private final JTextField userId = new JTextField(25);
+    private final JPasswordField secAnswer = new JPasswordField(25);
+    private final JTextArea questionText = new JTextArea(2, 35);
+    private final JButton lookupBut = new JButton("Continue");
+    private final JButton verifyBut = new JButton("Verify answer");
+    private final JButton backBut = new JButton("Back");
+    private final JTextArea msg = new JTextArea("Enter your account email to retrieve your security question.", 2, 30);
 
     private final Gson gson = new Gson();
     private final Function<ClientRequest, TutorReply> requests;
@@ -292,6 +292,12 @@ public class ForgotPasswordPanel extends GPanel {
     }
 
     public JTextField getUserIdComp() { return userId; }
+    JPasswordField getAnswerComp() { return secAnswer; }
+    JTextArea getQuestionComp() { return questionText; }
+    JButton getLookupButton() { return lookupBut; }
+    JButton getVerifyButton() { return verifyBut; }
+    JButton getBackButton() { return backBut; }
+    JTextArea getMessageComp() { return msg; }
     public void updateFocus() {
         updateButtons();
         userId.requestFocusInWindow();

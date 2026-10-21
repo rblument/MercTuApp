@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -66,20 +66,20 @@ public class NewAccountPanel extends GPanel {
     /**
      * The editable fields appearing in this dialog.
      */
-    protected HintTextField fName;
-    protected HintTextField lName;
-    protected HintTextField userId;
-    protected JPasswordField pass1;
-    protected JPasswordField pass2;
-    protected JComboBox<SecurityQuestion> secQuestions;
-    protected JPasswordField secAnswer;
+    private HintTextField fName;
+    private HintTextField lName;
+    private HintTextField userId;
+    private JPasswordField pass1;
+    private JPasswordField pass2;
+    private JComboBox<SecurityQuestion> secQuestions;
+    private JPasswordField secAnswer;
 
-    protected JLabel strength;
-    protected JLabel msg;
+    private JLabel strength;
+    private JLabel msg;
 
-    protected JButton signInBut;
-    protected JButton createAcctBut;
-    protected JButton backBut;
+    private JButton signInBut;
+    private JButton createAcctBut;
+    private JButton backBut;
 
     public NewAccountPanel() {
         super();
@@ -122,7 +122,7 @@ public class NewAccountPanel extends GPanel {
     public void updateFocus() {
         fName.requestFocusInWindow();
     }
-    
+
     /**
      * Set all of the text fields in this view to the empty string.
      */
@@ -180,9 +180,9 @@ public class NewAccountPanel extends GPanel {
 
         pass2 = new JPasswordField(20);
         pass2.getDocument().addDocumentListener(docListener);
-        
+
         secQuestions = new JComboBox<>(SecurityQuestion.values());
-        
+
         secAnswer = new JPasswordField(20);
         secAnswer.getDocument().addDocumentListener(docListener);
 
@@ -196,7 +196,7 @@ public class NewAccountPanel extends GPanel {
 
         backBut = new JButton("Back");
         backBut.setEnabled(true);
-        
+
         strength = new JLabel("(Strength: very poor)");
         strength.setForeground(new Color(173,7,1));
         strength.setFont(new Font("Dialog", Font.PLAIN, 10));
@@ -271,8 +271,8 @@ public class NewAccountPanel extends GPanel {
         descr.setWrapStyleWord(true);
         descr.setBackground(new Color(241,196,0));
         descr.setFont(new Font("Dialog", Font.PLAIN, 12));
-	descr.append("MERC provides individualized tutoring practice focused ");
-	descr.append("on understanding the Turing Machine, Lambda Calculus, ");
+        descr.append("MERC provides individualized tutoring practice focused ");
+        descr.append("on understanding the Turing Machine, Lambda Calculus, ");
         descr.append("and Mu-Recursive Functions computational models including ");
         descr.append("the relations among these.\n\n");
         descr.append("Please sign in or use 'New User' to create a student account.");
@@ -369,25 +369,25 @@ public class NewAccountPanel extends GPanel {
         panel.addc(pass2, 0, 8, 2, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 0, 5, 5, 5);
-        
+
         label = new JLabel("Choose Security Question:");
         label.setLabelFor(secQuestions);
 
         panel.addc(label, 0, 9, 1, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 15, 5, 5, 5);
-        
+
         panel.addc(secQuestions, 0, 10, 2, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 0, 5, 5, 5);
-        
+
         label = new JLabel("Answer:");
         label.setLabelFor(secAnswer);
 
         panel.addc(label, 0, 11, 2, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 15, 5, 5, 5);
-        
+
         panel.addc(secAnswer, 0, 12, 2, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 0, 5, 5, 5);
@@ -400,7 +400,7 @@ public class NewAccountPanel extends GPanel {
         panel.addc(msg, 0, 13, 2, 1, 0.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
                 5, 5, 5, 5);
-                
+
         panel.addc(backBut, 0, 14, 1, 1, 1.0, 0.0,
                 GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
                 10, 5, 5, 5);
@@ -533,10 +533,10 @@ public class NewAccountPanel extends GPanel {
         } else {
             pass2.setBorder(BorderFactory.createLineBorder(new Color(173,7,1)));
         }
-        
+
         int isValid = secAnswer.getDocument().getLength();
         boolean isValidAnswer = isValid > 0;
-        
+
         if (isValidFName && isValidLName && isValidUserId && isSamePass && isValidAnswer) {
             createAcctBut.setEnabled(true);
             msg.setText("");

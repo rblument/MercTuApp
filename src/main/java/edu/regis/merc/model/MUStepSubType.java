@@ -9,7 +9,7 @@ public enum MUStepSubType {
     DISPLAY_RHS_COMPONENT("Display Right Hand Side Component"),
     SELECT_RHS_COMPONENT("Selects Right Hand Side Component"),
     ERROR("Error");
-     
+
 
 
     /**

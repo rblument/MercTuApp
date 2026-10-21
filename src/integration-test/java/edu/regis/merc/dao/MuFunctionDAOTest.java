@@ -23,7 +23,6 @@ import java.sql.Connection;
 import java.util.List;
 import java.util.Optional;
 
-import edu.regis.merc.BaseMysqlIT;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,7 +54,7 @@ public class MuFunctionDAOTest extends BaseMysqlIT {
 
     private void deleteTestFunctions() {
         String sql = "DELETE FROM MuFunction WHERE Name LIKE ?";
-        try (Connection conn = DriverManager.getConnection(MySqlDAO.URL);
+        try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL());
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, "test_%");
             stmt.executeUpdate();

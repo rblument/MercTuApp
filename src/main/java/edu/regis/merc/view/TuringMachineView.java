@@ -10,11 +10,11 @@ import java.util.ArrayList;
 
 public class TuringMachineView extends GPanel {
     private TutoringSession model;
-    
+
     private TuringMachine tm;
-    
-   
-    
+
+
+
     private TuringMachineCanvas canvas;
 
     public TuringMachineView() {
@@ -28,22 +28,22 @@ public class TuringMachineView extends GPanel {
 
     public void setModel(TutoringSession model) {
         this.model = model;
-        
+
         tm = model.getProblem().getTuringMachine();
-        
+
         System.out.println("Turing Machine: " + tm);
-        
+
         canvas.setModel(tm);
     }
-    
+
     private void initializeComponents() {
         canvas = new TuringMachineCanvas();
     }
-    
+
     private void layoutComponents() {
         canvas.setBackground(Color.white);
-	addc(canvas, 0,0, 1,1, 1.0,1.0,
-	     GridBagConstraints.NORTHWEST,  GridBagConstraints.BOTH,
-	     0,0,0,0);	
+        addc(canvas, 0,0, 1,1, 1.0,1.0,
+             GridBagConstraints.NORTHWEST,  GridBagConstraints.BOTH,
+             0,0,0,0);
     }
 }

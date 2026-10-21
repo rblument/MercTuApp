@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -43,7 +43,7 @@ public class Account {
      * The first name of this user for this account.
      */
     protected String firstName;
-    
+
     /**
      * The last name of this user for this account.
      */
@@ -76,13 +76,13 @@ public class Account {
      * Constructor that takes only a userID.
      * Allows user to create an account only specifying the login ID.
      * The rest of the values are default
-     * 
+     *
      * @param userId The user's login ID (e.g., "name@university.edu").
      */
     public Account(String userId) {
         this(userId, "", 0, "");
     }
-    
+
     /**
     * Full constructor for creating an Account.
     * Sets up all the fields of the account with provided values.
@@ -94,7 +94,7 @@ public class Account {
     */
     public Account(String userId, String passwordHash, int securityQuestion,
             String securityAnswer) {
-        this.userId = userId; 
+        this.userId = userId;
         this.passwordHash = passwordHash;
         this.securityQuestion = securityQuestion;
         this.securityAnswer = securityAnswer;
@@ -194,7 +194,7 @@ public class Account {
     public String getLastName() {
         return lastName;
     }
-    
+
     /**
      * Assign this Student User's first name.
      * @param lastName the name String
@@ -265,7 +265,7 @@ public class Account {
     public void setIsStudent(boolean isStudent) {
         this.isStudent = isStudent;
     }
-    
+
     public void clear(){
         this.userId = null;
         this.password = null;

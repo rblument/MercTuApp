@@ -1,4 +1,4 @@
-// Kristin Ingram 
+// Kristin Ingram
 // Last updated: 12/2
 
 package edu.regis.merc.svc;

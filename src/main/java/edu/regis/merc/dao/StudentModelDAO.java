@@ -1,11 +1,11 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
- * 
+ *
  *  (C) Richard Blumenthal, All rights reserved
- * 
+ *
  *  Unauthorized use, duplication or distribution without the authors'
  *  permission is strictly prohibited.
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, this
  *  software is distributed on an "AS IS" basis without warranties
  *  or conditions of any kind, either expressed or implied.
@@ -57,7 +57,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
         PreparedStatement stmt1 = null;
         PreparedStatement stmt2 = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt1 = conn.prepareStatement(sql1);
 
             stmt1.setString(1, userId);
@@ -101,7 +101,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
         Connection conn = null;
         PreparedStatement stmt = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
             stmt.setString(1, userId);
             ResultSet rs = stmt.executeQuery();
@@ -139,7 +139,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
         Connection conn = null;
         PreparedStatement stmt = null;
         try {
-            conn = DriverManager.getConnection(URL);
+            conn = DriverManager.getConnection(getURL());
             switch (field) {
                 case ASSESSMENT_LEVEL:
                     sql = "UPDATE Assessment SET AssessmentLevel = ? WHERE KnowledgeComponentId = ? ";
@@ -178,7 +178,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
     /**
      * Retrieves a list of unfinished lessons for a student in a specific learning
      * category.
-     * 
+     *
      * The category is inferred from `AssessmentLevel`:
      * - "Not Started" → Teach Me
      * - "In Progress" → Practice
@@ -208,7 +208,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
                     WHERE a.UserId = ?
                 """;
 
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getURL());
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, userId);
@@ -277,7 +277,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
                            "JOIN KnowledgeComponent kc ON a.KnowledgeComponentId = kc.Id " +
                            "WHERE a.UserId = ? AND kc.Id NOT IN (0, 10, 20) " +
                            "ORDER BY kc.Id";
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getURL());
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -307,7 +307,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
                            "FROM Assessment a " +
                            "JOIN KnowledgeComponent kc ON a.KnowledgeComponentId = kc.Id " +
                            "WHERE a.UserId = ? AND kc.Title = ?";
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getURL());
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, userId);
             stmt.setString(2, lesson);
@@ -333,7 +333,7 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
     public void updateScaffoldLevel(String userId, ScaffoldLevel level)
             throws ObjNotFoundException, NonRecoverableException {
         final String sql = "UPDATE StudentModel SET ScaffoldLevel = ? WHERE UserId = ?";
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getURL());
              PreparedStatement stmt = conn.prepareStatement(sql)) {
              stmt.setString(1, level.toString());
              stmt.setString(2, userId);
@@ -345,10 +345,10 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
              throw new NonRecoverableException("Error updating scaffold level: " + e.toString(), e);
         }
     }
-    
+
     /**
      * Retrive
-     * 
+     *
      * @param userId
      * @param conn
      * @return
@@ -386,17 +386,20 @@ public class StudentModelDAO extends MySqlDAO implements StudentModelSvc {
 
     @Override
     public boolean exists(String userId) throws NonRecoverableException {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public StudentModel findModelById(String userId) throws ObjNotFoundException, NonRecoverableException {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public void delete(String userId) throws NonRecoverableException {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }
 

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+	<suppress files=".*edu.*merc.*view.*" checks="MagicNumber"/> <!-- Exempt grid numbers in the views. -->
+	<suppress files=".*edu.*merc.*dao.*" checks="MagicNumber"/> <!-- Also exempt arguments to creating SQL statements. -->
+	<suppress files=".*edu.*merc.*model.*" checks="VisibilityModifier" /> <!-- Exempt warnings about protected fields for polymorphic types. -->
+	<suppress files=".*edu.*merc.*svc.*MercTutor.*" checks ="VisibilityModifier" /> <!-- Exempt warning about protected fields for DTO in this class. -->
+	<suppress files=".*edu.*merc.*util.*SHA.*" checks="MagicNumber" />
+</suppressions>

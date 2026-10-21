@@ -27,10 +27,10 @@ class ForgotPasswordPanelTest {
                     new java.awt.Dimension(875, 650), new java.awt.Dimension(1200, 900) }) {
                 panel.setSize(size);
                 layout(panel);
-                assertEquals(panel.userId.getPreferredSize().height, panel.userId.getHeight());
-                assertEquals(panel.secAnswer.getPreferredSize().height, panel.secAnswer.getHeight());
-                assertEquals(panel.lookupBut.getPreferredSize().height, panel.lookupBut.getHeight());
-                assertEquals(panel.verifyBut.getPreferredSize().height, panel.verifyBut.getHeight());
+                assertEquals(panel.getUserIdComp().getPreferredSize().height, panel.getUserIdComp().getHeight());
+                assertEquals(panel.getAnswerComp().getPreferredSize().height, panel.getAnswerComp().getHeight());
+                assertEquals(panel.getLookupButton().getPreferredSize().height, panel.getLookupButton().getHeight());
+                assertEquals(panel.getVerifyButton().getPreferredSize().height, panel.getVerifyButton().getHeight());
                 assertEquals(new java.awt.Color(0, 43, 73), panel.getBackground());
             }
         });
@@ -59,12 +59,12 @@ class ForgotPasswordPanelTest {
             return new TutorReply("Verified", "\"test-reset-token\"");
         }, destination);
         lookup(panel);
-        await(() -> panel.secAnswer.isEnabled());
+        await(() -> panel.getAnswerComp().isEnabled());
         onEdt(() -> {
-            assertFalse(panel.questionText.isEditable());
-            assertEquals(SecurityQuestion.STREET_AT_TEN.toString(), panel.questionText.getText());
-            panel.secAnswer.setText("Oak Street");
-            panel.verifyBut.doClick();
+            assertFalse(panel.getQuestionComp().isEditable());
+            assertEquals(SecurityQuestion.STREET_AT_TEN.toString(), panel.getQuestionComp().getText());
+            panel.getAnswerComp().setText("Oak Street");
+            panel.getVerifyButton().doClick();
         });
         await(() -> destination.get() != null);
         assertEquals("student@example.com:test-reset-token", destination.get());
@@ -72,22 +72,22 @@ class ForgotPasswordPanelTest {
         assertEquals(2, answer.size());
         assertEquals("student@example.com", answer.get("userId").getAsString());
         assertEquals(ForgotPasswordPanel.encryptSHA256("Oak Street"), answer.get("securityAnswer").getAsString());
-        onEdt(() -> assertEquals("", panel.questionText.getText()));
+        onEdt(() -> assertEquals("", panel.getQuestionComp().getText()));
     }
 
     @Test
     void editingEmailClearsQuestionAndAnswerAndRequiresNewLookup() throws Exception {
         ForgotPasswordPanel panel = panel(request -> question(SecurityQuestion.FIRST_CAR_MAKE), new AtomicReference<>());
         lookup(panel);
-        await(() -> panel.secAnswer.isEnabled());
+        await(() -> panel.getAnswerComp().isEnabled());
         onEdt(() -> {
-            panel.secAnswer.setText("Ford");
-            panel.userId.setText("other@example.com");
-            assertEquals("", panel.questionText.getText());
-            assertEquals(0, panel.secAnswer.getPassword().length);
-            assertFalse(panel.secAnswer.isEnabled());
-            assertFalse(panel.verifyBut.isEnabled());
-            assertTrue(panel.lookupBut.isEnabled());
+            panel.getAnswerComp().setText("Ford");
+            panel.getUserIdComp().setText("other@example.com");
+            assertEquals("", panel.getQuestionComp().getText());
+            assertEquals(0, panel.getAnswerComp().getPassword().length);
+            assertFalse(panel.getAnswerComp().isEnabled());
+            assertFalse(panel.getVerifyButton().isEnabled());
+            assertTrue(panel.getLookupButton().isEnabled());
         });
     }
 
@@ -109,14 +109,14 @@ class ForgotPasswordPanelTest {
         assertTrue(started.await(3, TimeUnit.SECONDS));
         try {
             onEdt(() -> {
-                panel.userId.setText("other@example.com");
-                panel.lookupBut.doClick();
+                panel.getUserIdComp().setText("other@example.com");
+                panel.getLookupButton().doClick();
             });
-            await(() -> panel.secAnswer.isEnabled());
+            await(() -> panel.getAnswerComp().isEnabled());
         } finally { release.countDown(); }
         // SwingWorker schedules done() on the EDT after the background work returns.
         Thread.sleep(150);
-        onEdt(() -> assertEquals(SecurityQuestion.STREET_AT_TEN.toString(), panel.questionText.getText()));
+        onEdt(() -> assertEquals(SecurityQuestion.STREET_AT_TEN.toString(), panel.getQuestionComp().getText()));
     }
 
     @Test
@@ -125,14 +125,14 @@ class ForgotPasswordPanelTest {
         ForgotPasswordPanel panel = panel(request -> request.getRequestType() == ServerRequestType.GET_SECURITY_QUESTION
                 ? question(SecurityQuestion.MOTHERS_MAIDEN_NAME) : new TutorReply("InvalidAnswer"), destination);
         lookup(panel);
-        await(() -> panel.secAnswer.isEnabled());
-        onEdt(() -> { panel.secAnswer.setText("wrong"); panel.verifyBut.doClick(); });
-        await(() -> panel.msg.getText().contains("did not match"));
+        await(() -> panel.getAnswerComp().isEnabled());
+        onEdt(() -> { panel.getAnswerComp().setText("wrong"); panel.getVerifyButton().doClick(); });
+        await(() -> panel.getMessageComp().getText().contains("did not match"));
         assertNull(destination.get());
         onEdt(() -> {
-            assertEquals(0, panel.secAnswer.getPassword().length);
-            assertTrue(panel.secAnswer.isEnabled());
-            assertFalse(panel.verifyBut.isEnabled());
+            assertEquals(0, panel.getAnswerComp().getPassword().length);
+            assertTrue(panel.getAnswerComp().isEnabled());
+            assertFalse(panel.getVerifyButton().isEnabled());
         });
     }
 
@@ -142,12 +142,12 @@ class ForgotPasswordPanelTest {
                 new TutorReply("SecurityQuestion", "{}") }) {
             ForgotPasswordPanel panel = panel(request -> reply, new AtomicReference<>());
             lookup(panel);
-            await(() -> panel.lookupBut.isEnabled());
+            await(() -> panel.getLookupButton().isEnabled());
             onEdt(() -> {
-                assertFalse(panel.secAnswer.isEnabled());
-                assertFalse(panel.verifyBut.isEnabled());
-                assertEquals("", panel.questionText.getText());
-                assertTrue(panel.msg.getText().startsWith("Unable"));
+                assertFalse(panel.getAnswerComp().isEnabled());
+                assertFalse(panel.getVerifyButton().isEnabled());
+                assertEquals("", panel.getQuestionComp().getText());
+                assertTrue(panel.getMessageComp().getText().startsWith("Unable"));
             });
         }
     }
@@ -160,15 +160,15 @@ class ForgotPasswordPanelTest {
     void backClearsRecoveryState() throws Exception {
         ForgotPasswordPanel panel = panel(request -> question(SecurityQuestion.BIRTH_CITY), new AtomicReference<>());
         lookup(panel);
-        await(() -> panel.secAnswer.isEnabled());
+        await(() -> panel.getAnswerComp().isEnabled());
         onEdt(() -> {
-            panel.secAnswer.setText("Denver");
-            panel.backBut.doClick();
-            assertEquals("", panel.userId.getText());
-            assertEquals("", panel.questionText.getText());
-            assertEquals(0, panel.secAnswer.getPassword().length);
-            assertFalse(panel.verifyBut.isEnabled());
-            assertFalse(panel.secAnswer.isEnabled());
+            panel.getAnswerComp().setText("Denver");
+            panel.getBackButton().doClick();
+            assertEquals("", panel.getUserIdComp().getText());
+            assertEquals("", panel.getQuestionComp().getText());
+            assertEquals(0, panel.getAnswerComp().getPassword().length);
+            assertFalse(panel.getVerifyButton().isEnabled());
+            assertFalse(panel.getAnswerComp().isEnabled());
         });
     }
 
@@ -177,10 +177,10 @@ class ForgotPasswordPanelTest {
         ForgotPasswordPanel panel = panel(request -> { throw new IllegalStateException("offline"); },
                 new AtomicReference<>());
         lookup(panel);
-        await(() -> panel.lookupBut.isEnabled());
+        await(() -> panel.getLookupButton().isEnabled());
         onEdt(() -> {
-            assertTrue(panel.msg.getText().startsWith("Unable"));
-            assertFalse(panel.verifyBut.isEnabled());
+            assertTrue(panel.getMessageComp().getText().startsWith("Unable"));
+            assertFalse(panel.getVerifyButton().isEnabled());
         });
     }
 
@@ -194,9 +194,9 @@ class ForgotPasswordPanelTest {
 
     private void lookup(ForgotPasswordPanel panel) throws Exception {
         onEdt(() -> {
-            assertFalse(panel.verifyBut.isEnabled());
-            panel.userId.setText("student@example.com");
-            panel.lookupBut.doClick();
+            assertFalse(panel.getVerifyButton().isEnabled());
+            panel.getUserIdComp().setText("student@example.com");
+            panel.getLookupButton().doClick();
         });
     }
 
