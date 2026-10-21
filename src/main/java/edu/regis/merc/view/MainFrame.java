@@ -119,6 +119,14 @@ public class MainFrame extends JFrame {
         view.setModel(model);
     }
 
+    /** Drop the active session and its views only after a confirmed server logout. */
+    public void clearSession() {
+        model = null;
+        setVisible(false);
+        initializeComponents();
+        layoutComponents();
+    }
+
     /**
      * Create the child components used in this frame.
      */

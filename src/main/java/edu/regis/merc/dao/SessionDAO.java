@@ -219,6 +219,40 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         }
     }
 
+    @Override
+    public void replaceSecurityToken(String userId, String token) throws ObjNotFoundException, NonRecoverableException {
+        if (userId == null || userId.isBlank() || token == null || token.isBlank()) {
+            throw new IllegalArgumentException("A user and nonblank token are required.");
+        }
+        final String sql = "UPDATE TutoringSession SET SecurityToken = ? WHERE UserId = ?";
+        try (Connection conn = tokenConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, token);
+            stmt.setString(2, userId);
+            if (stmt.executeUpdate() != 1) throw new ObjNotFoundException("Session not found for token rotation.");
+        } catch (SQLException ex) {
+            throw new NonRecoverableException("Unable to replace session token.");
+        }
+    }
+
+    @Override
+    public boolean revokeSecurityToken(String userId, String token) throws NonRecoverableException {
+        if (userId == null || userId.isBlank() || token == null || token.isBlank()) return false;
+        // Token matching is case-sensitive even when the database's VARCHAR collation is not.
+        final String sql = "UPDATE TutoringSession SET SecurityToken = '' WHERE UserId = ? AND BINARY SecurityToken = BINARY ?";
+        try (Connection conn = tokenConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            stmt.setString(2, token);
+            return stmt.executeUpdate() == 1;
+        } catch (SQLException ex) {
+            throw new NonRecoverableException("Unable to revoke session token.");
+        }
+    }
+
+    /** Connection seam for focused token SQL tests without a live database. */
+    Connection tokenConnection() throws SQLException {
+        return DriverManager.getConnection(getURL());
+    }
+
     /**
      * {@inheritDoc}
      *
