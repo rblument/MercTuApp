@@ -210,19 +210,19 @@ public class LCDAO extends MySqlDAO implements LCSvc {
     private LCApplication retrieveApplication(int id, Connection conn)
             throws SQLException, ObjNotFoundException, NonRecoverableException {
 
-        String sql = "SELECT FuncAbsId, ArgExprId FROM LC_APPLICATION WHERE Id = ?";
+        String sql = "SELECT FuncExprId, ArgExprId FROM LC_APPLICATION WHERE Id = ?";
         PreparedStatement stmt = null;
         try {
             stmt = conn.prepareStatement(sql);
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                int funcId = rs.getInt("FuncAbsId");
+                int funcId = rs.getInt("FuncExprId");
                 int argId = rs.getInt("ArgExprId");
 
                 LCApplication app = new LCApplication();
                 app.setId(id);
-                app.setFunction(retrieveAbstraction(funcId, conn));
+                app.setFunction(retrieveExpressionRecursive(funcId, conn));
                 app.setArg(retrieveExpressionRecursive(argId, conn));
 
                 return app;

@@ -20,27 +20,15 @@ package edu.regis.merc.model;
  * @author rickb
  */
 public class LCApplication extends LCExpression {
-    /**
-     * The Lambda Calculus Abstraction that is applied to the argument in this
-     * Application.
-     */
-    private LCAbstraction function;
-
-    /**
-     * The argument for this Application.
-     */
-    private LCExpression arg;
 
     public LCApplication(){
-        function = null;
-        arg = null;
     }
 
-    public void setFunction(LCAbstraction function){
+    public void setFunction(LCExpression function){
         this.function = function;
     }
 
-    public LCAbstraction getFunction(){
+    public LCExpression getFunction(){
         return function;
     }
 
@@ -50,16 +38,5 @@ public class LCApplication extends LCExpression {
 
     public LCExpression getArg(){
         return arg;
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder buff = new StringBuilder();
-
-        buff.append(function.toString());
-        buff.append(" ");
-        buff.append(arg.toString());
-
-        return buff.toString();
     }
 }
