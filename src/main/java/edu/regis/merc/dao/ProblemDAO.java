@@ -40,6 +40,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Optional;
 
 /**
  * A Data Access Object implementing {@link ProblemSvc} life-cycle behaviors.
@@ -101,6 +102,32 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
         }
     }
 
+    @Override
+    public Optional<Problem> retrieveByUnitAndSequence(int unitId, int sequenceIndex, Connection conn) throws NonRecoverableException {
+        final String sql = "SELECT Id FROM Problem WHERE UnitId = ? AND SequenceIndex = ?";
+        PreparedStatement stmt = null;
+
+        try {
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, unitId);
+            stmt.setInt(2, sequenceIndex);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return Optional.of(retrieve(rs.getInt("Id"), conn));
+            } else {
+                return Optional.empty();
+            }
+        } catch (ObjNotFoundException e) {
+            InconsistentDBException ex = new InconsistentDBException(
+                    "Problem not found in unit " + unitId);
+            throw new NonRecoverableException("InconsistentDB see internal exception", ex);
+        } catch (SQLException e) {
+            throw new NonRecoverableException("ProblemDAO-ERR-7" + e.toString(), e);
+        } finally {
+            close(stmt);
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -110,7 +137,6 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
         final String sql = "SELECT Title,Description,UnitId,SequenceIndex,TuringMachineId,LambdaCalculusId,MuRecursiveFunctionId FROM Problem WHERE Id = ?";
         PreparedStatement stmt = null;
         try {
-            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
