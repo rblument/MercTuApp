@@ -234,20 +234,33 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      */
     @Override
     public void update(TutoringSession session) throws ObjNotFoundException, NonRecoverableException {
-        final String sql = "UPDATE TutoringSession SET SecurityToken = ?, IsActive = ?, CourseId = ?, UnitId = ?, ProblemId = ? WHERE UserId = ?";
 
         Connection conn = null;
-        PreparedStatement stmt = null;
-
         Account account = session.getStudent().getAccount();
         String userId = account.getUserId();
 
         try {
             conn = DriverManager.getConnection(getURL());
-
-            if (!exists(userId, conn))
+            if (!exists(userId, conn)) {
                 throw new ObjNotFoundException("No TutoringSession matching " + userId + " found.");
+            }
+            update(session, conn);
+        } catch (SQLException e) {
+            throw new NonRecoverableException("SessionDAO-ERR-29", e);
 
+        } finally {
+            close(conn);
+        }
+    }
+
+    private void update(TutoringSession session, Connection conn) throws NonRecoverableException {
+        final String sql = "UPDATE TutoringSession SET SecurityToken = ?, IsActive = ?, CourseId = ?, UnitId = ?, ProblemId = ? WHERE UserId = ?";
+
+        PreparedStatement stmt = null;
+        Account account = session.getStudent().getAccount();
+        String userId = account.getUserId();
+
+        try {
             stmt = conn.prepareStatement(sql);
 
             stmt.setString(1, session.getSecurityToken());
@@ -266,7 +279,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             throw new NonRecoverableException("SessionDAO-ERR-8", e);
 
         } finally {
-            close(conn, stmt);
+            close(stmt);
         }
     }
 
@@ -335,7 +348,8 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
                 // a row of its own, and repoint the task at it.
                 updatePendingStep(pTask.getReplacedStep(), conn);
 
-                updatePendingTask(sessionId, createPendingStep(sessionId, pStep, conn), conn);
+                int newPendingStepId = createPendingStep(sessionId, pStep, conn);
+                updatePendingTask(sessionId, pTask.getTask().getId(), newPendingStepId, conn);
 
             } else {
                 // Still on the same step; only its state changed.
@@ -346,6 +360,55 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
 
         } catch (SQLException e) {
             throw new NonRecoverableException("SessionDAO-ERR-12", e);
+
+        } finally {
+            // Rolling back here rather than in a catch covers every way out of
+            // the try, including unchecked exceptions. That matters because
+            // close() below calls setAutoCommit(true), and JDBC commits the
+            // open transaction when auto-commit is turned back on -- so an
+            // un-rolled-back failure would be committed on the way out. After a
+            // successful commit above this rolls back an empty transaction and
+            // does nothing.
+            rollback(conn);
+
+            close(conn);
+        }
+    }
+
+    @Override
+    public void updateCurrentProblem(TutoringSession session) throws NonRecoverableException {
+        Connection conn = null;
+
+        try {
+            conn = DriverManager.getConnection(getURL());
+
+            // The writes below are a single logical change: a half-applied
+            // advance would leave the session pointing at the new problem
+            // while its pending rows still describe the old one.
+            conn.setAutoCommit(false);
+
+            int sessionId = session.getId();
+            PendingTask pTask = session.currentTask();
+
+            // currentStep() is a field that stays null until setCurrentStep is
+            // called, and it is written straight to the database below. An NPE
+            // here would escape the SQLException catch, so fail cleanly.
+            if (pTask.getTask() == null || pTask.currentStep() == null) {
+                throw new NonRecoverableException(
+                        "SessionDAO-ERR-27: Session " + sessionId
+                                + " has no task and step to advance to");
+            }
+
+            update(session, conn);
+
+            int pendingStepId = createPendingStep(sessionId, pTask.currentStep(), conn);
+
+            updatePendingTask(sessionId, pTask.getTask().getId(), pendingStepId, conn);
+
+            conn.commit();
+
+        } catch (SQLException e) {
+            throw new NonRecoverableException("SessionDAO-ERR-28", e);
 
         } finally {
             // Rolling back here rather than in a catch covers every way out of
@@ -440,7 +503,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      * they are currently on.
      *
      * SessionId alone is the PendingTask primary key, so a session has at most
-     * one pending task and no TaskId is needed to identify the row.
+     * one pending task and the task Id here is being written.
      *
      * @param sessionId the id of the tutoring session whose task is moving
      * @param pendingStepId the id of an existing PendingStep row to point at
@@ -448,17 +511,18 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
      * @throws NonRecoverableException if the session has no PendingTask row,
      *         which leaves the update affecting no rows
      */
-    private void updatePendingTask(int sessionId, int pendingStepId, Connection conn)
+    private void updatePendingTask(int sessionId, int taskId, int pendingStepId, Connection conn)
         throws NonRecoverableException {
-        final String sql = "UPDATE PendingTask SET PendingStepId = ? WHERE SessionId = ?";
+        final String sql = "UPDATE PendingTask SET TaskId = ?, PendingStepId = ? WHERE SessionId = ?";
 
         PreparedStatement stmt = null;
 
         try {
             stmt = conn.prepareStatement(sql);
 
-            stmt.setInt(1, pendingStepId);
-            stmt.setInt(2, sessionId);
+            stmt.setInt(1, taskId);
+            stmt.setInt(2, pendingStepId);
+            stmt.setInt(3, sessionId);
 
             int rows = stmt.executeUpdate();
 
@@ -603,9 +667,6 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
 
             return pendingTasks;
 
-       // } catch (ObjNotFoundException ex) {
-       //     String errMsg = "Task not found in pending task" + taskId;
-         //   throw new NonRecoverableException("SessionDAO-ERR-10", new InconsistentDBException(errMsg));
         } catch (SQLException e) {
             throw new NonRecoverableException("SessionDAO-ERR-22", e);
 

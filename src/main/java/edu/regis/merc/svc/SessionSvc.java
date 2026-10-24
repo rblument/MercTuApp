@@ -86,6 +86,19 @@ public interface SessionSvc {
     void updateCurrentStep(TutoringSession session) throws NonRecoverableException;
 
     /**
+     * Persist the current problem of the given session.
+     *
+     * Where updateCurrentStep moves a student within a task, this moves them
+     * to a different problem. Call it after the session has been pointed at
+     * the new problem in memory; the caller chooses which problem, this only
+     * writes it.
+     *
+     * @param session a TutoringSession already pointed at its new problem.
+     * @throws NonRecoverableException perhaps see getCause().getErrorCode().
+     */
+    void updateCurrentProblem(TutoringSession session) throws NonRecoverableException;
+
+    /**
      * Delete the session from the database for the given student user id.
      *
      * @param userId the student's user id (email: user@university.edu)
