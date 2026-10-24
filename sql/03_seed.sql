@@ -524,3 +524,113 @@ INSERT INTO
     LC_ABS_BODY (AbsId, BodyExprId, SeqIndex)
 VALUES
     (3, 2, 0);
+
+
+-- ---------------------------------------------------------------
+-- The successor function.
+--
+-- Written one statement per table rather than per row: the rows above
+-- cost about eight lines each, which this term cannot afford -- it is
+-- 24 rows on its own.
+--
+-- The comment below lists every node, so the ids can be checked against
+-- the structure without tracing the inserts. A variable is one row
+-- shared by all of its occurrences, matching the terms above, where id
+-- 102 is both the parameter and the body of abstraction 2.
+--
+-- Ids start at 240 rather than 200 because 200-204 and 220-225 were
+-- used by Church numerals 1 and 2, which were dropped: a Problem holds
+-- a single LambdaCalculusId, so nothing could display them until there
+-- is a problem of their own. Leaving the gap keeps those ids free if
+-- they come back.
+-- ---------------------------------------------------------------
+
+-- Successor:  \n. \f. \x. f (n f x)
+--   240  ABS  param=241 body=242
+--   241  VAR  n
+--   242  ABS  param=243 body=244
+--   243  VAR  f
+--   244  ABS  param=245 body=246
+--   245  VAR  x
+--   246  APP  func=243 arg=247
+--   247  APP  func=248 arg=245
+--   248  APP  func=241 arg=243
+INSERT INTO LC_EXPRESSION (Id, ExprType) VALUES
+  (240,'ABS'), (241,'VAR'), (242,'ABS'), (243,'VAR'), (244,'ABS'), (245,'VAR'),
+  (246,'APP'), (247,'APP'), (248,'APP');
+INSERT INTO LC_VARIABLE (Id, Name) VALUES (241,'n'), (243,'f'), (245,'x');
+INSERT INTO LC_ABSTRACTION (Id, IsCurried) VALUES (240,FALSE), (242,FALSE), (244,FALSE);
+INSERT INTO LC_APPLICATION (Id, FuncExprId, ArgExprId) VALUES (246,243,247), (247,248,245), (248,241,243);
+INSERT INTO LC_ABS_PARAMS (AbsId, VarId, SeqIndex) VALUES (240,241,0), (242,243,0), (244,245,0);
+INSERT INTO LC_ABS_BODY (AbsId, BodyExprId, SeqIndex) VALUES (240,242,0), (242,244,0), (244,246,0);
+
+
+-- ---------------------------------------------------------------
+-- Problem 1: the successor function.
+--
+-- Placed after the lambda rows above because it refers to expression
+-- 240. Successor is the second of the initial primitive functions, so
+-- it takes SequenceIndex 1, directly after the zero function. The
+-- indices have to stay contiguous: the tutor finds the next problem by
+-- an exact UnitId/SequenceIndex match and treats an empty result as the
+-- end of the unit, so a gap would end the unit early.
+--
+-- Only the lambda calculus representation is filled in. The mu
+-- recursive form of successor, S(Z(0)), needs function application in
+-- MuExpression, which does not exist yet, and there is no Turing
+-- machine for it, so both ids are left null.
+-- ---------------------------------------------------------------
+
+INSERT INTO
+  Problem (Id, Title, Description, UnitId, SequenceIndex,
+           TuringMachineId, LambdaCalculusId, MuRecursiveFunctionId)
+VALUES
+  (1, 'Successor Function',
+   'The student sees that a Natural number is a count of applications, and that successor adds one more.',
+   0, 1, NULL, 240, NULL);
+
+INSERT INTO
+  Task (Id, ProblemId, SequenceIndex, Title, Description, ExercisedComponentId)
+VALUES
+  (11, 1, 0, 'Representing the Next Natural Number',
+   'Builds up the idea that a Natural number is f applied to a base some number of times, and that successor applies f once more.', -1);
+
+-- The steps follow the concept rather than the syntax: what stands for
+-- zero, what counts, and what successor adds. Successor has no addition
+-- available to it, so "the next Natural number" has to be shown as one
+-- more application rather than as n + 1.
+--
+-- Target ids are the rows above: 245 is x, 243 is f, and 246 is the
+-- application f (n f x) that wraps the number successor was given.
+INSERT INTO
+  Step (Id, TaskId, SequenceIndex, Title, Description, Prompt, Context, Data,
+        ExercisedComponentId, ViewConfigId, StudentAction, ActionId, TimeoutId)
+VALUES
+  (52, 11, 0, 'Zero as No Applications',
+   'Shows that the base value, with the counting function applied no times, stands for zero',
+   'Identify zero.',
+   'A Natural number is written here as a function applied to a base value some number of times: the base alone is 0, one application is 1, two applications is 2. Select the symbol that stands for 0.',
+   '{"representation": "LAMBDA_CALCULUS", "correctComponentId": 245}',
+   -1, 10, 'INFORMATION_MESSAGE', -1, 0),
+  (53, 11, 1, 'The Counting Function',
+   'Shows that each additional application moves to the next Natural number',
+   'Identify the function that counts.',
+   'Applying one particular function one more time is what moves from a Natural number to the next one. Select that function.',
+   '{"representation": "LAMBDA_CALCULUS", "correctComponentId": 243}',
+   -1, 10, 'INFORMATION_MESSAGE', -1, 0),
+  (54, 11, 2, 'The Application Successor Adds',
+   'Shows that successor is one further application wrapped around the number it was given',
+   'Identify the application successor adds.',
+   'Inside the body, n f x is the number successor was given. Successor does not add 1 to it -- it applies f around it one more time. Select that outermost application.',
+   '{"representation": "LAMBDA_CALCULUS", "correctComponentId": 246}',
+   -1, 10, 'INFORMATION_MESSAGE', -1, 0);
+
+INSERT INTO
+  Hint (Id, StepId, Text, SequenceIndex)
+VALUES
+  (20, 52, 'A number counts how many times the function is applied. Zero applications leaves the base value untouched.', 0),
+  (21, 52, 'The base value is x. Click the x!', 1),
+  (22, 53, 'Going from one Natural number to the next means applying this one more time.', 0),
+  (23, 53, 'It is f. Click the f!', 1),
+  (24, 54, 'n f x is what the given number already builds. Successor wraps one more application of f around it.', 0),
+  (25, 54, 'Click the parentheses around the whole body, not the f inside it.', 1);
