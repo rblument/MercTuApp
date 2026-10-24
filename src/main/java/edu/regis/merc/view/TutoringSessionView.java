@@ -126,17 +126,26 @@ public class TutoringSessionView extends GPanel {
      */
     private final java.util.function.Function<ClientRequest, TutorReply> logoutRequests;
     private final Runnable loggedOut;
+    private final Runnable closed;
+    private boolean cleanupPending;
     private final java.util.function.Consumer<String> logoutError;
 
     public TutoringSessionView() {
         this(request -> SvcFacade.instance().tutorRequest(request), () -> SplashFrame.instance().logout(),
-                message -> JOptionPane.showMessageDialog(null, message, "Logout", JOptionPane.ERROR_MESSAGE));
+                () -> { SplashFrame.instance().clearSession(); MercApp.shutdown(); },
+                message -> JOptionPane.showMessageDialog(null, message, "Session cleanup", JOptionPane.ERROR_MESSAGE));
     }
 
     TutoringSessionView(java.util.function.Function<ClientRequest, TutorReply> requests, Runnable loggedOut,
             java.util.function.Consumer<String> error) {
+        this(requests, loggedOut, () -> { SplashFrame.instance().clearSession(); MercApp.shutdown(); }, error);
+    }
+
+    TutoringSessionView(java.util.function.Function<ClientRequest, TutorReply> requests, Runnable loggedOut,
+            Runnable closed, java.util.function.Consumer<String> error) {
         this.logoutRequests = requests;
         this.loggedOut = loggedOut;
+        this.closed = closed;
         this.logoutError = error;
         initCoreViews();
         initMercTutorPanel();
@@ -258,7 +267,7 @@ public class TutoringSessionView extends GPanel {
         buttonColumn.add(Box.createVerticalGlue());
 
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
-        closeButton.addActionListener(e -> MercApp.shutdown());
+        closeButton.addActionListener(e -> MainFrame.instance().requestClose());
 
         submitButton.addActionListener(e -> {
             if (selectedRepresentation != null) {
@@ -430,7 +439,31 @@ public class TutoringSessionView extends GPanel {
      * A class called by logout Button to logout
      */
     public void logout() {
-        if (model == null || !logoutButton.isEnabled()) return;
+        endSession(loggedOut, false);
+    }
+
+    /** Both application windows route X through the same guarded close request as the buttons. */
+    static java.awt.event.WindowAdapter closeListener(Runnable requestClose) {
+        return new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent event) { requestClose.run(); }
+        };
+    }
+
+    /** Reuse the same authenticated revocation before the final application shutdown. */
+    public void closeSession() {
+        endSession(closed, true);
+    }
+
+    private void endSession(Runnable completed, boolean closing) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> endSession(completed, closing));
+            return;
+        }
+        if (cleanupPending) return;
+        if (model == null) {
+            if (closing) completed.run();
+            return;
+        }
         TutoringSession current = model;
         ClientRequest request = new ClientRequest(ServerRequestType.LOGOUT);
         request.setUserId(current.getStudent().getAccount().getUserId());
@@ -445,15 +478,15 @@ public class TutoringSessionView extends GPanel {
                     if (reply != null && "LoggedOut".equals(reply.getStatus())) {
                         current.setSecurityToken("");
                         model = null;
-                        loggedOut.run();
+                        completed.run();
                     } else {
-                        logoutError.accept("Logout was not confirmed. Please try again; your session has not been cleared.");
+                        logoutError.accept("Could not confirm sign-out. The application will stay open. You can try again.");
                     }
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
-                    logoutError.accept("Logout was interrupted. Please try again.");
+                    logoutError.accept("Session cleanup was interrupted. The application will stay open. Please retry.");
                 } catch (java.util.concurrent.ExecutionException | RuntimeException ex) {
-                    logoutError.accept("Unable to log out. Check the server connection and try again.");
+                    logoutError.accept("Session cleanup could not be confirmed. The application will stay open. Check the connection and retry.");
                 } finally {
                     setLogoutBusy(false);
                 }
@@ -466,6 +499,8 @@ public class TutoringSessionView extends GPanel {
     }
 
     private void setLogoutBusy(boolean busy) {
+        cleanupPending = busy;
+        closeButton.setEnabled(!busy);
         logoutButton.setEnabled(!busy);
         submitButton.setEnabled(!busy);
         hintButton.setEnabled(!busy);

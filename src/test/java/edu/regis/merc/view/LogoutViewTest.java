@@ -19,12 +19,16 @@ import static org.junit.jupiter.api.Assertions.*;
 class LogoutViewTest {
     private final AtomicReference<String> error = new AtomicReference<>();
     private final AtomicBoolean returnedToSignIn = new AtomicBoolean();
+    private final AtomicBoolean exited = new AtomicBoolean();
 
     private TutoringSessionView view(Function<ClientRequest, TutorReply> requests) throws Exception {
         AtomicReference<TutoringSessionView> result = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> result.set(new TutoringSessionView(requests, () -> {
             assertTrue(SwingUtilities.isEventDispatchThread());
             returnedToSignIn.set(true);
+        }, () -> {
+            assertTrue(SwingUtilities.isEventDispatchThread());
+            exited.set(true);
         }, error::set)));
         TutoringSession saved = new TutoringSession(new Student(new Account("student@example.com")));
         saved.setSecurityToken("current-token");
@@ -68,6 +72,7 @@ class LogoutViewTest {
         assertEquals("student@example.com", sent.get().getUserId());
         assertEquals("current-token", sent.get().getSecurityToken());
         assertNull(error.get());
+        assertFalse(exited.get(), "Logout must not exit the application");
     }
 
     @Test void rejectedLogoutKeepsSessionAndShowsFailure() throws Exception {
@@ -92,6 +97,97 @@ class LogoutViewTest {
         SwingUtilities.invokeAndWait(view::logout);
         await(returnedToSignIn::get);
         assertEquals(2, attempts.get());
+    }
+
+    @Test void closeAndWindowXRevokeBeforeExitWithoutShowingSignIn() throws Exception {
+        for (boolean windowX : new boolean[] {false, true}) {
+            exited.set(false);
+            AtomicReference<ClientRequest> sent = new AtomicReference<>();
+            TutoringSessionView view = view(request -> {
+                assertFalse(exited.get(), "Application exited before revocation");
+                assertFalse(SwingUtilities.isEventDispatchThread());
+                sent.set(request);
+                return new TutorReply("LoggedOut");
+            });
+            SwingUtilities.invokeAndWait(() -> {
+                if (windowX) TutoringSessionView.closeListener(view::closeSession).windowClosing(null);
+                else view.closeSession();
+            });
+            await(exited::get);
+            assertEquals(ServerRequestType.LOGOUT, sent.get().getRequestType());
+            SwingUtilities.invokeAndWait(() -> assertNull(view.getModel()));
+            assertFalse(returnedToSignIn.get());
+        }
+    }
+
+    @Test void closeWithoutActiveSessionExitsWithoutNetwork() throws Exception {
+        AtomicReference<TutoringSessionView> result = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            TutoringSessionView view = new TutoringSessionView(request -> { throw new AssertionError("No session to revoke"); },
+                    () -> returnedToSignIn.set(true), () -> exited.set(true), error::set);
+            result.set(view);
+            view.closeSession();
+        });
+        assertTrue(exited.get());
+        assertFalse(returnedToSignIn.get());
+        assertNull(result.get().getModel());
+    }
+
+    @Test void failedCloseRetainsSessionAndCanBeRetriedOrCancelled() throws Exception {
+        java.util.concurrent.atomic.AtomicInteger attempts = new java.util.concurrent.atomic.AtomicInteger();
+        TutoringSessionView view = view(request -> new TutorReply(attempts.incrementAndGet() == 1 ? ":ERR" : "LoggedOut"));
+        SwingUtilities.invokeAndWait(view::closeSession);
+        await(() -> error.get() != null);
+        assertFalse(exited.get());
+        SwingUtilities.invokeAndWait(() -> {
+            assertNotNull(view.getModel());
+            assertEquals("current-token", view.getModel().getSecurityToken());
+            assertTrue(button(view, "Close").isEnabled());
+            assertTrue(button(view, "Logout").isEnabled());
+        });
+        // Dismissing the error leaves the application open. A later Close retries the operation.
+        SwingUtilities.invokeAndWait(view::closeSession);
+        await(exited::get);
+        assertEquals(2, attempts.get());
+    }
+
+    @Test void closeAndWindowXCannotInterruptOrDuplicatePendingLogout() throws Exception {
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicInteger attempts = new java.util.concurrent.atomic.AtomicInteger();
+        TutoringSessionView view = view(request -> {
+            attempts.incrementAndGet();
+            started.countDown();
+            try { assertTrue(release.await(3, TimeUnit.SECONDS)); } catch (InterruptedException ex) { throw new AssertionError(ex); }
+            return new TutorReply("LoggedOut");
+        });
+        SwingUtilities.invokeAndWait(view::logout);
+        try {
+            assertTrue(started.await(3, TimeUnit.SECONDS));
+            SwingUtilities.invokeAndWait(() -> {
+                assertFalse(button(view, "Close").isEnabled());
+                assertFalse(button(view, "Logout").isEnabled());
+                view.logout();
+                view.closeSession();
+                TutoringSessionView.closeListener(view::closeSession).windowClosing(null);
+                assertNotNull(view.getModel());
+                assertFalse(exited.get());
+            });
+        } finally { release.countDown(); }
+        await(returnedToSignIn::get);
+        assertEquals(1, attempts.get());
+        assertFalse(exited.get());
+    }
+
+    private javax.swing.JButton button(java.awt.Container container, String text) {
+        for (java.awt.Component child : container.getComponents()) {
+            if (child instanceof javax.swing.JButton button && text.equals(button.getText())) return button;
+            if (child instanceof java.awt.Container nested) {
+                javax.swing.JButton found = button(nested, text);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private void await(BooleanSupplier condition) throws Exception {

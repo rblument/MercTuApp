@@ -16,8 +16,6 @@ import edu.regis.merc.MercApp;
 import edu.regis.merc.model.TutoringSession;
 import java.awt.Dimension;
 import java.awt.Toolkit;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -86,12 +84,7 @@ public class MainFrame extends JFrame {
 
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                MercApp.shutdown();
-            }
-        });
+        addWindowListener(TutoringSessionView.closeListener(this::requestClose));
 
         setVisible(false);
     }
@@ -117,6 +110,19 @@ public class MainFrame extends JFrame {
         // ToDo: Ask to save changes to existing model?
         this.model = model;
         view.setModel(model);
+    }
+
+    /** Shared Close/X entry point; the main frame owns the active authenticated session. */
+    public void requestClose() {
+        if (!javax.swing.SwingUtilities.isEventDispatchThread()) {
+            javax.swing.SwingUtilities.invokeLater(this::requestClose);
+            return;
+        }
+        if (model == null) {
+            MercApp.shutdown();
+        } else {
+            view.closeSession();
+        }
     }
 
     /** Drop the active session and its views only after a confirmed server logout. */

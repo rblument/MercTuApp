@@ -149,3 +149,18 @@ capstone contributions from Regis Students.
 distribution without the authors' permission is prohibited. The software is
 distributed on an "AS IS" basis without warranties or conditions of any kind,
 either expressed or implied.
+
+### Logout and Close
+
+Logout revokes the active authentication token before clearing the local session and
+returning to sign-in. Close and either window's X use the same asynchronous revocation,
+then exit. With no active tutoring session, Close exits immediately. If revocation
+cannot be confirmed, the application stays open; dismiss the message to cancel the
+close attempt or retry. Previously submitted tutoring progress stays in the database.
+
+The plaintext client has a 5-second connection timeout and a 10-second read timeout.
+Override them with positive millisecond JVM properties
+`edu.regis.merc.client.connectTimeoutMillis` and
+`edu.regis.merc.client.readTimeoutMillis`, supplied as `-D` options when launching
+Java or Maven. Missing, invalid, or nonpositive values use the bounded defaults.
+Existing host/port and startup behavior are unchanged.

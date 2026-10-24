@@ -18,8 +18,6 @@ import edu.regis.merc.model.TutoringSession;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.Toolkit;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -153,12 +151,7 @@ public class SplashFrame extends JFrame {
 
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                MercApp.shutdown();
-            }
-        });
+        addWindowListener(TutoringSessionView.closeListener(() -> MainFrame.instance().requestClose()));
 
         // Get screen dimensions
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -277,6 +270,13 @@ public class SplashFrame extends JFrame {
      * Switches to splash screen for sign in.
      */
     public void logout() {
+        clearSession();
+        selectSplash();
+        setVisible(true);
+    }
+
+    /** Clear local authentication references without opening the sign-in window during Close. */
+    public void clearSession() {
         MainFrame.instance().clearSession();
         tutoringSession = null;
         if (tutoringSessionView != null) {
@@ -289,8 +289,6 @@ public class SplashFrame extends JFrame {
         }
         splashPanel.setModel(new Account());
         splashPanel.clearFields();
-        selectSplash();
-        setVisible(true);
     }
 
     /**
