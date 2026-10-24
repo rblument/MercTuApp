@@ -93,8 +93,14 @@ public class SignInAction extends MercGuiAction {
         // putValue(ACCELERATOR_KEY, getAcceleratorKeyStroke());
     }
 
-    /** Creates the parser for the complete session returned by sign-in. */
-    static Gson createSessionGson() {
+    /**
+     * Creates the parser for a complete session returned by the tutor.
+     *
+     * Needed wherever a TutoringSession is deserialized: a plain Gson cannot
+     * build an LCExpression, which is abstract, so it returns an empty lambda
+     * panel rather than failing.
+     */
+    public static Gson createSessionGson() {
         return new GsonBuilder()
                 .setPrettyPrinting()
                 .registerTypeAdapter(Student.class, new StudentDeserializer())
