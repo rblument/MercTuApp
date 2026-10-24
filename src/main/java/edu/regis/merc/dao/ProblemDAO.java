@@ -299,6 +299,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                 SELECT Id,Title,Description,SequenceIndex,Context,Prompt,Data,ExercisedComponentId,ViewConfigId,StudentAction,ActionId,TimeoutId
                 FROM Step
                 WHERE TaskId = ?
+                ORDER BY SequenceIndex
                 """;
         ArrayList<Step> steps = new ArrayList<>();
         PreparedStatement stmt = null;
