@@ -102,6 +102,26 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Optional<Problem> retrieveByUnitAndSequence(int unitId, int sequenceIndex)
+            throws NonRecoverableException {
+        Connection conn = null;
+        try {
+            conn = DriverManager.getConnection(getURL());
+            return retrieveByUnitAndSequence(unitId, sequenceIndex, conn);
+        } catch (SQLException e) {
+            throw new NonRecoverableException("ProblemDAO-ERR-8" + e.toString(), e);
+        } finally {
+            close(conn);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<Problem> retrieveByUnitAndSequence(int unitId, int sequenceIndex, Connection conn) throws NonRecoverableException {
         final String sql = "SELECT Id FROM Problem WHERE UnitId = ? AND SequenceIndex = ?";

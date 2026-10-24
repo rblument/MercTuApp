@@ -375,16 +375,21 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void updateCurrentProblem(TutoringSession session) throws NonRecoverableException {
+    public void updateCurrentTask(TutoringSession session) throws NonRecoverableException {
         Connection conn = null;
 
         try {
             conn = DriverManager.getConnection(getURL());
 
             // The writes below are a single logical change: a half-applied
-            // advance would leave the session pointing at the new problem
-            // while its pending rows still describe the old one.
+            // advance would leave the session pointing at the new task while
+            // its pending rows still describe the old one. The session's
+            // problem id is written whether or not it changed, which costs
+            // nothing and keeps one method serving both kinds of advance.
             conn.setAutoCommit(false);
 
             int sessionId = session.getId();
