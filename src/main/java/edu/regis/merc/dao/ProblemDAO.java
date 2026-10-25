@@ -40,6 +40,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Optional;
 
 /**
  * A Data Access Object implementing {@link ProblemSvc} life-cycle behaviors.
@@ -104,13 +105,58 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
     /**
      * {@inheritDoc}
      */
+    @Override
+    public Optional<Problem> retrieveByUnitAndSequence(int unitId, int sequenceIndex)
+            throws NonRecoverableException {
+        Connection conn = null;
+        try {
+            conn = DriverManager.getConnection(getURL());
+            return retrieveByUnitAndSequence(unitId, sequenceIndex, conn);
+        } catch (SQLException e) {
+            throw new NonRecoverableException("ProblemDAO-ERR-8" + e.toString(), e);
+        } finally {
+            close(conn);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Optional<Problem> retrieveByUnitAndSequence(int unitId, int sequenceIndex, Connection conn) throws NonRecoverableException {
+        final String sql = "SELECT Id FROM Problem WHERE UnitId = ? AND SequenceIndex = ?";
+        PreparedStatement stmt = null;
+
+        try {
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, unitId);
+            stmt.setInt(2, sequenceIndex);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return Optional.of(retrieve(rs.getInt("Id"), conn));
+            } else {
+                return Optional.empty();
+            }
+        } catch (ObjNotFoundException e) {
+            InconsistentDBException ex = new InconsistentDBException(
+                    "Problem not found in unit " + unitId);
+            throw new NonRecoverableException("InconsistentDB see internal exception", ex);
+        } catch (SQLException e) {
+            throw new NonRecoverableException("ProblemDAO-ERR-7" + e.toString(), e);
+        } finally {
+            close(stmt);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
 
     @Override
     public Problem retrieve(int id, Connection conn) throws ObjNotFoundException, NonRecoverableException {
         final String sql = "SELECT Title,Description,UnitId,SequenceIndex,TuringMachineId,LambdaCalculusId,MuRecursiveFunctionId FROM Problem WHERE Id = ?";
         PreparedStatement stmt = null;
         try {
-            conn = DriverManager.getConnection(getURL());
             stmt = conn.prepareStatement(sql);
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
@@ -273,6 +319,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                 SELECT Id,Title,Description,SequenceIndex,Context,Prompt,Data,ExercisedComponentId,ViewConfigId,StudentAction,ActionId,TimeoutId
                 FROM Step
                 WHERE TaskId = ?
+                ORDER BY SequenceIndex
                 """;
         ArrayList<Step> steps = new ArrayList<>();
         PreparedStatement stmt = null;

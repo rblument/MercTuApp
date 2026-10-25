@@ -29,6 +29,7 @@ import java.awt.*;
 import javax.swing.*;
 
 import com.google.gson.Gson;
+import edu.regis.merc.view.act.SignInAction;
 
 /**
  * Displays a tutoring session that allows a student to practice.
@@ -102,7 +103,7 @@ public class TutoringSessionView extends GPanel {
     /**
      * Converts request payloads to JSon.
      */
-    private final Gson gson = new Gson();
+    private final Gson gson = SignInAction.createSessionGson();
 
     /**
      * The representation the student most recently selected a component in, or
@@ -266,13 +267,25 @@ public class TutoringSessionView extends GPanel {
                     model.currentTask().currentStep().setIsCompleted(true);
                     model.currentTask().advanceStep();
                     setModel(model);
-                } else if ("TaskComplete".equals(reply.getStatus())) {
-                    // The last step of the task. There is nothing to advance
-                    // to, so mark it done and leave the view where it is
-                    // rather than re-rendering the same question.
+                } else if ("TaskComplete".equals(reply.getStatus())
+                        || "ProblemComplete".equals(reply.getStatus())) {
+                    // The task changed, so advanceStep cannot get us there --
+                    // it only moves within a task. Render the session the
+                    // server sent instead of advancing our own copy.
+                    boolean newProblem = "ProblemComplete".equals(reply.getStatus());
+
+                    JOptionPane.showMessageDialog(this,
+                            newProblem
+                                    ? "Correct! Moving to the next problem."
+                                    : "Correct! Moving to the next task.",
+                            "Correct!", JOptionPane.INFORMATION_MESSAGE);
+
+                    setModel(gson.fromJson(reply.getData(), TutoringSession.class));
+
+                } else if ("UnitComplete".equals(reply.getStatus())) {
                     model.currentTask().currentStep().setIsCompleted(true);
                     setModel(model);
-                    JOptionPane.showMessageDialog(this, "Correct! You have completed this task.", "Task Complete",
+                    JOptionPane.showMessageDialog(this, "Correct! You have completed this unit.", "Unit Complete",
                             JOptionPane.INFORMATION_MESSAGE);
                 } else if ("Incorrect".equals(reply.getStatus())) {
                     JOptionPane.showMessageDialog(this, reply.getData(), "Incorrect", JOptionPane.WARNING_MESSAGE);
