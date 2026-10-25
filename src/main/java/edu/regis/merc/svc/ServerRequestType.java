@@ -85,6 +85,9 @@ public enum ServerRequestType {
     /** Look up the stored question by email, without exposing credentials. */
     GET_SECURITY_QUESTION(":GetSecurityQuestion"),
 
+    /** Revoke the authenticated request token without removing tutoring progress. */
+    LOGOUT(":Logout"),
+
     /**
      * Get the current task of the user
      */
