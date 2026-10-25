@@ -634,3 +634,87 @@ VALUES
   (23, 53, 'It is f. Click the f!', 1),
   (24, 54, 'n f x is what the given number already builds. Successor wraps one more application of f around it.', 0),
   (25, 54, 'Click the parentheses around the whole body, not the f inside it.', 1);
+
+
+-- ---------------------------------------------------------------
+-- Problem 2: a projection function.
+--
+-- P_i^k(x1, ..., xk) = xi simply returns one of the values it is given.
+-- There are infinitely many of them, so one concrete example is seeded,
+-- P_2^3, which is the one in Dr. Blumenthal's notes. Nothing in the code
+-- is specific to it: LeftHandSide takes any parameter list and
+-- LCAbstraction takes any number of parameters.
+--
+-- The lambda form is written uncurried, as one abstraction over three
+-- parameters, matching how it is written in the notes. IsCurried is set
+-- true because that is what LCParser sets when it reads the comma form,
+-- \x1,x2,x3. x2. Nothing reads the flag yet, so it is a label rather
+-- than behaviour. The curried form, \x1.(\x2.(\x3. x2)), is the same
+-- function and belongs in a later problem.
+--
+-- Unlike successor, projection needs no function application, so the mu
+-- recursive form is filled in here: its right hand side is a bare
+-- variable, which retrieveMuFunction already handles. The steps still
+-- grade against lambda, because MuRecView draws the whole parameter
+-- list as a single label and so cannot report which xi was clicked.
+-- ---------------------------------------------------------------
+
+-- P_2^3:  \x1 x2 x3. x2
+--   260  ABS  param=261,262,263 body=262
+--   261  VAR  x1
+--   262  VAR  x2
+--   263  VAR  x3
+INSERT INTO LC_EXPRESSION (Id, ExprType) VALUES
+  (260,'ABS'), (261,'VAR'), (262,'VAR'), (263,'VAR');
+INSERT INTO LC_VARIABLE (Id, Name) VALUES (261,'x1'), (262,'x2'), (263,'x3');
+INSERT INTO LC_ABSTRACTION (Id, IsCurried) VALUES (260,TRUE);
+INSERT INTO LC_ABS_PARAMS (AbsId, VarId, SeqIndex) VALUES (260,261,0), (260,262,1), (260,263,2);
+INSERT INTO LC_ABS_BODY (AbsId, BodyExprId, SeqIndex) VALUES (260,262,0);
+
+-- Id 2 is free: Z is an explicit 0 and add took 1 from AUTO_INCREMENT.
+INSERT INTO
+  MuFunction (Id, Name, Lhs, Rhs)
+VALUES
+  (2, 'P', 'P(x1, x2, x3)', 'x2');
+
+INSERT INTO
+  Problem (Id, Title, Description, UnitId, SequenceIndex,
+           TuringMachineId, LambdaCalculusId, MuRecursiveFunctionId)
+VALUES
+  (2, 'Projection Function',
+   'The student sees that a projection computes nothing and simply returns one of the values it is given.',
+   0, 2, NULL, 260, 2);
+
+INSERT INTO
+  Task (Id, ProblemId, SequenceIndex, Title, Description, ExercisedComponentId)
+VALUES
+  (12, 2, 0, 'Selecting Among the Given Values',
+   'Shows that a projection returns one of its inputs unchanged, and that the subscript picks which one.', -1);
+
+-- Step 56 asks about a projection that is not the one on screen, so the
+-- student has to read the subscript rather than recognise the picture.
+-- 262 is x2 and 263 is x3.
+INSERT INTO
+  Step (Id, TaskId, SequenceIndex, Title, Description, Prompt, Context, Data,
+        ExercisedComponentId, ViewConfigId, StudentAction, ActionId, TimeoutId)
+VALUES
+  (55, 12, 0, 'The Value a Projection Returns',
+   'Shows that a projection hands back one of its inputs unchanged',
+   'Identify the value this projection returns.',
+   'A projection does not compute anything. P_2^3 is given three values and returns one of them unchanged. Select the value it returns.',
+   '{"representation": "LAMBDA_CALCULUS", "correctComponentId": 262}',
+   -1, 10, 'INFORMATION_MESSAGE', -1, 0),
+  (56, 12, 1, 'Reading the Subscript',
+   'Shows that the subscript chooses which input is returned and the superscript counts them',
+   'Identify what a different projection would return.',
+   'In P_i^k the superscript k says how many values are given and the subscript i says which one comes back. Select the value that P_3^3 would return.',
+   '{"representation": "LAMBDA_CALCULUS", "correctComponentId": 263}',
+   -1, 10, 'INFORMATION_MESSAGE', -1, 0);
+
+INSERT INTO
+  Hint (Id, StepId, Text, SequenceIndex)
+VALUES
+  (26, 55, 'A projection performs no arithmetic. Whatever it returns is already one of the values on screen.', 0),
+  (27, 55, 'The subscript 2 means the second of the three. Click x2!', 1),
+  (28, 56, 'The subscript changed from 2 to 3, so a different one of the three comes back.', 0),
+  (29, 56, 'P_3^3 returns the third of its three values. Click x3!', 1);
