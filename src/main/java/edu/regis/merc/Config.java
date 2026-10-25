@@ -22,6 +22,12 @@ public abstract class Config {
                 throw new IOException("Cannot load external configuration; check that the file exists and is readable.");
             }
         }
+        for (String key : props.stringPropertyNames()) {
+            if (!key.equals("server.host") && !key.equals("server.port") && !key.equals("server.tls")) {
+                throw new IllegalArgumentException("Unknown transport configuration key. Use server.host, server.port, or server.tls; "
+                        + "pass JSSE store settings as JVM properties.");
+            }
+        }
     }
 
     /** TLS is opt-in; key and trust stores use standard JSSE JVM properties. */

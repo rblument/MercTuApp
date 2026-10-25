@@ -91,6 +91,9 @@ public class MercApp {
             } else if (arg.startsWith("--config=")) {
                 configPath = arg.substring("--config=".length());
                 if (configPath.isBlank()) throw new IllegalArgumentException("--config requires a file path.");
+            } else {
+                throw new IllegalArgumentException("Unknown startup option. Use --server, --client, or --config=<file>; "
+                        + "enable TLS with server.tls=true in the configuration file.");
             }
         }
         // Resolve the mode before loading configuration; never fall back from a failed TLS config.
