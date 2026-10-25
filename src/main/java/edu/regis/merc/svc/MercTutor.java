@@ -623,7 +623,7 @@ public class MercTutor implements TutorSvc {
             // Without this the advance lives only in memory, and the next
             // request reloads the session with the pointer back where it was.
             try {
-                ServiceFactory.findSessionSvc().updateCurrentStep(session);
+                sessionSvc().updateCurrentStep(session);
 
             } catch (NonRecoverableException e) {
                 return createError("Unable to save progress for " + session.getStudent()
@@ -719,7 +719,7 @@ public class MercTutor implements TutorSvc {
         session.setTasks(tasks);
 
         try {
-            ServiceFactory.findSessionSvc().updateCurrentTask(session);
+            sessionSvc().updateCurrentTask(session);
 
         } catch (NonRecoverableException e) {
             return createError("Unable to advance " + session.getStudent().getAccount().getUserId()

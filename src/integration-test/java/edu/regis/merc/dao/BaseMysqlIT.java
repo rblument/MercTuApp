@@ -12,6 +12,10 @@
  */
 package edu.regis.merc.dao;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -37,6 +41,10 @@ public abstract class BaseMysqlIT {
 
     @BeforeAll
     public static void setUpClass() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+        if ("true".equals(System.getProperty("merctu.it.local"))) {
+            configureLocalDatabase();
+            return;
+        }
         // setupDB.sql uses the mysql client's SOURCE command, which cannot run
         // as a container init script, so the scripts it sources are copied
         // into /docker-entrypoint-initdb.d/ instead. The official image runs
@@ -59,6 +67,32 @@ public abstract class BaseMysqlIT {
 
         mysqlContainer.start();
         MySqlDAO.setURL(mysqlContainer.getHost(), mysqlContainer.getDatabaseName(), DB_USER, DB_PASS, mysqlContainer.getMappedPort(mysqlContainer.MYSQL_PORT));
+    }
+
+    /** Uses an already initialized isolated database; never creates or resets it. */
+    private static void configureLocalDatabase() {
+        String database = System.getenv("MERCTU_IT_DATABASE");
+        String user = System.getenv("MERCTU_IT_USER");
+        String password = System.getenv("MERCTU_IT_PASSWORD");
+        if (!"merctu_logout_test".equals(database) || !"merctu_logout_test".equals(user)
+                || password == null || password.isBlank()) {
+            throw new IllegalStateException("Local integration tests require the merctu_logout_test database and dedicated user, and a password.");
+        }
+        MySqlDAO.setURL("localhost", database, user, password, 3306);
+        try {
+            MySqlDAO.atomicallyLoadDriver();
+            try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL());
+                    Statement statement = conn.createStatement();
+                    ResultSet result = statement.executeQuery("SELECT DATABASE(), CURRENT_USER()")) {
+                if (!result.next() || !database.equals(result.getString(1))
+                        || !"merctu_logout_test@localhost".equals(result.getString(2))) {
+                    throw new IllegalStateException("Local integration database identity check failed.");
+                }
+            }
+        } catch (Exception ex) {
+            // JDBC URLs contain credentials; do not expose the original exception.
+            throw new IllegalStateException("Cannot connect to the isolated local integration database. Check setup and credentials.");
+        }
     }
 
     @AfterAll

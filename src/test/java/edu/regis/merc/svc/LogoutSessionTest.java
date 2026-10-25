@@ -39,6 +39,8 @@ class LogoutSessionTest {
                 switch (name) {
                     case "retrieve": saved.setSecurityToken(stored); return saved;
                     case "retrieveSecurityToken": return stored;
+                    case "updateCurrentStep":
+                    case "updateCurrentTask": return null;
                     case "replaceSecurityToken": stored = (String) args[1]; rotations++; return null;
                     case "revokeSecurityToken":
                         if (!SecurityTokens.matches(stored, (String) args[1])) return false;
@@ -183,6 +185,47 @@ class LogoutSessionTest {
             assertFalse(output.contains("TEST_PASSWORD_DO_NOT_LOG"));
             assertFalse(output.contains("TEST_ANSWER_DO_NOT_LOG"));
             assertFalse(output.contains(request.getData()));
+        }
+    }
+
+    @Test void stepAndTaskAdvancementSurviveRepeatedLogoutAndTokenRotation() {
+        Fixture f = new Fixture();
+        Problem problem = new Problem(0);
+        for (int taskIndex = 0; taskIndex < 2; taskIndex++) {
+            Task task = new Task(70 + taskIndex);
+            task.setSequenceIndex(taskIndex);
+            int first = taskIndex == 0 ? 50 : 52;
+            int last = taskIndex == 0 ? 51 : 54;
+            for (int stepId = first; stepId <= last; stepId++) {
+                Step step = new Step(stepId);
+                step.setData("{\"representation\":\"LAMBDA_CALCULUS\",\"correctComponentId\":101}");
+                task.addStep(step);
+            }
+            problem.addTask(task);
+        }
+        f.saved.setProblem(problem);
+        PendingTask initial = new PendingTask(problem.findTaskBySequence(0));
+        initial.setCurrentStep(new PendingStep(300, initial.getTask().getSteps().get(0)));
+        f.saved.setTasks(new java.util.ArrayList<>(java.util.List.of(initial)));
+        for (int stepId = 50; stepId < 54; stepId++) {
+            ClientRequest answer = new ClientRequest(ServerRequestType.COMPLETED_STEP);
+            answer.setUserId(EMAIL);
+            answer.setSecurityToken(f.stored);
+            StudentPayload payload = new StudentPayload(stepId);
+            payload.setRepresentation(RepresentationKind.LAMBDA_CALCULUS);
+            payload.setSelectedComponentId(101);
+            answer.setData(gson.toJson(payload));
+            assertEquals(stepId == 51 ? "TaskComplete" : "Success", f.tutor.request(answer).getStatus());
+            assertEquals(stepId + 1, f.saved.currentTask().currentStep().getStep().getId());
+            String oldToken = f.stored;
+            assertEquals("LoggedOut", f.logout(oldToken).getStatus());
+            TutorReply login = f.login();
+            assertEquals("Authenticated", login.getStatus());
+            assertNotEquals(oldToken, f.stored);
+            JsonObject restored = gson.fromJson(login.getData(), JsonObject.class);
+            JsonObject task = restored.getAsJsonArray("tasks").get(0).getAsJsonObject();
+            assertEquals(stepId + 1, task.getAsJsonObject("currentStep").getAsJsonObject("step").get("id").getAsInt());
+            assertEquals(42, restored.get("id").getAsInt());
         }
     }
 

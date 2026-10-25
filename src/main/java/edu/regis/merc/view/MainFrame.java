@@ -138,6 +138,7 @@ public class MainFrame extends JFrame {
      */
     private void initializeComponents() {
         view = new TutoringSessionView();
+        view.setSessionListener(session -> model = session);
 
     }
 

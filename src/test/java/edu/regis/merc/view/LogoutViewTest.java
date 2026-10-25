@@ -179,6 +179,46 @@ class LogoutViewTest {
         assertFalse(exited.get());
     }
 
+    @Test void serverProgressUpdatesDisplayedAndOwningSessionsBeforeLogout() throws Exception {
+        AtomicReference<ClientRequest> sent = new AtomicReference<>();
+        TutoringSessionView view = view(request -> {
+            sent.set(request);
+            return new TutorReply("LoggedOut");
+        });
+        AtomicReference<TutoringSession> owner = new AtomicReference<>();
+        com.google.gson.Gson gson = edu.regis.merc.view.act.SignInAction.createSessionGson();
+        String[] statuses = {"Success", "TaskComplete", "ProblemComplete", "UnitComplete"};
+        for (int i = 0; i < statuses.length; i++) {
+            int stepId = 51 + i;
+            TutoringSession returned = new TutoringSession(new Student(new Account("student@example.com")));
+            returned.setSecurityToken("server-token");
+            edu.regis.merc.model.Problem problem = new edu.regis.merc.model.Problem(1);
+            edu.regis.merc.model.Task task = new edu.regis.merc.model.Task(11);
+            edu.regis.merc.model.Step step = new edu.regis.merc.model.Step(stepId);
+            task.addStep(step);
+            problem.addTask(task);
+            returned.setProblem(problem);
+            edu.regis.merc.model.PendingTask pending = new edu.regis.merc.model.PendingTask(task);
+            pending.setCurrentStep(new edu.regis.merc.model.PendingStep(500 + i, step));
+            pending.currentStep().setIsCompleted(i == statuses.length - 1);
+            returned.addTask(pending);
+            TutorReply reply = new TutorReply(statuses[i], gson.toJson(returned));
+            SwingUtilities.invokeAndWait(() -> {
+                view.setSessionListener(owner::set);
+                view.applySession(reply);
+                assertSame(view.getModel(), owner.get());
+                assertEquals(stepId, owner.get().currentTask().currentStep().getStep().getId());
+                assertEquals("server-token", owner.get().getSecurityToken());
+                assertEquals(returned.currentTask().currentStep().isCompleted(),
+                        owner.get().currentTask().currentStep().isCompleted());
+            });
+        }
+        SwingUtilities.invokeAndWait(view::logout);
+        await(returnedToSignIn::get);
+        assertEquals("server-token", sent.get().getSecurityToken());
+        assertFalse(exited.get());
+    }
+
     private javax.swing.JButton button(java.awt.Container container, String text) {
         for (java.awt.Component child : container.getComponents()) {
             if (child instanceof javax.swing.JButton button && text.equals(button.getText())) return button;

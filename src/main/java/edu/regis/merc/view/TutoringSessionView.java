@@ -128,6 +128,7 @@ public class TutoringSessionView extends GPanel {
     private final Runnable loggedOut;
     private final Runnable closed;
     private boolean cleanupPending;
+    private java.util.function.Consumer<TutoringSession> sessionListener = session -> { };
     private final java.util.function.Consumer<String> logoutError;
 
     public TutoringSessionView() {
@@ -153,11 +154,17 @@ public class TutoringSessionView extends GPanel {
         layoutComponents();
     }
 
-    /**
-     * Return the model currently displayed in this view.
-     *
-     * @return a TutoringSession
-     */
+    /** Keep the owning frame synchronized when a server response replaces the session. */
+    void setSessionListener(java.util.function.Consumer<TutoringSession> listener) {
+        sessionListener = listener;
+    }
+
+    /** Apply the persisted server session rather than independently advancing a local copy. */
+    void applySession(TutorReply reply) {
+        setModel(gson.fromJson(reply.getData(), TutoringSession.class));
+    }
+
+    /** Return the model currently displayed in this view. */
     public TutoringSession getModel() {
         return model;
     }
@@ -169,6 +176,7 @@ public class TutoringSessionView extends GPanel {
      */
     public void setModel(TutoringSession model) {
         this.model = model;
+        sessionListener.accept(model);
 
         // Re-rendering the panels clears their own selections, so the
         // selection recorded here has to go too. Otherwise a selection made
@@ -290,9 +298,7 @@ public class TutoringSessionView extends GPanel {
                 if ("Success".equals(reply.getStatus())) {
                     JOptionPane.showMessageDialog(this, "Correct! Moving to the next step.", "Correct!",
                             JOptionPane.INFORMATION_MESSAGE);
-                    model.currentTask().currentStep().setIsCompleted(true);
-                    model.currentTask().advanceStep();
-                    setModel(model);
+                    applySession(reply);
                 } else if ("TaskComplete".equals(reply.getStatus())
                         || "ProblemComplete".equals(reply.getStatus())) {
                     // The task changed, so advanceStep cannot get us there --
@@ -306,11 +312,10 @@ public class TutoringSessionView extends GPanel {
                                     : "Correct! Moving to the next task.",
                             "Correct!", JOptionPane.INFORMATION_MESSAGE);
 
-                    setModel(gson.fromJson(reply.getData(), TutoringSession.class));
+                    applySession(reply);
 
                 } else if ("UnitComplete".equals(reply.getStatus())) {
-                    model.currentTask().currentStep().setIsCompleted(true);
-                    setModel(model);
+                    applySession(reply);
                     JOptionPane.showMessageDialog(this, "Correct! You have completed this unit.", "Unit Complete",
                             JOptionPane.INFORMATION_MESSAGE);
                 } else if ("Incorrect".equals(reply.getStatus())) {

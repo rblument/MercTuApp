@@ -288,21 +288,17 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
     }
 
     private void update(TutoringSession session, Connection conn) throws NonRecoverableException {
-        final String sql = "UPDATE TutoringSession SET SecurityToken = ?, IsActive = ?, CourseId = ?, UnitId = ?, ProblemId = ? WHERE UserId = ?";
+        // Progress writes must never restore a token revoked or rotated by another request.
+        final String sql = "UPDATE TutoringSession SET CourseId = ?, UnitId = ?, ProblemId = ? WHERE Id = ?";
 
         PreparedStatement stmt = null;
-        Account account = session.getStudent().getAccount();
-        String userId = account.getUserId();
-
         try {
             stmt = conn.prepareStatement(sql);
 
-            stmt.setString(1, session.getSecurityToken());
-            stmt.setBoolean(2, session.isActive());
-            stmt.setInt(3, session.getCourse().getId());
-            stmt.setInt(4, session.getUnit().getId());
-            stmt.setInt(5, session.getProblem().getId());
-            stmt.setString(6, userId);
+            stmt.setInt(1, session.getCourse().getId());
+            stmt.setInt(2, session.getUnit().getId());
+            stmt.setInt(3, session.getProblem().getId());
+            stmt.setInt(4, session.getId());
 
             int rows = stmt.executeUpdate();
             if (rows != 1) {
