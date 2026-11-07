@@ -1,10 +1,11 @@
 // Kristin Ingram
 // last updated: 10/28
 
-import java.util.List;
-import java.util.ArrayList;
 
 package edu.regis.merc.model;
+
+import java.util.List;
+import java.util.ArrayList;
 
 public class MuExpression {
     private Kind kind;
@@ -38,7 +39,7 @@ public class MuExpression {
 
     // For applications
     public MuExpression(String functionName, List<MuExpression> arguments) {
-        this.kind = kind.APPLICATION;
+        this.kind = Kind.APPLICATION;
         this.functionName = functionName;
         // Copying into a new ArrayList keeps a caller from mutating the tree
         // after the fact.
@@ -69,7 +70,7 @@ public class MuExpression {
             if (buff.length() > 0) {
                 buff.append(", ");
             }
-            buff.append(", ");
+            buff.append(arg);
         }
         return buff.toString();
     }
