@@ -1,452 +1,321 @@
 /*
  * MERC^T: Multiple External Representations of Computation Tutor
  *
- *  (C) Richard Blumenthal, All rights reserved
+ * (C) Richard Blumenthal, All rights reserved
  *
- *  Unauthorized use, duplication or distribution without the authors'
- *  permission is strictly prohibited.
+ * Unauthorized use, duplication or distribution without the authors'
+ * permission is strictly prohibited.
  *
- *  Unless required by applicable law or agreed to in writing, this
- *  software is distributed on an "AS IS" basis without warranties
- *  or conditions of any kind, either expressed or implied.
+ * Unless required by applicable law or agreed to in writing, this
+ * software is distributed on an "AS IS" basis without warranties
+ * or conditions of any kind, either expressed or implied.
  */
 package edu.regis.merc.view;
 
+import com.google.gson.Gson;
 import edu.regis.merc.model.Account;
-import edu.regis.merc.view.act.CheckSecurityQuestAction;
+import edu.regis.merc.model.RecoveryRequest;
+import edu.regis.merc.model.SecurityQuestionPrompt;
+import edu.regis.merc.svc.ClientRequest;
+import edu.regis.merc.svc.ServerRequestType;
+import edu.regis.merc.svc.SvcFacade;
+import edu.regis.merc.svc.TutorReply;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.regex.Matcher;
+import java.util.HexFormat;
+import java.util.concurrent.ExecutionException;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JPasswordField;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
+import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
 
-/**
- * Forgot Password screen that allows the user to reset their password.
- *
- * @author mandyroskelley
- */
-public class ForgotPasswordPanel extends GPanel{
+/** Two-stage recovery: identify the account, then answer its stored question. */
+public class ForgotPasswordPanel extends GPanel {
+    public static final Pattern VALID_EMAIL_ADDRESS_REGEX =
+            Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
-    /**
-     * A regex pattern used to validate user email ids (e.g. "rick@regis.edu").
-     */
-    public static final Pattern VALID_EMAIL_ADDRESS_REGEX
-            = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$", Pattern.CASE_INSENSITIVE);
+    private final JTextField userId = new JTextField(25);
+    private final JPasswordField secAnswer = new JPasswordField(25);
+    private final JTextArea questionText = new JTextArea(2, 35);
+    private final JButton lookupBut = new JButton("Continue");
+    private final JButton verifyBut = new JButton("Verify answer");
+    private final JButton backBut = new JButton("Back");
+    private final JTextArea msg = new JTextArea("Enter your account email to retrieve your security question.", 2, 30);
 
-    /**
-     * The account being created and displayed in this panel.
-     */
-    private Account model;
-
-    /**
-     * The editable fields appearing in this dialog.
-     */
-    private HintTextField userId;
-    private JPasswordField secAnswer;
-    private JComboBox<String> securityQuestions;
-
-    private JLabel strength;
-    private JLabel msg;
-
-    private JButton verifyBut;
-    private JButton backBut;
+    private final Gson gson = new Gson();
+    private final Function<ClientRequest, TutorReply> requests;
+    private final BiConsumer<String, String> verified;
+    private String resolvedUserId;
+    private boolean busy;
+    // Each email change or navigation invalidates any earlier asynchronous reply.
+    private long generation;
 
     public ForgotPasswordPanel() {
-        super();
-
-        model = new Account();
-
-        initComponents();
-        layoutPanel();
-
-        enableButtons(userId.getDocument());
+        this(request -> SvcFacade.instance().tutorRequest(request), (email, token) -> {
+            SplashFrame frame = SplashFrame.instance();
+            frame.initializeResetPassword(email, token);
+            frame.selectResetPassword(email);
+        }, () -> SplashFrame.instance().selectSplash());
     }
 
-    /**
-     * Update and return the model with view's information.
-     *
-     * @return
-     */
+    ForgotPasswordPanel(Function<ClientRequest, TutorReply> requests,
+            BiConsumer<String, String> verified, Runnable back) {
+        this.requests = requests;
+        this.verified = verified;
+        layoutComponents();
+
+        userId.getDocument().addDocumentListener(listener(() -> {
+            invalidateQuestion();
+            msg.setText("Enter your account email, then select Continue.");
+        }));
+        secAnswer.getDocument().addDocumentListener(listener(this::updateButtons));
+        lookupBut.addActionListener(e -> lookupQuestion());
+        verifyBut.addActionListener(e -> verifyAnswer());
+        userId.addActionListener(e -> lookupBut.doClick());
+        secAnswer.addActionListener(e -> verifyBut.doClick());
+        backBut.addActionListener(e -> {
+            clearFields();
+            back.run();
+        });
+        updateButtons();
+    }
+
+    private void layoutComponents() {
+        Color navy = new Color(0, 43, 73);
+        Color gold = new Color(241, 196, 0);
+        setBackground(navy);
+        setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        setPreferredSize(new Dimension(850, 540));
+
+        GPanel header = new GPanel();
+        header.setBackground(gold);
+        JLabel heading = new JLabel("MERC — Account recovery");
+        heading.setFont(heading.getFont().deriveFont(Font.BOLD, 20f));
+        heading.setForeground(navy);
+        header.addc(heading, 0, 0, 1, 1, 1, 0, GridBagConstraints.WEST,
+                GridBagConstraints.HORIZONTAL, 14, 16, 14, 16);
+        addc(header, 0, 0, 2, 1, 1, 0, GridBagConstraints.NORTHWEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 12, 0);
+
+        GPanel overview = new GPanel();
+        overview.setBackground(gold);
+        overview.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        JLabel title = new JLabel("Forgot your password?");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
+        title.setForeground(navy);
+        overview.addc(title, 0, 0, 1, 1, 1, 0, GridBagConstraints.WEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 14, 0);
+        JTextArea guidance = new JTextArea("Enter your account email to see the security question you chose.\n\n"
+                + "Answer that question to continue to password reset.\n\n"
+                + "You no longer need to select or remember which question you used.", 10, 22);
+        configureText(guidance, gold, navy);
+        overview.addc(guidance, 0, 1, 1, 1, 1, 0, GridBagConstraints.NORTHWEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 0, 0);
+        addc(overview, 0, 1, 1, 1, 0.35, 0, GridBagConstraints.NORTHWEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 0, 12);
+
+        GPanel fields = new GPanel();
+        fields.setBackground(gold);
+        fields.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        questionText.setEditable(false);
+        configureText(questionText, gold, navy);
+        questionText.setFont(questionText.getFont().deriveFont(Font.BOLD));
+        configureText(msg, gold, navy);
+
+        JLabel emailLabel = new JLabel("Email:");
+        emailLabel.setLabelFor(userId);
+        fields.addc(emailLabel, 0, 0, 2, 1, 1, 0, GridBagConstraints.WEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 5, 0);
+        fields.addc(userId, 0, 1, 1, 1, 1, 0, GridBagConstraints.WEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 0, 8);
+        fields.addc(lookupBut, 1, 1, 1, 1, 0, 0, GridBagConstraints.EAST,
+                GridBagConstraints.NONE, 0, 0, 0, 0);
+        JLabel questionLabel = new JLabel("Your security question:");
+        questionLabel.setLabelFor(questionText);
+        fields.addc(questionLabel, 0, 2, 2, 1, 1, 0, GridBagConstraints.WEST,
+                GridBagConstraints.HORIZONTAL, 22, 0, 6, 0);
+        fields.addc(questionText, 0, 3, 2, 1, 1, 0, GridBagConstraints.WEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 0, 0);
+        JLabel answerLabel = new JLabel("Answer:");
+        answerLabel.setLabelFor(secAnswer);
+        fields.addc(answerLabel, 0, 4, 2, 1, 1, 0, GridBagConstraints.WEST,
+                GridBagConstraints.HORIZONTAL, 16, 0, 5, 0);
+        fields.addc(secAnswer, 0, 5, 2, 1, 1, 0, GridBagConstraints.WEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 12, 0);
+        fields.addc(msg, 0, 6, 2, 1, 1, 0, GridBagConstraints.WEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 12, 0);
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        buttons.setOpaque(false);
+        buttons.add(backBut);
+        buttons.add(verifyBut);
+        fields.addc(buttons, 0, 7, 2, 1, 1, 0, GridBagConstraints.EAST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 0, 0);
+        addc(fields, 1, 1, 1, 1, 0.65, 0, GridBagConstraints.NORTHWEST,
+                GridBagConstraints.HORIZONTAL, 0, 0, 0, 0);
+        addc(Box.createVerticalGlue(), 0, 2, 2, 1, 1, 1, GridBagConstraints.NORTHWEST,
+                GridBagConstraints.BOTH, 0, 0, 0, 0);
+    }
+
+    private static void configureText(JTextArea text, Color background, Color foreground) {
+        text.setEditable(false);
+        text.setFocusable(false);
+        text.setLineWrap(true);
+        text.setWrapStyleWord(true);
+        text.setFont(UIManager.getFont("Label.font"));
+        text.setBackground(background);
+        text.setForeground(foreground);
+    }
+
+    private static DocumentListener listener(Runnable change) {
+        return new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { change.run(); }
+            @Override public void removeUpdate(DocumentEvent e) { change.run(); }
+            @Override public void changedUpdate(DocumentEvent e) { change.run(); }
+        };
+    }
+
+    private void invalidateQuestion() {
+        generation++;
+        resolvedUserId = null;
+        busy = false;
+        questionText.setText("");
+        secAnswer.setText("");
+        updateButtons();
+    }
+
+    private void updateButtons() {
+        boolean validEmail = VALID_EMAIL_ADDRESS_REGEX.matcher(userId.getText().trim()).matches();
+        lookupBut.setEnabled(!busy && validEmail);
+        boolean ready = resolvedUserId != null && resolvedUserId.equals(userId.getText().trim());
+        secAnswer.setEnabled(ready && !busy);
+        verifyBut.setEnabled(ready && !busy && secAnswer.getDocument().getLength() > 0);
+        if (isShowing() && getRootPane() != null) {
+            getRootPane().setDefaultButton(ready ? verifyBut : lookupBut);
+        }
+    }
+
+    public void lookupQuestion() {
+        if (!lookupBut.isEnabled()) return;
+        invalidateQuestion();
+        String email = userId.getText().trim();
+        ClientRequest request = new ClientRequest(ServerRequestType.GET_SECURITY_QUESTION);
+        request.setData(gson.toJson(new RecoveryRequest(email, null)));
+        submit(request, reply -> {
+            if ("SecurityQuestion".equals(reply.getStatus())) {
+                SecurityQuestionPrompt question = gson.fromJson(reply.getData(), SecurityQuestionPrompt.class);
+                if (question == null || question.getText() == null || question.getText().isBlank()) {
+                    throw new IllegalArgumentException("Missing question");
+                }
+                resolvedUserId = email;
+                questionText.setText(question.getText());
+                msg.setText("Enter the answer you provided when you created your account.");
+                updateButtons();
+                secAnswer.requestFocusInWindow();
+            } else {
+                msg.setText("Unable to load the question. Check your email or try again later.");
+            }
+        });
+    }
+
+    public void verifyAnswer() {
+        if (!verifyBut.isEnabled()) return;
+        String email = resolvedUserId;
+        ClientRequest request = new ClientRequest(ServerRequestType.VERIFY_USER);
+        request.setData(gson.toJson(new RecoveryRequest(email,
+                encryptSHA256(new String(secAnswer.getPassword())))));
+        submit(request, reply -> {
+            if ("Verified".equals(reply.getStatus())) {
+                String token = gson.fromJson(reply.getData(), String.class);
+                if (token == null || token.isBlank()) throw new IllegalArgumentException("Missing token");
+                clearFields();
+                verified.accept(email, token);
+            } else {
+                secAnswer.setText("");
+                msg.setText("InvalidAnswer".equals(reply.getStatus())
+                        ? "The answer did not match. Please try again."
+                        : "Unable to verify your answer. Please try again later.");
+            }
+        });
+    }
+
+    private void submit(ClientRequest request, java.util.function.Consumer<TutorReply> receive) {
+        long requestGeneration = ++generation;
+        busy = true;
+        updateButtons();
+        msg.setText("Please wait...");
+        SwingWorker<TutorReply, Void> worker = new SwingWorker<>() {
+            @Override protected TutorReply doInBackground() { return requests.apply(request); }
+            @Override protected void done() {
+                if (generation != requestGeneration) return;
+                busy = false;
+                try {
+                    TutorReply reply = get();
+                    if (reply == null || reply.getStatus() == null) {
+                        throw new IllegalArgumentException("Missing reply");
+                    }
+                    receive.accept(reply);
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    msg.setText("Request interrupted. Please try again.");
+                } catch (ExecutionException | RuntimeException ex) {
+                    // Exception text can contain a response payload; do not log it.
+                    msg.setText("Unable to complete the request. Please try again.");
+                } finally {
+                    updateButtons();
+                }
+            }
+        };
+        // SwingWorker's shared pool can linger under Maven exec:java. This
+        // request-owned thread exits as soon as the network operation finishes.
+        Thread thread = new Thread(worker, "merc-recovery-request");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
     public Account getModel() {
-
-        updateModel();
-        return model;
+        Account account = new Account(userId.getText().trim());
+        account.setSecurityAnswer(encryptSHA256(new String(secAnswer.getPassword())));
+        return account;
     }
 
-    /**
-     * Display the given model in the view, but the MD5 encrypted password is
-     * not displayed.
-     *
-     * @param model
-     */
-    public void setModel(Account model) {
-        this.model = model;
-
-        updateDisplay();
+    public void setModel(Account account) {
+        clearFields();
+        userId.setText(account.getUserId());
     }
 
-    public JTextField getUserIdComp() {
-        return userId;
-    }
-
+    public JTextField getUserIdComp() { return userId; }
+    JPasswordField getAnswerComp() { return secAnswer; }
+    JTextArea getQuestionComp() { return questionText; }
+    JButton getLookupButton() { return lookupBut; }
+    JButton getVerifyButton() { return verifyBut; }
+    JButton getBackButton() { return backBut; }
+    JTextArea getMessageComp() { return msg; }
     public void updateFocus() {
+        updateButtons();
         userId.requestFocusInWindow();
     }
 
-    /**
-     * Set all of the text fields in this view to the empty string.
-     */
     public void clearFields() {
+        invalidateQuestion();
         userId.setText("");
-        secAnswer.setText("");
-        securityQuestions.setSelectedIndex(0);
+        msg.setText("Enter your account email to retrieve your security question.");
     }
 
-    /**
-     * Update our model with the current values displayed in this view
-     */
-    private void updateModel() {
-        model.setUserId(userId.getText());
-        model.setSecurityAnswer(encryptSHA256(new String(secAnswer.getPassword())));
-        model.setSecurityQuestion(securityQuestions.getSelectedIndex());
-    }
-
-    /**
-     * Update this view with the current values in our model (except the
-     * passwords).
-     */
-    private void updateDisplay() {
-        userId.setText(model.getUserId());
-        secAnswer.setText("");
-        securityQuestions.setSelectedIndex(0);
-    }
-
-    private void initComponents() {
-        LoginDocumentListener docListener = new LoginDocumentListener();
-
-        userId = new HintTextField("userId@university.edu", 10);
-        userId.setIsEmailAddr(true);
-        userId.getDocument().addDocumentListener(docListener);
-
-        securityQuestions = new JComboBox<>(new String[] {"What city were you born in?", "What is your mother's maiden name?"});
-
-        secAnswer = new JPasswordField(20);
-        secAnswer.getDocument().addDocumentListener(docListener);
-
-        verifyBut = new JButton(CheckSecurityQuestAction.instance());
-
-        verifyBut.setEnabled(false);
-        MainFrame.instance().getRootPane().setDefaultButton(verifyBut);
-
-        backBut = new JButton("Back");
-        backBut.setEnabled(true);
-        backBut.addActionListener(e -> {
-          clearFields();
-          SplashFrame.instance().selectSplash();
-        });
-
-        strength = new JLabel("(Strength: very poor)");
-        strength.setForeground(new Color(173,7,1));
-        strength.setFont(new Font("Dialog", Font.PLAIN, 10));
-    }
-
-    private void layoutPanel() {
-        setBackground(new Color(0, 43, 73));
-
-        setPreferredSize(new Dimension(300, 400));
-
-        addc(createHeader(), 0, 0, 2, 1, 1.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
-                5, 5, 5, 5);
-
-        addc(createOverview(), 0, 1, 1, 1, 1.0, 1.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH,
-                5, 5, 5, 5);
-
-        addc(createVerify(), 1, 1, 1, 1, 0.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
-                10, 5, 5, 5);
-
-        JLabel copyright = new JLabel("(C) 2019-2024 Johanna and Richard Blumenthal. All Rights Reserved");
-        copyright.setFont(new Font("Dialog", Font.PLAIN, 10));
-        copyright.setForeground(new Color(241,196,0));
-        addc(copyright, 0, 2, 2, 1, 1.0, 1.0,
-                GridBagConstraints.NORTH, GridBagConstraints.CENTER,
-                5, 5, 5, 5);
-
-        setSize(490, 400);
-    }
-
-    private GPanel createHeader() {
-        GPanel panel = new GPanel();
-        panel.setBackground(new Color(241,196,0));
-
-        JLabel ccis = new JLabel("Regis University Department of Computer and Cyber Sciences");
-        ccis.setFont(new Font("Dialog", Font.PLAIN, 20));
-        ccis.setForeground(new Color(0, 43, 73));
-
-        panel.addc(ccis, 0, 0, 1, 1, 1.0, 1.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
-                5, 5, 5, 5);
-
-        return panel;
-    }
-
-    private GPanel createOverview() {
-        GPanel panel = new GPanel();
-        panel.setBackground(new Color(241,196,0));
-
-        panel.setSize(300, 400);
-        panel.setPreferredSize(new Dimension(300, 400));
-
-        JLabel logo = new JLabel("ShaTu");
-        logo.setFont(new Font("Dialog", Font.PLAIN, 20));
-        logo.setForeground(new Color(0, 43, 73));
-
-        panel.addc(logo, 0, 0, 1, 1, 0.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
-                5, 5, 5, 5);
-
-        JLabel name = new JLabel("A See_1, Do_1, Teach_1 Intelligent Tutoring System.");
-        name.setFont(new Font("Dialog", Font.PLAIN, 14));
-        panel.addc(name, 0, 1, 1, 1, 0.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
-                0, 5, 5, 5);
-
-        JTextArea descr = new JTextArea();
-        descr.setEditable(false);
-        descr.setLineWrap(true);
-        descr.setWrapStyleWord(true);
-        descr.setBackground(new Color(241,196,0));
-        descr.setFont(new Font("Dialog", Font.PLAIN, 12));
-        descr.append("ShaTu provides individualized tutoring practice focused ");
-        descr.append("on understanding the SHA-256 digest algorithm and the");
-        descr.append("underlying computer science concepts upon which it is ");
-        descr.append("based.\n\n");
-        descr.append("Please sign in or use 'New User' to create a student account.");
-
-        descr.append("\n\n");
-        descr.append("Use your university email address as your user id, but ");
-        descr.append("DO NOT use your existing university password. Instead,");
-        descr.append("use a different password for the ShaTu tutor.");
-        panel.addc(descr, 0, 2, 1, 1, 1.0, 1.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH,
-                15, 5, 5, 5);
-
-        JLabel loginMsg = new JLabel("To use the tutor, you must sign in.");
-        panel.addc(loginMsg, 0, 3, 1, 1, 0.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
-                5, 5, 5, 5);
-
-        panel.addc(new JLabel(" "), 0, 4, 1, 1, 1.0, 1.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH,
-                5, 5, 5, 5);
-
-        return panel;
-    }
-
-    private GPanel createVerify() {
-        GPanel panel = new GPanel();
-        panel.setBackground(new Color(241,196,0));
-
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 5));
-
-
-        JLabel label = new JLabel("User Id:");
-        label.setLabelFor(userId);
-
-        panel.addc(label, 0, 2, 1, 1, 1.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
-                5, 5, 5, 5);
-
-        panel.addc(userId, 0, 3, 2, 1, 1.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
-                0, 5, 5, 5);
-
-        label = new JLabel("Choose Security Question:");
-        label.setLabelFor(securityQuestions);
-
-        panel.addc(label, 0, 4, 1, 1, 0.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
-                15, 5, 5, 5);
-
-        panel.addc(securityQuestions, 0, 5, 2, 1, 1.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
-                0, 5, 5, 5);
-
-        label = new JLabel("Answer:");
-        label.setLabelFor(secAnswer);
-
-        panel.addc(label, 0, 6, 2, 1, 0.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
-                15, 5, 5, 5);
-
-        panel.addc(secAnswer, 0, 7, 2, 1, 1.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
-                0, 5, 5, 5);
-
-        panel.addc(verifyBut, 1, 9, 1, 1, 1.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
-                10, 5, 5, 5);
-
-        msg = new JLabel("");
-        msg.setLabelFor(verifyBut);
-        msg.setFont(new Font("Dialog", Font.PLAIN, 10));
-        msg.setForeground(new Color(173,7,1));
-
-        panel.addc(msg, 0, 12, 2, 1, 0.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
-                5, 5, 5, 5);
-
-        panel.addc(backBut, 0, 9, 1, 1, 1.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.HORIZONTAL,
-                10, 5, 5, 5);
-
-        msg = new JLabel("");
-        msg.setLabelFor(backBut);
-        msg.setFont(new Font("Dialog", Font.PLAIN, 10));
-        msg.setForeground(new Color(173,7,1));
-
-        panel.addc(msg, 0, 12, 2, 1, 0.0, 0.0,
-                GridBagConstraints.NORTHWEST, GridBagConstraints.NONE,
-                5, 5, 5, 5);
-
-        return panel;
-    }
-
-
-
-    /**
-     * If the userId or security answer fields are empty, disable the OK 'Login'
-     * button.
-     */
-    private void enableButtons(Document e)  {
-
-        boolean isValidUserId = !userId.isDefaultValue();
-        if (isValidUserId) {
-            Document userIdDoc = userId.getDocument();
-            try {
-                String email = userIdDoc.getText(0, userIdDoc.getLength());
-
-                Matcher matcher = VALID_EMAIL_ADDRESS_REGEX.matcher(email);
-                isValidUserId = matcher.find();
-
-                if (isValidUserId) {
-                    userId.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-                } else {
-                    userId.setBorder(BorderFactory.createLineBorder(new Color(173,7,1)));
-                }
-            } catch (BadLocationException er) {
-                // Cannot happen since 0 to length
-            }
-        } else {
-            userId.setBorder(BorderFactory.createLineBorder(new Color(173,7,1)));
-        }
-
-        boolean isValidAnswer = false;
-            Document secAnswerDoc = secAnswer.getDocument();
-
-            String answer = "";
+    /** Preserves the SHA-256/UTF-8 answer format used by existing accounts. */
+    public static String encryptSHA256(String answer) {
         try {
-            answer = secAnswerDoc.getText(0, secAnswerDoc.getLength());
-            if (answer.isEmpty()) {
-                isValidAnswer = false;
-            }
-            else {
-                isValidAnswer = true;
-            }
-        } catch (BadLocationException ex) {
-            Logger.getLogger(ForgotPasswordPanel.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        if (isValidUserId && isValidAnswer) {
-            verifyBut.setEnabled(true);
-            msg.setText("");
-
-        } else {
-            verifyBut.setEnabled(false);
-            msg.setText("(* Please fix problems highlighted in red.)");
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(answer.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 unavailable", ex);
         }
     }
-
-    /**
-     * Listens to changes made to the LoginDialog's userId and password fields
-     * in order to appropriate enable the buttons in the dialog.
-     */
-    public class LoginDocumentListener implements DocumentListener {
-        /**
-         * As text was insert into the userId or password field, check whether
-         * we need to enable or disable the LoginDialog's buttons.
-         */
-        @Override
-        public void insertUpdate(DocumentEvent e) {
-
-            enableButtons(e.getDocument());
-        }
-
-        /**
-         * As text was removed from the userId or answer field, check whether
-         * we need to enable or disable the LoginDialog's buttons.
-         */
-        @Override
-        public void removeUpdate(DocumentEvent e) {
-
-            enableButtons(e.getDocument());
-        }
-
-        /**
-         * As text was changed in the userId or answer field, check whether we
-         * need to enable or disable the LoginDialog's buttons.
-         */
-        @Override
-        public void changedUpdate(DocumentEvent e) {
-
-            enableButtons(e.getDocument());
-        }
-    }
-
-    /**
-     * Encrypt the given security answer using SHA-256
-     *
-     * @param base
-     * @return
-     */
-    public static String encryptSHA256(String base) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(base.getBytes("UTF-8"));
-            StringBuilder hexString = new StringBuilder();
-            for (int i = 0; i < hash.length; i++) {
-                String hex = Integer.toHexString(0xff & hash[i]);
-
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (UnsupportedEncodingException | NoSuchAlgorithmException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
 }

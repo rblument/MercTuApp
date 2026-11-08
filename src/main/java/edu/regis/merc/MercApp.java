@@ -20,9 +20,12 @@ import edu.regis.merc.view.MainFrame;
 import edu.regis.merc.view.SplashFrame;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+import javax.swing.SwingUtilities;
 
 /**
  * A standalone implementation of the MERC intelligent tutoring application.
@@ -33,6 +36,8 @@ import java.util.logging.Logger;
  *   --config=<file>  External configuration file (applies to both modes)
  *
  * If no arguments are provided, both server and client are started.
+ * --server and --client cannot be combined, and any other argument, a config
+ * file that cannot be read, or an invalid port stops startup with an error.
  *
  * @author rickb
  */
@@ -65,91 +70,152 @@ public class MercApp {
      */
     private static boolean shuttingDown = false;
 
+    /**
+     * Ensures the server is stopped only once, whether by shutdown() or by the
+     * JVM shutdown hook.
+     */
+    private static final AtomicBoolean SERVER_STOPPED = new AtomicBoolean(false);
+
     private static final int THREAD_WAIT_MILLIS = 4000;
+
+    /**
+     * How long to wait for the server to start accepting connections.
+     */
+    private static final int SERVER_START_TIMEOUT_SECONDS = 10;
+
+    private static final String USAGE =
+            "Usage: MercApp [--server | --client] [--config=<file>]";
+
+    /**
+     * The mode this application was started in, or null before main() runs.
+     */
+    private static ExecutionMode runningMode;
 
     /**
      * Configuration instances (created during parseArgs for use during startup).
      */
     private static ServerConfig serverConfig;
     private static ClientConfig clientConfig;
-    private static ExecutionMode executionMode = ExecutionMode.BOTH;
 
     /**
-     * Parse command line arguments to determine execution mode and config file.
+     * Parse command line arguments to determine execution mode, then load the
+     * server and client configuration.
      *
      * @param args the command line arguments
      * @return an ExecutionMode enum value
+     * @throws IllegalArgumentException if an argument is unknown, --server and
+     *         --client are combined, or a configured port is invalid
+     * @throws IOException if the --config file cannot be read
      */
     private static ExecutionMode parseArgs(String[] args) throws IOException {
         ExecutionMode mode = ExecutionMode.BOTH;
         String configPath = null;
+
         for (String arg : args) {
-            if ("--server".equals(arg)) {
-                mode = ExecutionMode.SERVER;
-            } else if ("--client".equals(arg)) {
-                mode = ExecutionMode.CLIENT;
+            if ("--server".equals(arg) || "--client".equals(arg)) {
+                ExecutionMode requested = "--server".equals(arg)
+                        ? ExecutionMode.SERVER : ExecutionMode.CLIENT;
+
+                // mode is still BOTH, the default, until a mode flag is seen,
+                // so this only rejects --server combined with --client.
+                if (mode != ExecutionMode.BOTH && mode != requested) {
+                    throw new IllegalArgumentException(
+                            "--server and --client cannot be used together");
+                }
+
+                mode = requested;
             } else if (arg.startsWith("--config=")) {
                 configPath = arg.substring("--config=".length());
-                if (configPath.isBlank()) throw new IllegalArgumentException("--config requires a file path.");
+
+                if (configPath.isBlank()) {
+                    throw new IllegalArgumentException("--config needs a file path");
+                }
             } else {
                 throw new IllegalArgumentException("Unknown startup option. Use --server, --client, or --config=<file>; "
                         + "enable TLS with server.tls=true in the configuration file.");
             }
         }
-        // Resolve the mode before loading configuration; never fall back from a failed TLS config.
-        if (mode != ExecutionMode.CLIENT) serverConfig = new ServerConfig(configPath);
-        if (mode != ExecutionMode.SERVER) clientConfig = new ClientConfig(configPath);
+
+        // Load only after reading every argument, so the result does not depend
+        // on argument order. A --config file that cannot be read stops startup
+        // instead of silently falling back to the defaults.
+        serverConfig = new ServerConfig(configPath);
+        clientConfig = new ClientConfig(configPath);
+
+        // Read the ports now so an invalid value stops startup instead of
+        // failing later, on the first connection.
+        serverConfig.getPort();
+        clientConfig.getPort();
+
         return mode;
     }
 
     /**
-     * Start the server, optionally in a separate thread.
-     *
-     * @param inBackground true to start server in a separate thread, false to run in current thread
+     * Start the server on its own thread and wait until it is accepting
+     * connections. Exits the application if the server cannot start, for
+     * example because another process is already using the port.
      */
-    private static void startServer(boolean inBackground) throws IOException {
-        LOGGER.info(" Starting Merc Server (Tutoring Service)...");
+    private static void startServer() throws IOException {
+        LOGGER.info(" Starting Merc Server (Tutoring Service) on port "
+                + serverConfig.getPort() + "...");
 
         mercServer = new MercServer(serverConfig);
 
+        // Register before starting the server so Ctrl+C or SIGTERM always
+        // closes it, including in server-only mode.
         Runtime.getRuntime().addShutdownHook(
-                new Thread(() -> {
-                    if (mercServer != null) {
-                        mercServer.close();
-                    }
-                }, "merc-server-shutdown"));
+                new Thread(MercApp::shutdownServer, "merc-server-shutdown"));
 
-        mercServer.startListening();
-        LOGGER.info(" Server is running.");
-        if (inBackground) {
-            mercServerThread = new Thread(mercServer, "merc-server");
-            mercServerThread.start();
-        } else {
-            mercServer.run();
+        mercServerThread = new Thread(mercServer, "merc-server");
+        mercServerThread.start();
+
+        boolean listening;
+
+        try {
+            listening = mercServer.awaitListening(
+                    SERVER_START_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            listening = false;
         }
 
+        if (!listening) {
+            LOGGER.severe("Merc server could not listen on port "
+                    + serverConfig.getPort() + "; exiting.");
+            System.exit(1);
+        }
+
+        LOGGER.info(" Server is running.");
     }
 
     /**
      * Start the client GUI.
      */
     private static void startClient() {
-        LOGGER.info(" Starting Client GUI...");
+        LOGGER.info(" Starting Client GUI, using the server at "
+                + clientConfig.getHost() + ":" + clientConfig.getPort() + "...");
 
-        MainFrame.instance();
+        // Create and display Swing components on the event dispatch thread.
+        SwingUtilities.invokeLater(() -> {
+            // The main tutoring window stays hidden until sign-in succeeds.
+            MainFrame.instance();
+            // The splash window provides sign-in and account recovery.
+            SplashFrame.instance();
 
-        SplashFrame.instance();
-
-        LOGGER.info("Merc Initialization successful.");
+            LOGGER.info("Merc Initialization successful.");
+        });
     }
 
     /**
-     * Shutdown the server if it was started.
+     * Stop the server and the MySQL cleanup thread, if this process started
+     * the server. Safe to call more than once, including from the shutdown hook.
      */
     private static void shutdownServer() {
-        if (mercServer != null) {
-            mercServer.close();
+        if (mercServer == null || !SERVER_STOPPED.compareAndSet(false, true)) {
+            return;
         }
+
+        mercServer.close();
 
         if (mercServerThread != null
                 && mercServerThread != Thread.currentThread()) {
@@ -166,14 +232,15 @@ public class MercApp {
                         e);
             }
         }
+
+        // Stop the MySQL Connector/J cleanup thread. Only the server uses MySQL.
+        AbandonedConnectionCleanupThread.checkedShutdown();
     }
 
     /**
      * Shutdown the client GUI components.
      */
     private static void shutdownClient() {
-        AbandonedConnectionCleanupThread.checkedShutdown();
-
         MainFrame.instance().dispose();
         SplashFrame.instance().dispose();
 
@@ -181,11 +248,11 @@ public class MercApp {
     }
 
     /**
-     * Gracefully shut down based on execution mode.
-     *
-     * @param mode the execution mode
+     * Gracefully shut down whatever this process started: the Merc server and
+     * MySQL cleanup thread in server or both modes, and the application
+     * windows in client or both modes.
      */
-    public static synchronized void shutdown(ExecutionMode mode) {
+    public static synchronized void shutdown() {
         if (shuttingDown) {
             return;
         }
@@ -194,11 +261,14 @@ public class MercApp {
 
         LOGGER.info("MERC shutdown initiated.");
 
-        if (mode == ExecutionMode.SERVER || mode == ExecutionMode.BOTH) {
+        // Only server and both modes start the server.
+        if (runningMode == ExecutionMode.SERVER || runningMode == ExecutionMode.BOTH) {
             shutdownServer();
         }
 
-        if (mode == ExecutionMode.CLIENT || mode == ExecutionMode.BOTH) {
+        // Only client and both modes create the windows. Server-only mode
+        // skips this so it doesn't create windows just to dispose of them.
+        if (runningMode == ExecutionMode.CLIENT || runningMode == ExecutionMode.BOTH) {
             shutdownClient();
         }
     }
@@ -247,16 +317,30 @@ public class MercApp {
         System.out.println("Finished initializing");
 
         try {
-            executionMode = parseArgs(args);
-            // Validate client trust before starting a local listener or showing the GUI.
-            if (executionMode != ExecutionMode.SERVER) SvcFacade.instance().configure(clientConfig);
-            boolean startServerInBackground = (executionMode == ExecutionMode.BOTH);
-            if (executionMode != ExecutionMode.CLIENT) startServer(startServerInBackground);
-            if (executionMode != ExecutionMode.SERVER) startClient();
-        } catch (IOException | IllegalArgumentException ex) {
-            LOGGER.severe("Merc startup failed: " + ex.getMessage());
-            if (mercServer != null) mercServer.close();
+            runningMode = parseArgs(args);
+            // Validate TLS trust and install the resolved destination before starting any local listener or GUI.
+            if (runningMode != ExecutionMode.SERVER) SvcFacade.instance().setClientConfig(clientConfig);
+
+            if (runningMode == ExecutionMode.SERVER || runningMode == ExecutionMode.BOTH) {
+                startServer();
+            }
+
+            if (runningMode == ExecutionMode.CLIENT || runningMode == ExecutionMode.BOTH) {
+                startClient();
+            }
+        } catch (IllegalArgumentException e) {
+            LOGGER.severe(e.getMessage());
+            System.err.println(USAGE);
+            shutdownServer();
+            System.exit(1);
+        } catch (IOException e) {
+            LOGGER.severe("Merc startup failed: " + e.getMessage());
+            shutdownServer();
+            System.exit(1);
         }
+
+        // In server-only mode main() returns here, and the merc-server thread
+        // keeps the application running until Ctrl+C or SIGTERM stops it.
     }
 
     /**
@@ -264,13 +348,5 @@ public class MercApp {
      */
     private enum ExecutionMode {
         SERVER, CLIENT, BOTH
-    }
-
-    /**
-     * Gracefully shut down the Merc server, MySQL cleanup thread, and
-     * application windows.
-     */
-    public static synchronized void shutdown() {
-        shutdown(executionMode);
     }
 }

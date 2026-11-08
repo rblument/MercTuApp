@@ -14,6 +14,7 @@ package edu.regis.merc.svc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.Gson;
 import edu.regis.merc.dao.BaseMysqlIT;
@@ -21,6 +22,7 @@ import edu.regis.merc.ServerConfig;
 import edu.regis.merc.model.Account;
 import edu.regis.merc.model.TutoringSession;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -34,6 +36,8 @@ import org.junit.jupiter.api.Test;
 @Tag("integration")
 @DisplayName("Sign-In Integration Test")
 public class SignInTest extends BaseMysqlIT {
+
+    private static final int SERVER_START_TIMEOUT_SECONDS = 10;
 
     private MercServer server;
     private Thread serverThread;
@@ -85,9 +89,12 @@ public class SignInTest extends BaseMysqlIT {
         server = new MercServer(config);
         serverThread = new Thread(server, "test-server");
         serverThread.start();
-        
-        // Wait for server to be ready
-        Thread.sleep(500);
+
+        // Wait until the server accepts connections rather than for a fixed
+        // time. Fails fast if the port is taken, e.g. by a running MercApp,
+        // instead of sending the test's requests to that other server.
+        assertTrue(server.awaitListening(SERVER_START_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                "Server should be listening on port " + config.getPort());
     }
 
     @Test

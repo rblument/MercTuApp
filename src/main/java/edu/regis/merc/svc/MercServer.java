@@ -21,6 +21,8 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -56,6 +58,10 @@ public class MercServer implements Runnable {
      */
     private volatile boolean running = true;
 
+    /** Released after binding succeeds or startup fails. */
+    private final CountDownLatch startup = new CountDownLatch(1);
+    private volatile boolean listening;
+
     /** Socket factories selected and validated during startup. */
     private final TransportSockets sockets;
 
@@ -75,13 +81,22 @@ public class MercServer implements Runnable {
     public synchronized void startListening() throws IOException {
         if (!running) throw new IOException("Server has been closed.");
         if (server == null) server = sockets.listen();
+        listening = true;
+        startup.countDown();
     }
 
     /** Bind an ephemeral port for local transport tests. */
     synchronized int startListening(int port) throws IOException {
         if (!running) throw new IOException("Server has been closed.");
         if (server == null) server = sockets.listen(port);
+        listening = true;
+        startup.countDown();
         return server.getLocalPort();
+    }
+
+    /** Wait for binding to finish; a failed bind or shutdown returns false. */
+    public boolean awaitListening(long timeout, TimeUnit unit) throws InterruptedException {
+        return startup.await(timeout, unit) && listening;
     }
 
     /**
@@ -128,6 +143,8 @@ public class MercServer implements Runnable {
             }
 
         } finally {
+            listening = false;
+            startup.countDown();
             server = null;
             activeClient = null;
 
@@ -141,6 +158,8 @@ public class MercServer implements Runnable {
      */
     public synchronized void close() {
         running = false;
+        listening = false;
+        startup.countDown();
 
         Socket currentClient = activeClient;
 

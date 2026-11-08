@@ -34,11 +34,20 @@ class TlsConfigTest {
         assertEquals(12345, new ServerConfig(file).getPort());
     }
 
-    @Test void invalidTlsPortsAndHostsFailEarly() throws Exception {
-        for (String text : new String[] {"server.tls=secret", "server.port=0", "server.port=65536",
-                "server.port=secret", "server.host=", "server.host=bad host"}) {
+    @Test
+    void invalidTlsPortsAndHostsFailEarly() throws Exception {
+        for (String text : new String[] {
+                "server.tls=secret",
+                "server.port=0",
+                "server.port=65536",
+                "server.port=secret",
+                "server.host=bad host"
+        }) {
             String path = file(text);
-            IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> new ClientConfig(path));
+            IllegalArgumentException error = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> new ClientConfig(path)
+            );
             assertFalse(error.getMessage().contains("secret"));
         }
     }
@@ -46,6 +55,25 @@ class TlsConfigTest {
     @Test void missingExternalConfigCannotFallBackToPlaintext() {
         assertThrows(IOException.class, () -> new ClientConfig(directory.resolve("missing").toString()));
         assertThrows(IOException.class, () -> new ServerConfig(directory.resolve("missing").toString()));
+    }
+
+    @Test void blankHostAndPortPreserveSeparationDefaultsForBothTransports() throws Exception {
+        for (boolean tls : new boolean[] {false, true}) {
+            String path = file("server.host=   \nserver.port=   \nserver.tls=" + tls + "\n");
+            assertEquals("localhost", new ClientConfig(path).getHost());
+            assertEquals(tls ? 53641 : 53640, new ClientConfig(path).getPort());
+            assertEquals(tls ? 53641 : 53640, new ServerConfig(path).getPort());
+        }
+    }
+
+    @Test void separationStillRejectsConflictingStartupModes() throws Exception {
+        java.lang.reflect.Method parse = MercApp.class.getDeclaredMethod("parseArgs", String[].class);
+        parse.setAccessible(true);
+        for (String[] args : new String[][] {{"--server", "--client"}, {"--client", "--server"}}) {
+            java.lang.reflect.InvocationTargetException error = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                    () -> parse.invoke(null, (Object) args));
+            assertInstanceOf(IllegalArgumentException.class, error.getCause());
+        }
     }
 
     @Test void unknownTlsPropertiesFailForBothRolesWithoutExposingValues() throws Exception {

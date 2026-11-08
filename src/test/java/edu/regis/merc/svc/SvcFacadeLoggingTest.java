@@ -29,7 +29,7 @@ class SvcFacadeLoggingTest {
         Gson gson = new Gson();
         for (ServerRequestType type : new ServerRequestType[] {
                 ServerRequestType.SIGN_IN, ServerRequestType.VERIFY_USER,
-                ServerRequestType.RESET_PASSWORD }) {
+                ServerRequestType.RESET_PASSWORD, ServerRequestType.GET_SECURITY_QUESTION }) {
             AtomicReference<String> transmitted = new AtomicReference<>();
             String response = gson.toJson(new TutorReply("Authenticated", PAYLOAD));
             SvcFacade facade = new SvcFacade(json -> {

@@ -43,6 +43,7 @@ public abstract class Config {
 
     protected int getPort(String key, int defaultValue) {
         String value = props.getProperty(key);
+        if (value == null || value.isBlank()) return defaultValue;
         try {
             int port = value != null ? Integer.parseInt(value.trim()) : defaultValue;
             if (port < 1 || port > MAX_PORT) throw new NumberFormatException();
@@ -53,6 +54,7 @@ public abstract class Config {
     }
 
     protected String getHost(String key, String defaultValue) {
-        return props.getProperty(key, defaultValue);
+        String value = props.getProperty(key);
+        return (value == null || value.isBlank()) ? defaultValue : value.trim();
     }
 }

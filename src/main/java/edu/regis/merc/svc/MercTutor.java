@@ -18,6 +18,7 @@ import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
 import edu.regis.merc.model.Account;
+import edu.regis.merc.model.RecoveryRequest;
 import edu.regis.merc.model.Assessment;
 import edu.regis.merc.model.AssessmentLevel;
 import edu.regis.merc.model.Course;
@@ -227,18 +228,12 @@ public class MercTutor implements TutorSvc {
      * @throws edu.regis.merc.err.NonRecoverableException
      */
     public TutorReply verifyUser(String jsonAcct) throws NonRecoverableException {
-        Account requestAcct = gson.fromJson(jsonAcct, Account.class);
-        AccountSvc acctSvc = ServiceFactory.findAccountSvc();
-
-        if (!acctSvc.exists(requestAcct.getUserId())) {
-            return new TutorReply("IllegalUserId");
-        }
-
+        RecoveryRequest request = gson.fromJson(jsonAcct, RecoveryRequest.class);
+        RecoverySvc recovery = new RecoverySvc(userId -> ServiceFactory.findAccountSvc().retrieve(userId));
         try {
-            Account dbAcct = acctSvc.retrieve(requestAcct.getUserId());
+            Account dbAcct = recovery.verifyAnswer(request);
 
-            if ((dbAcct.getSecurityAnswer().equals(requestAcct.getSecurityAnswer())) &&
-                    (dbAcct.getSecurityQuestion() == requestAcct.getSecurityQuestion())) {
+            if (dbAcct != null) {
 
                 student = new Student(dbAcct);
 
@@ -271,11 +266,18 @@ public class MercTutor implements TutorSvc {
             }
 
         } catch (ObjNotFoundException e) {
-            return new TutorReply("UnknownUser");
+            return new TutorReply("InvalidAnswer");
         } catch (NonRecoverableException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
             return new TutorReply();
         }
+    }
+
+    /** Public lookup returns only the stored question, never an account or token. */
+    public TutorReply getSecurityQuestion(String json) {
+        RecoveryRequest request = gson.fromJson(json, RecoveryRequest.class);
+        RecoverySvc recovery = new RecoverySvc(userId -> ServiceFactory.findAccountSvc().retrieve(userId));
+        return recovery.questionFor(request == null ? null : request.getUserId());
     }
 
     /**
@@ -593,16 +595,99 @@ public class MercTutor implements TutorSvc {
                 return new TutorReply("Success", gson.toJson(session));
 
             } else {
-                // The student finished the last step of the task. This is a
-                // distinct outcome from advancing: there is no next step to
-                // render, so the client must not try to move forward.
+                // No steps left in this task, so move up a level.
                 System.out.println("Task complete! No more steps.");
 
-                return new TutorReply("TaskComplete", gson.toJson(session));
+                return advanceTask(session, pendingTask);
             }
         } else {
             return new TutorReply("Incorrect", "Not quite. Please try again or request a hint.");
         }
+    }
+
+    /**
+     * Move the given session off a task whose steps are all complete.
+     *
+     * Tries the next task in the current problem, then the first task of the
+     * next problem in the unit.
+     *
+     * @param session the session whose current task is finished
+     * @param finished the pending task that was just completed
+     * @return a TutorReply carrying the updated session
+     */
+    private TutorReply advanceTask(TutoringSession session, PendingTask finished) {
+        Problem problem = session.getProblem();
+        int nextTaskSequence = finished.getTask().getSequenceIndex() + 1;
+
+        Task nextTask = problem.findTaskBySequence(nextTaskSequence);
+
+        if (nextTask != null) {
+            return startTask(session, problem, nextTask, "TaskComplete");
+        }
+
+        // The problem is finished too, so look for the next one in the unit.
+        int unitId = session.getUnit().getId();
+        int nextProblemSequence = problem.getSequenceIndex() + 1;
+
+        Optional<Problem> nextProblem;
+
+        try {
+            nextProblem = ServiceFactory.findProbelmSvc()
+                    .retrieveByUnitAndSequence(unitId, nextProblemSequence);
+
+        } catch (NonRecoverableException e) {
+            return createError("Unable to look up problem " + nextProblemSequence
+                    + " of unit " + unitId, e);
+        }
+
+        if (nextProblem.isEmpty()) {
+            System.out.println("Unit complete! No problem at sequence " + nextProblemSequence);
+
+            return new TutorReply("UnitComplete", gson.toJson(session));
+        }
+
+        Problem advanced = nextProblem.get();
+        Task firstTask = advanced.findTaskBySequence(0);
+
+        if (firstTask == null) {
+            return createError("Problem " + advanced.getId() + " has no task at sequence 0", null);
+        }
+
+        return startTask(session, advanced, firstTask, "ProblemComplete");
+    }
+
+    /**
+     * Point the given session at the given task and persist it.
+     *
+     * @param session the session to move
+     * @param problem the problem the task belongs to
+     * @param task the task to start
+     * @param status the reply status to return on success
+     * @return a TutorReply carrying the updated session
+     */
+    private TutorReply startTask(TutoringSession session, Problem problem, Task task, String status) {
+        session.setProblem(problem);
+
+        // The task list holds outstanding tasks, so the finished one is
+        // replaced rather than added to.
+        PendingTask pendingTask = new PendingTask(task);
+        pendingTask.setCurrentStep(new PendingStep(task.getCurrentStep()));
+
+        ArrayList<PendingTask> tasks = new ArrayList<>();
+        tasks.add(pendingTask);
+        session.setTasks(tasks);
+
+        try {
+            ServiceFactory.findSessionSvc().updateCurrentTask(session);
+
+        } catch (NonRecoverableException e) {
+            return createError("Unable to advance " + session.getStudent().getAccount().getUserId()
+                    + " to task " + task.getId(), e);
+        }
+
+        System.out.println("Advanced to problem " + problem.getId() + ", task " + task.getId());
+
+        return new TutorReply(status, gson.toJson(session));
     }
 
     /**

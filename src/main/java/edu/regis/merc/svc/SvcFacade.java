@@ -94,6 +94,11 @@ public class SvcFacade {
         configure(TransportSockets.create(config));
     }
 
+    /** Preserve the separation startup API while validating and selecting TLS transport. */
+    public void setClientConfig(ClientConfig clientConfig) throws IOException {
+        configure(clientConfig);
+    }
+
     /** Install startup transport before the GUI can issue requests. */
     void configure(TransportSockets sockets) {
         this.sockets = java.util.Objects.requireNonNull(sockets);
@@ -159,7 +164,11 @@ public class SvcFacade {
      */
     private String send(String request) {
         try {
-            TransportSockets selected = sockets == null ? TransportSockets.create(new ClientConfig()) : sockets;
+            TransportSockets selected = sockets;
+            if (selected == null) {
+                selected = TransportSockets.create(new ClientConfig());
+                sockets = selected;
+            }
             return send(request, selected);
         } catch (IOException | IllegalArgumentException ex) {
             LOGGER.severe("Client configuration failed; check transport settings and JSSE stores.");
