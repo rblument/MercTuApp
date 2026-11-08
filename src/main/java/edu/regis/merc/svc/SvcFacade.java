@@ -13,6 +13,7 @@
 package edu.regis.merc.svc;
 
 import com.google.gson.Gson;
+import edu.regis.merc.ClientConfig;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -87,23 +88,18 @@ public class SvcFacade {
     private static final Logger LOGGER = Logger.getLogger(SvcFacade.class.getName());
 
     /**
-     * The computer host to which ShaTu tutor requests are delegated.
-     *
-     * That is, the ShaTuServer is executing on this host.
-     */
-    private static final String SERVER = "localhost";
-
-    /**
-     * Socket port supporting the MERC tutoring service protocol
-     */
-    private static final int PORT = 53640;
-
-    /**
      * Utility reference to Gson for converting between Java and JSon objects.
      */
     private Gson gson;
     private final Function<String, String> transport;
     private final boolean debug;
+
+    /**
+     * Host and port of the tutor server. MercApp sets this at startup from
+     * the loaded configuration; otherwise the bundled client.properties is
+     * loaded on first use.
+     */
+    private volatile ClientConfig clientConfig;
 
     /**
      * Initialize this facade with its Gson convertor.
@@ -119,6 +115,16 @@ public class SvcFacade {
         gson = new Gson();
         this.transport = java.util.Objects.requireNonNull(transport);
         this.debug = debug;
+    }
+
+    /**
+     * Send all later requests to the server named in the given configuration,
+     * such as one loaded from a --config file.
+     *
+     * @param clientConfig the server host and port to connect to
+     */
+    public void setClientConfig(ClientConfig clientConfig) {
+        this.clientConfig = java.util.Objects.requireNonNull(clientConfig);
     }
 
     /**
@@ -156,7 +162,14 @@ public class SvcFacade {
         PrintWriter out = null;
 
         try {
-            client = new Socket(SERVER, PORT);
+            ClientConfig config = clientConfig;
+
+            if (config == null) {
+                config = new ClientConfig();
+                clientConfig = config;
+            }
+
+            client = new Socket(config.getHost(), config.getPort());
 
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
