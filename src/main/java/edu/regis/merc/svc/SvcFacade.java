@@ -19,7 +19,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.InetSocketAddress;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.function.Function;
@@ -87,6 +88,13 @@ public class SvcFacade {
      */
     private static final Logger LOGGER = Logger.getLogger(SvcFacade.class.getName());
 
+    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 5000;
+    private static final int DEFAULT_READ_TIMEOUT_MS = 10000;
+    private final String host;
+    private final int port;
+    private final int connectTimeoutMillis;
+    private final int readTimeoutMillis;
+
     /**
      * Utility reference to Gson for converting between Java and JSon objects.
      */
@@ -105,17 +113,39 @@ public class SvcFacade {
      * Initialize this facade with its Gson convertor.
      */
     private SvcFacade() {
-        gson = new Gson();
-        transport = this::send;
-        debug = IS_DEBUG;
+        this(null, 0, System.getProperties(), null, IS_DEBUG);
     }
 
     /** Allows testing the protocol and logging without a live socket server. */
     SvcFacade(Function<String, String> transport, boolean debug) {
-        gson = new Gson();
-        this.transport = java.util.Objects.requireNonNull(transport);
-        this.debug = debug;
+        this(null, 0, System.getProperties(), transport, debug);
     }
+
+    /** Local socket tests use ephemeral endpoints without changing the singleton. */
+    SvcFacade(String host, int port, Properties settings) {
+        this(host, port, settings, null, IS_DEBUG);
+    }
+
+    private SvcFacade(String host, int port, Properties settings, Function<String, String> transport, boolean debug) {
+        gson = new Gson();
+        this.transport = transport == null ? this::send : transport;
+        this.debug = debug;
+        this.host = host;
+        this.port = port;
+        connectTimeoutMillis = timeout(settings, "edu.regis.merc.client.connectTimeoutMillis", DEFAULT_CONNECT_TIMEOUT_MS);
+        readTimeoutMillis = timeout(settings, "edu.regis.merc.client.readTimeoutMillis", DEFAULT_READ_TIMEOUT_MS);
+    }
+
+    private static int timeout(Properties settings, String key, int fallback) {
+        try {
+            int value = Integer.parseInt(settings.getProperty(key, Integer.toString(fallback)));
+            return value > 0 ? value : fallback;
+        } catch (NumberFormatException ex) {
+            return fallback;
+        }
+    }
+
+    Socket newSocket() throws IOException { return new Socket(); }
 
     /**
      * Send all later requests to the server named in the given configuration,
@@ -151,65 +181,39 @@ public class SvcFacade {
     /**
      * Send the given request to the ShaTu server and return the reply.
      *
-     * Communication with the SERVER occurs via the socket connection on port PORT.
+     * Communication uses the configured server host and port.
      *
      * @param request a JSon encoded ClientRequest object
      * @return a JSon encoded TutorReply from the tutor
      */
     private String send(String request) {
-        Socket client = null;
-        BufferedReader in = null;
-        PrintWriter out = null;
-
-        try {
+        try (Socket client = newSocket()) {
             ClientConfig config = clientConfig;
-
-            if (config == null) {
+            String destinationHost = host;
+            int destinationPort = port;
+            if (config == null && destinationHost == null) {
                 config = new ClientConfig();
                 clientConfig = config;
             }
-
-            client = new Socket(config.getHost(), config.getPort());
-
-            in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-
-            out = new PrintWriter(client.getOutputStream());
-            out.println(request);
-
-            out.flush();
-
-            return in.readLine();
-
-        } catch (UnknownHostException e) {
-            LOGGER.log(Level.SEVERE, "Unknown Host", e);
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "IOException client", e);
-        } finally {
-            // Kludgy, but tries to close an open socket and its associated
-            // input and output streams in every possible error scenario
-            // If we didn't, it's possible that we're leaking memory.
-            try {
-                if (out != null)
-                    out.close();
-            } finally {
-                try {
-                    if (in != null)
-                        in.close();
-                } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, "Unable to close client socket in", e);
-                } finally {
-                    try {
-                        if (client != null)
-                            client.close();
-                    } catch (IOException e) {
-                        LOGGER.log(Level.SEVERE, "Unable to close client socket in", e);
-                    }
-                }
+            if (config != null) {
+                destinationHost = config.getHost();
+                destinationPort = config.getPort();
             }
+            client.connect(new InetSocketAddress(destinationHost, destinationPort), connectTimeoutMillis);
+            client.setSoTimeout(readTimeoutMillis);
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                    PrintWriter out = new PrintWriter(client.getOutputStream())) {
+                out.println(request);
+                out.flush();
+                if (out.checkError()) throw new IOException("Request write failed.");
+                String reply = in.readLine();
+                if (reply == null) throw new IOException("Connection closed before reply.");
+                return reply;
+            }
+        } catch (IOException ex) {
+            // Do not log the request, server payload, or exception text containing connection details.
+            LOGGER.warning("Server request could not be completed. Check the connection and retry.");
         }
-
-        // Return this as a JSon encoded TutorReply object string.
-        return "{'status':':ERR','data':'A non-recoverable error occurred in the socket connection (see logs)'}";
+        return "{'status':':ERR','data':'The server request could not be confirmed. Please try again.'}";
     }
 }
-

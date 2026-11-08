@@ -54,6 +54,12 @@ public interface SessionSvc {
      */
     String retrieveSecurityToken(String userId) throws ObjNotFoundException, NonRecoverableException;
 
+    /** Replace only the authentication token; leave all tutoring progress unchanged. */
+    void replaceSecurityToken(String userId, String token) throws ObjNotFoundException, NonRecoverableException;
+
+    /** Revoke only if this is still the current token (a delayed logout must not revoke a new login). */
+    boolean revokeSecurityToken(String userId, String token) throws NonRecoverableException;
+
     /**
      * Update the session in formation in the database using the given session.
      *

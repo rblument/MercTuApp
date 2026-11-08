@@ -204,7 +204,7 @@ public class SplashPanel extends GPanel {
         forgotPasswordBut = new JButton(ForgotPasswordAction.instance());
 
         closeBut = new JButton("Close");
-        closeBut.addActionListener(e -> MercApp.shutdown());
+        closeBut.addActionListener(e -> MainFrame.instance().requestClose());
     }
 
     /**

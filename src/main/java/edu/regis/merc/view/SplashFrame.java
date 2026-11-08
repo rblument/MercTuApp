@@ -18,8 +18,6 @@ import edu.regis.merc.model.TutoringSession;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.Toolkit;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -153,12 +151,7 @@ public class SplashFrame extends JFrame {
 
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                MercApp.shutdown();
-            }
-        });
+        addWindowListener(TutoringSessionView.closeListener(() -> MainFrame.instance().requestClose()));
 
         // Get screen dimensions
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -277,23 +270,25 @@ public class SplashFrame extends JFrame {
      * Switches to splash screen for sign in.
      */
     public void logout() {
-        // Ensure that tutoring session is not null before attempting to clear
-        if (this.tutoringSession != null
-                && this.tutoringSession.getStudent().getAccount() != null) {
+        clearSession();
+        selectSplash();
+        setVisible(true);
+    }
 
-            // Clear account information
-            this.tutoringSession.getStudent().getAccount().clear();
+    /** Clear local authentication references without opening the sign-in window during Close. */
+    public void clearSession() {
+        MainFrame.instance().clearSession();
+        tutoringSession = null;
+        if (tutoringSessionView != null) {
+            cards.remove(tutoringSessionView);
+            tutoringSessionView = null;
         }
-
-        // Invalidate or set the tutoring session to null
-        this.tutoringSession = null;
-
-        // Clear the splash panel model by setting it to a new user and reset the fields
-        this.splashPanel.setModel(new Account());
-        this.splashPanel.clearFields();
-
-        // Swap to splash screen for login
-        this.selectSplash();
+        if (resetPasswordPanel != null) {
+            resetPasswordPanel.clearFields();
+            resetPasswordPanel.setSecurityToken(null);
+        }
+        splashPanel.setModel(new Account());
+        splashPanel.clearFields();
     }
 
     /**
