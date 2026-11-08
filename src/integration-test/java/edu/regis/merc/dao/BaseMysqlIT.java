@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -50,23 +51,32 @@ public abstract class BaseMysqlIT {
         // into /docker-entrypoint-initdb.d/ instead. The official image runs
         // them via the mysql client with MercTuDB already created and
         // selected, in filename order.
+        //
+        // The container is shared by every test class that extends this base:
+        // start it only once per JVM (failsafe runs all ITs in a single forked
+        // JVM by default) instead of once per class.
 
-        mysqlContainer = new MySQLContainer<>("mysql:8.0")
-            .withDatabaseName(DB_NAME)
-            .withUsername(DB_USER)
-            .withPassword(DB_PASS)
-            .withCopyFileToContainer(
-                MountableFile.forClasspathResource("01_user.sql"),
-                "/docker-entrypoint-initdb.d/01_user.sql")
-            .withCopyFileToContainer(
-                MountableFile.forClasspathResource("02_schema.sql"),
-                "/docker-entrypoint-initdb.d/02_schema.sql")
-            .withCopyFileToContainer(
-                MountableFile.forClasspathResource("03_seed.sql"),
-                "/docker-entrypoint-initdb.d/03_seed.sql");
+        if (mysqlContainer == null || !mysqlContainer.isRunning()) {
+            mysqlContainer = new MySQLContainer<>("mysql:8.0")
+                    .withDatabaseName(DB_NAME)
+                    .withUsername(DB_USER)
+                    .withPassword(DB_PASS)
+                    // MySQL's first boot (datadir init + the copied init scripts)
+                    // can exceed the default 60s on slow or loaded machines.
+                    .withStartupTimeout(Duration.ofMinutes(3))
+                    .withCopyFileToContainer(
+                            MountableFile.forClasspathResource("01_user.sql"),
+                            "/docker-entrypoint-initdb.d/01_user.sql")
+                    .withCopyFileToContainer(
+                            MountableFile.forClasspathResource("02_schema.sql"),
+                            "/docker-entrypoint-initdb.d/02_schema.sql")
+                    .withCopyFileToContainer(
+                            MountableFile.forClasspathResource("03_seed.sql"),
+                            "/docker-entrypoint-initdb.d/03_seed.sql");
 
-        mysqlContainer.start();
-        MySqlDAO.setURL(mysqlContainer.getHost(), mysqlContainer.getDatabaseName(), DB_USER, DB_PASS, mysqlContainer.getMappedPort(mysqlContainer.MYSQL_PORT));
+            mysqlContainer.start();
+            MySqlDAO.setURL(mysqlContainer.getHost(), mysqlContainer.getDatabaseName(), DB_USER, DB_PASS, mysqlContainer.getMappedPort(mysqlContainer.MYSQL_PORT));
+        }
     }
 
     /** Uses an already initialized isolated database; never creates or resets it. */
@@ -97,8 +107,9 @@ public abstract class BaseMysqlIT {
 
     @AfterAll
     public static void tearDownClass() {
-        if (mysqlContainer != null) {
-            mysqlContainer.stop();
-        }
+        // Intentionally does NOT stop the container: it is shared by every
+        // test class that extends this base, so stopping it after the first
+        // class would force a fresh start for the rest. Testcontainers' Ryuk
+        // reaper removes it when the JVM exits.
     }
 }

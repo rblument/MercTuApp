@@ -79,10 +79,20 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
         TutoringSession current = f.login();
         int sessionId = current.getId();
         long startDate = current.getStartDate().getTimeInMillis();
-        int[] steps = {50, 51, 52, 53, 54};
-        int[] answers = {101, 102, 245, 243, 246};
-        int[] nextSteps = {51, 52, 53, 54, 54};
-        String[] statuses = {"Success", "ProblemComplete", "Success", "Success", "UnitComplete"};
+        int[] steps = {50, 51, 52, 53, 54, 55, 56};
+        int[] answers = {101, 102, 245, 243, 246, 262, 263};
+        int[] nextSteps = {51, 52, 53, 54, 55, 56, 56};
+        int[] tasks = {10, 11, 11, 11, 12, 12, 12};
+        int[] problems = {0, 1, 1, 1, 2, 2, 2};
+        String[] statuses = {
+            "Success",
+            "ProblemComplete",
+            "Success",
+            "Success",
+            "ProblemComplete",
+            "Success",
+            "UnitComplete"
+        };
         for (int i = 0; i < steps.length; i++) {
             assertEquals(steps[i], current.currentTask().currentStep().getStep().getId());
             StudentPayload payload = new StudentPayload(steps[i]);
@@ -92,9 +102,9 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
             assertEquals(statuses[i], reply.getStatus());
             TutoringSession returned = gson.fromJson(reply.getData(), TutoringSession.class);
             TutoringSession saved = sessions.retrieve(f.user);
-            assertPosition(returned, nextSteps[i], i == 0 ? 10 : 11);
-            assertPosition(saved, nextSteps[i], i == 0 ? 10 : 11);
-            assertEquals(i == 0 ? 0 : 1, saved.getProblem().getId());
+            assertPosition(returned, nextSteps[i], tasks[i]);
+            assertPosition(saved, nextSteps[i], tasks[i]);
+            assertEquals(problems[i], saved.getProblem().getId());
             String oldToken = current.getSecurityToken();
             assertEquals("LoggedOut", f.request(ServerRequestType.LOGOUT, oldToken, "").getStatus());
             f.assertStoredToken("");
@@ -102,7 +112,7 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
             current = f.login();
             assertEquals(sessionId, current.getId());
             assertEquals(startDate, current.getStartDate().getTimeInMillis());
-            assertPosition(current, nextSteps[i], i == 0 ? 10 : 11);
+            assertPosition(current, nextSteps[i], tasks[i]);
             assertEquals("InvalidToken", f.request(ServerRequestType.LOGOUT, oldToken, "").getStatus());
             f.assertStoredToken(current.getSecurityToken());
         }
@@ -115,7 +125,7 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
             try (ResultSet result = statement.executeQuery()) {
                 while (result.next()) completed.add(result.getInt(1));
             }
-            assertEquals(List.of(50, 51, 52, 53, 54), completed);
+            assertEquals(List.of(50, 51, 52, 53, 54, 55, 56), completed);
         }
     }
 

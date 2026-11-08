@@ -15,11 +15,13 @@ class SvcFacadeTimeoutTest {
 
     private static final class RecordingSocket extends Socket {
         private int connectTimeout;
+        private SocketAddress destination;
         private int readTimeout;
         private boolean failConnect;
         private boolean closed;
 
         @Override public void connect(SocketAddress address, int timeout) throws IOException {
+            destination = address;
             connectTimeout = timeout;
             if (failConnect) throw new SocketTimeoutException("Test connection timeout");
         }
@@ -46,6 +48,20 @@ class SvcFacadeTimeoutTest {
         assertEquals("LoggedOut", reply.getStatus());
         assertEquals(123, socket.connectTimeout);
         assertEquals(456, socket.readTimeout);
+        assertTrue(socket.closed);
+    }
+
+    @Test void sharedClientConfigurationSelectsDestinationWithoutLosingTimeouts() throws Exception {
+        RecordingSocket socket = new RecordingSocket();
+        SvcFacade facade = facade(socket, new Properties());
+        facade.setClientConfig(new edu.regis.merc.ClientConfig() {
+            @Override public String getHost() { return "127.0.0.1"; }
+            @Override public int getPort() { return 23456; }
+        });
+        assertEquals("LoggedOut", facade.tutorRequest(new ClientRequest(ServerRequestType.LOGOUT)).getStatus());
+        assertEquals(new InetSocketAddress("127.0.0.1", 23456), socket.destination);
+        assertEquals(5000, socket.connectTimeout);
+        assertEquals(10000, socket.readTimeout);
         assertTrue(socket.closed);
     }
 

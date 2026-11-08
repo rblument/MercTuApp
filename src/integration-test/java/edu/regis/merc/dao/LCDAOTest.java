@@ -28,6 +28,7 @@ import edu.regis.merc.model.LCAbstraction;
 import edu.regis.merc.model.LCApplication;
 import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.model.LCVariable;
+import edu.regis.merc.model.MuFunction;
 import edu.regis.merc.model.Problem;
 import edu.regis.merc.model.Step;
 import edu.regis.merc.model.Task;
@@ -50,6 +51,10 @@ public class LCDAOTest extends BaseMysqlIT {
     /** The problem that shows it, second in the unit. */
     private static final int SUCCESSOR_PROBLEM_ID = 1;
     private static final int UNIT_ID = 0;
+
+    /** The seeded projection, P_2^3 = \x1 x2 x3. x2, and its problem. */
+    private static final int PROJECTION_ID = 260;
+    private static final int PROJECTION_PROBLEM_ID = 2;
 
     private LCDAO dao;
     private ProblemDAO problemDao;
@@ -124,6 +129,45 @@ public class LCDAOTest extends BaseMysqlIT {
         assertEquals(52, steps.get(0).getId());
         assertEquals(53, steps.get(1).getId());
         assertEquals(54, steps.get(2).getId());
+    }
+
+    @Test
+    @DisplayName("the projection loads as one abstraction over three parameters")
+    public void projectionLoadsItsParametersInOrder() throws Exception {
+        LCAbstraction projection =
+                assertInstanceOf(LCAbstraction.class, dao.retrieve(PROJECTION_ID));
+
+        // P_2^3 is written uncurried, so this is a single abstraction over
+        // three parameters rather than three nested ones. LC_ABS_PARAMS is
+        // read ORDER BY SeqIndex, and the order is what makes x2 the second
+        // of three rather than just some variable.
+        List<LCVariable> parameters = projection.getParameters();
+        assertEquals(3, parameters.size());
+        assertEquals("x1", parameters.get(0).getName());
+        assertEquals("x2", parameters.get(1).getName());
+        assertEquals("x3", parameters.get(2).getName());
+
+        // The body is the same row as the second parameter, so step 55 grades
+        // the same id wherever the student clicks it.
+        assertEquals(262, projection.getBody().get(0).getId());
+        assertEquals(262, parameters.get(1).getId());
+        assertEquals(263, parameters.get(2).getId(), "step 56 grades x3");
+    }
+
+    @Test
+    @DisplayName("the projection problem carries both representations")
+    public void projectionProblemHasBothRepresentations() throws Exception {
+        Problem problem = problemDao.retrieve(PROJECTION_PROBLEM_ID);
+
+        assertNotNull(problem.getExpression(), "projection problem has no lambda expression");
+        assertEquals(PROJECTION_ID, problem.getExpression().getId());
+
+        // Projection needs no function application, so unlike successor its mu
+        // recursive form can be filled in already.
+        MuFunction mu = problem.getMuFunction();
+        assertNotNull(mu, "projection problem has no mu function");
+        assertEquals("P", mu.getLhs().getName());
+        assertEquals(List.of("x1", "x2", "x3"), mu.getLhs().getParameters());
     }
 
     @Test
