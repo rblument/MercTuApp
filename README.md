@@ -122,8 +122,9 @@ Server-only mode runs in the foreground and does not start a GUI:
 mvn -Pserver exec:java
 ```
 
-The server reads port configuration from `server.properties` (default: 53640).
-Shutdown with `Ctrl+C` or send SIGTERM.
+The server reads `server.port` from `server.properties` (default: 53640).
+Shutdown with `Ctrl+C` or send SIGTERM. If the port is already in use, the
+server logs an error and exits with status 1.
 
 #### Client mode
 
@@ -134,9 +135,11 @@ running first:
 mvn -Pclient exec:java
 ```
 
-Client configuration is read from `client.properties`:
-- `client.host` (default: `localhost`)
-- `client.port` (default: `53640`)
+Client configuration is read from `client.properties`, which names the server
+to connect to:
+
+- `server.host` (default: `localhost`)
+- `server.port` (default: `53640`)
 
 ### Configuration
 
@@ -146,25 +149,35 @@ Server and client use separate configuration files in
 | File | Properties |
 | --- | --- |
 | `server.properties` | `server.port` |
-| `client.properties` | `client.host`, `client.port` |
+| `client.properties` | `server.host`, `server.port` |
+
+The client reads the same `server.*` keys as the server, so one file passed with
+`--config` configures both sides when they run together.
 
 Override defaults by passing an external properties file via `--config=<path>`.
-External file overrides classpath defaults.
+External file overrides classpath defaults. Startup stops with an error if the
+file cannot be read, a port is not a number from 1 to 65535, `--server` and
+`--client` are combined, or an argument is not recognized.
 
-**Example:**
+**Examples:**
+
+`-Dexec.args` replaces the arguments set by the `-Pserver` and `-Pclient`
+profiles, so repeat `--server` or `--client` when you pass `--config`:
 
 ```bash
-# Create custom config file
+# Run the server on port 9999
 echo "server.port=9999" > custom-server.properties
+mvn -Pserver exec:java -Dexec.args="--server --config=custom-server.properties"
 
-# Run server with custom config
-mvn -Pserver exec:java -Dexec.args="--config=custom-server.properties"
+# Run a client against a server on another host
+printf "server.host=tutor.example.edu\nserver.port=9999\n" > remote.properties
+mvn -Pclient exec:java -Dexec.args="--client --config=remote.properties"
 ```
 
 On startup the app initializes logging, loads properties, starts `MercServer` on
-port **53640**, waits four seconds for it to come up, then shows the splash
-screen. Sign in or create an account; a successful sign-in opens the main
-tutoring window.
+port **53640**, waits until it is accepting connections (up to 10 seconds), then
+shows the splash screen. Sign in or create an account; a successful sign-in opens
+the main tutoring window.
 
 Note that `mvn package` produces a jar with neither a `Main-Class` manifest entry
 nor bundled dependencies, so `java -jar` will not work as-is.

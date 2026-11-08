@@ -95,6 +95,13 @@ public class SvcFacade {
     private final boolean debug;
 
     /**
+     * Host and port of the tutor server. MercApp sets this at startup from
+     * the loaded configuration; otherwise the bundled client.properties is
+     * loaded on first use.
+     */
+    private volatile ClientConfig clientConfig;
+
+    /**
      * Initialize this facade with its Gson convertor.
      */
     private SvcFacade() {
@@ -108,6 +115,16 @@ public class SvcFacade {
         gson = new Gson();
         this.transport = java.util.Objects.requireNonNull(transport);
         this.debug = debug;
+    }
+
+    /**
+     * Send all later requests to the server named in the given configuration,
+     * such as one loaded from a --config file.
+     *
+     * @param clientConfig the server host and port to connect to
+     */
+    public void setClientConfig(ClientConfig clientConfig) {
+        this.clientConfig = java.util.Objects.requireNonNull(clientConfig);
     }
 
     /**
@@ -145,7 +162,13 @@ public class SvcFacade {
         PrintWriter out = null;
 
         try {
-            ClientConfig config = new ClientConfig();
+            ClientConfig config = clientConfig;
+
+            if (config == null) {
+                config = new ClientConfig();
+                clientConfig = config;
+            }
+
             client = new Socket(config.getHost(), config.getPort());
 
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));

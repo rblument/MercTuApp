@@ -21,6 +21,8 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -64,6 +66,16 @@ public class MercServer implements Runnable {
     private volatile boolean running = true;
 
     /**
+     * Released once the server socket is bound, or binding has failed.
+     */
+    private final CountDownLatch startup = new CountDownLatch(1);
+
+    /**
+     * Whether the server socket is bound and accepting connections.
+     */
+    private volatile boolean listening = false;
+
+    /**
      * Create a server with the given configuration.
      *
      * @param config the server configuration
@@ -94,6 +106,8 @@ public class MercServer implements Runnable {
     public void run() {
         try (ServerSocket listener = new ServerSocket(port)) {
             server = listener;
+            listening = true;
+            startup.countDown();
 
             while (running) {
                 try {
@@ -122,11 +136,29 @@ public class MercServer implements Runnable {
             }
 
         } finally {
+            listening = false;
             server = null;
             activeClient = null;
 
+            // Wake anyone waiting in awaitListening() if binding failed.
+            startup.countDown();
+
             LOGGER.info("Merc server stopped.");
         }
+    }
+
+    /**
+     * Wait until this server is accepting connections or has failed to start.
+     *
+     * @param timeout the maximum time to wait
+     * @param unit the unit of the timeout argument
+     * @return true if the server is listening; false if it could not bind its
+     *         port, has already stopped, or did not start within the timeout
+     * @throws InterruptedException if interrupted while waiting
+     */
+    public boolean awaitListening(long timeout, TimeUnit unit)
+            throws InterruptedException {
+        return startup.await(timeout, unit) && listening;
     }
 
     /**
