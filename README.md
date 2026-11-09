@@ -241,9 +241,21 @@ Launch the client with `--client --config=tls.properties` and:
 ```
 
 Replace placeholders locally; do not save actual passwords in tracked launch
-configurations. With `mvn exec:java`, pass the same JVM properties to Maven and
-use `-Dexec.args="--server --config=tls.properties"` or the corresponding client arguments.
-For `--config=tls.properties`, supply both sets of store properties to the same process.
+configurations. Keep the application truststore out of `MAVEN_OPTS`,
+`JAVA_TOOL_OPTIONS`, and Maven's JVM properties: Maven needs its normal trust roots
+to download dependencies. Build and resolve dependencies first, then launch a
+separate application JVM. From the repository root, in PowerShell:
+
+```powershell
+mvn compile dependency:copy-dependencies -DincludeScope=runtime
+java "-Djavax.net.ssl.keyStore=.dev-tls/server.p12" "-Djavax.net.ssl.keyStoreType=PKCS12" "-Djavax.net.ssl.keyStorePassword=<your-server-store-password>" -cp "target/classes;target/dependency/*" edu.regis.merc.MercApp --server --config=tls.properties
+# In a separate terminal:
+java "-Djavax.net.ssl.trustStore=.dev-tls/client-trust.p12" "-Djavax.net.ssl.trustStoreType=PKCS12" "-Djavax.net.ssl.trustStorePassword=<your-client-store-password>" -cp "target/classes;target/dependency/*" edu.regis.merc.MercApp --client --config=tls.properties
+```
+
+On Linux/macOS use `target/classes:target/dependency/*` as the classpath separator.
+For combined mode (`--config=tls.properties` without `--server` or `--client`),
+supply both sets of store properties to the application JVM.
 
 Connection and TLS handshake read timeouts are 10 seconds; request reads time out
 after 15 seconds. The server binds before reporting startup success and continues

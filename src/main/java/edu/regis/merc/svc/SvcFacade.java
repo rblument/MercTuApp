@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.function.Function;
@@ -171,7 +170,8 @@ public class SvcFacade {
             }
             return send(request, selected);
         } catch (IOException | IllegalArgumentException ex) {
-            LOGGER.severe("Client configuration failed; check transport settings and JSSE stores.");
+            LOGGER.log(Level.SEVERE, "Client configuration failed; check transport settings and JSSE stores.",
+                    ConnectionDiagnostics.safeCause(ex));
             return connectionError();
         }
     }
@@ -183,11 +183,12 @@ public class SvcFacade {
             out.println(request);
             out.flush();
             if (out.checkError()) throw new IOException("Request write failed.");
-            return in.readLine();
-        } catch (UnknownHostException e) {
-            LOGGER.severe("Cannot resolve the configured server host.");
+            String reply = in.readLine();
+            if (reply == null) throw new IOException("Connection closed before reply.");
+            return reply;
         } catch (IOException e) {
-            LOGGER.severe("Server connection failed; check the host, port, TLS trust, and certificate hostname.");
+            LOGGER.log(Level.SEVERE, "Server connection failed; check the host, port, TLS trust, and certificate hostname.",
+                    ConnectionDiagnostics.safeCause(e));
         }
         return connectionError();
     }

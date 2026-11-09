@@ -19,12 +19,13 @@ public abstract class Config {
             try (InputStream is = new java.io.FileInputStream(externalFile)) {
                 props.load(is);
             } catch (IOException ex) {
-                throw new IOException("Cannot load external configuration; check that the file exists and is readable.");
+                throw new IOException("Cannot load external configuration '" + externalFile
+                        + "'; check that the file exists and is readable.", ex);
             }
         }
         for (String key : props.stringPropertyNames()) {
             if (!key.equals("server.host") && !key.equals("server.port") && !key.equals("server.tls")) {
-                throw new IllegalArgumentException("Unknown transport configuration key. Use server.host, server.port, or server.tls; "
+                throw new IllegalArgumentException("Unknown transport configuration key '" + key + "'. Use server.host, server.port, or server.tls; "
                         + "pass JSSE store settings as JVM properties.");
             }
         }

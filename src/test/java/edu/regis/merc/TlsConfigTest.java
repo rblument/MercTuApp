@@ -53,8 +53,13 @@ class TlsConfigTest {
     }
 
     @Test void missingExternalConfigCannotFallBackToPlaintext() {
-        assertThrows(IOException.class, () -> new ClientConfig(directory.resolve("missing").toString()));
-        assertThrows(IOException.class, () -> new ServerConfig(directory.resolve("missing").toString()));
+        String missing = directory.resolve("missing").toString();
+        IOException client = assertThrows(IOException.class, () -> new ClientConfig(missing));
+        IOException server = assertThrows(IOException.class, () -> new ServerConfig(missing));
+        for (IOException failure : new IOException[] {client, server}) {
+            assertTrue(failure.getMessage().contains(missing));
+            assertInstanceOf(java.io.FileNotFoundException.class, failure.getCause());
+        }
     }
 
     @Test void blankHostAndPortPreserveSeparationDefaultsForBothTransports() throws Exception {
@@ -83,6 +88,8 @@ class TlsConfigTest {
             IllegalArgumentException client = assertThrows(IllegalArgumentException.class, () -> new ClientConfig(path));
             IllegalArgumentException server = assertThrows(IllegalArgumentException.class, () -> new ServerConfig(path));
             assertTrue(client.getMessage().contains("server.tls"));
+            assertTrue(client.getMessage().contains("'" + key + "'"));
+            assertTrue(server.getMessage().contains("'" + key + "'"));
             assertFalse(client.getMessage().contains("sensitive-value"));
             assertFalse(server.getMessage().contains("sensitive-value"));
         }

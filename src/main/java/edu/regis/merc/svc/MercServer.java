@@ -139,7 +139,7 @@ public class MercServer implements Runnable {
             }
         } catch (IOException e) {
             if (running) {
-                LOGGER.severe("Unable to start or accept connections on the configured server port.");
+                LOGGER.log(Level.SEVERE, "Unable to start or accept connections on the configured server port.", e);
             }
 
         } finally {
@@ -237,7 +237,8 @@ public class MercServer implements Runnable {
                 }
             } catch (IOException | RuntimeException e) {
                 if (running) {
-                    LOGGER.warning("Client connection failed or sent an invalid request; connection closed.");
+                    LOGGER.log(Level.WARNING, "Client connection failed or sent an invalid request; connection closed.",
+                            e instanceof RuntimeException ? ConnectionDiagnostics.safeCause(e) : e);
                 }
             }
         }
