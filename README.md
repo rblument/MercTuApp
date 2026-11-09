@@ -148,8 +148,8 @@ Server and client use separate configuration files in
 
 | File | Properties |
 | --- | --- |
-| `server.properties` | `server.port` |
-| `client.properties` | `server.host`, `server.port` |
+| `server.properties` | `server.port`, `server.tls` |
+| `client.properties` | `server.host`, `server.port`, `server.tls` |
 
 The client reads the same `server.*` keys as the server, so one file passed with
 `--config` configures both sides when they run together.
@@ -158,6 +158,8 @@ Override defaults by passing an external properties file via `--config=<path>`.
 External file overrides classpath defaults. Startup stops with an error if the
 file cannot be read, a port is not a number from 1 to 65535, `--server` and
 `--client` are combined, or an argument is not recognized.
+Missing or blank host and port values use their defaults. Unknown transport
+property keys are rejected; TLS uses `server.tls=true` in the properties file.
 
 **Examples:**
 
@@ -174,10 +176,91 @@ printf "server.host=tutor.example.edu\nserver.port=9999\n" > remote.properties
 mvn -Pclient exec:java -Dexec.args="--client --config=remote.properties"
 ```
 
-On startup the app initializes logging, loads properties, starts `MercServer` on
-port **53640**, waits until it is accepting connections (up to 10 seconds), then
+With the default local plaintext configuration, the app initializes logging,
+loads properties, starts `MercServer` on port **53640**, waits until it is
+accepting connections (up to 10 seconds), then
 shows the splash screen. Sign in or create an account; a successful sign-in opens
 the main tutoring window.
+
+### TLS transport
+
+PR #41's `--server`, `--client`, Maven profiles, and `--config` remain the startup
+interface. Enable TLS in the external properties file (`tls.properties`):
+
+```properties
+server.tls=true
+server.host=localhost
+# Optional: server.port=53641
+```
+
+Both client and server default to port 53641 with TLS, or 53640 with plaintext.
+An explicit `server.port` always wins. `server.host` is the client destination.
+No TLS switch or separate transport startup parser is required. Existing plaintext
+configurations continue to work. Invalid configuration or TLS stores fail startup
+instead of falling back to plaintext.
+
+The server uses standard JVM `javax.net.ssl.keyStore`, `keyStoreType`, and
+`keyStorePassword` properties; the client uses `javax.net.ssl.trustStore`,
+`trustStoreType`, and `trustStorePassword`. Prefix all property names with
+`javax.net.ssl.`. An omitted client truststore uses JSSE's platform trust roots.
+TLS clients validate both the certificate chain and the destination hostname.
+
+### Local development certificate
+
+Use the JDK's `keytool` (in `JAVA_HOME/bin` if it is not on PATH). From the
+project directory, create the ignored `.dev-tls` directory with `mkdir .dev-tls`.
+Run each command below as one line; keytool prompts for store passwords. Use the
+same password for the server private key and its keystore. Choose your own passwords;
+no password file or generated store belongs in Git.
+
+```text
+keytool -genkeypair -alias merc-server -keyalg RSA -keysize 2048 -validity 365 -dname "CN=localhost" -ext "SAN=dns:localhost,ip:127.0.0.1" -storetype PKCS12 -keystore .dev-tls/server.p12
+keytool -exportcert -alias merc-server -keystore .dev-tls/server.p12 -file .dev-tls/server.cer
+keytool -importcert -alias merc-server -file .dev-tls/server.cer -storetype PKCS12 -keystore .dev-tls/client-trust.p12
+```
+
+Confirm the certificate fingerprint during import. For another host, replace/add
+its actual DNS name or IP in the SAN list before generating the certificate.
+Copy only the exported public certificate to the client and import it into the
+client's own truststore; the server's private-key store stays on the server.
+
+Launch the server with `--server --config=tls.properties` and these JVM properties:
+
+```text
+-Djavax.net.ssl.keyStore=.dev-tls/server.p12
+-Djavax.net.ssl.keyStoreType=PKCS12
+-Djavax.net.ssl.keyStorePassword=<your-server-store-password>
+```
+
+Launch the client with `--client --config=tls.properties` and:
+
+```text
+-Djavax.net.ssl.trustStore=.dev-tls/client-trust.p12
+-Djavax.net.ssl.trustStoreType=PKCS12
+-Djavax.net.ssl.trustStorePassword=<your-client-store-password>
+```
+
+Replace placeholders locally; do not save actual passwords in tracked launch
+configurations. Keep the application truststore out of `MAVEN_OPTS`,
+`JAVA_TOOL_OPTIONS`, and Maven's JVM properties: Maven needs its normal trust roots
+to download dependencies. Build and resolve dependencies first, then launch a
+separate application JVM. From the repository root, in PowerShell:
+
+```powershell
+mvn compile dependency:copy-dependencies -DincludeScope=runtime
+java "-Djavax.net.ssl.keyStore=.dev-tls/server.p12" "-Djavax.net.ssl.keyStoreType=PKCS12" "-Djavax.net.ssl.keyStorePassword=<your-server-store-password>" -cp "target/classes;target/dependency/*" edu.regis.merc.MercApp --server --config=tls.properties
+# In a separate terminal:
+java "-Djavax.net.ssl.trustStore=.dev-tls/client-trust.p12" "-Djavax.net.ssl.trustStoreType=PKCS12" "-Djavax.net.ssl.trustStorePassword=<your-client-store-password>" -cp "target/classes;target/dependency/*" edu.regis.merc.MercApp --client --config=tls.properties
+```
+
+On Linux/macOS use `target/classes:target/dependency/*` as the classpath separator.
+For combined mode (`--config=tls.properties` without `--server` or `--client`),
+supply both sets of store properties to the application JVM.
+
+Connection and TLS handshake read timeouts are 10 seconds; request reads time out
+after 15 seconds. The server binds before reporting startup success and continues
+accepting connections after a client handshake or request failure.
+
 
 Note that `mvn package` produces a jar with neither a `Main-Class` manifest entry
 nor bundled dependencies, so `java -jar` will not work as-is.
@@ -207,6 +290,12 @@ One driver still runs as a `main` method rather than through Maven:
 
 - `edu.regis.merc.MuDAOTest` — inserts and reads back a mu function. It
   requires a live database.
+
+Local TLS regression tests run with `mvn clean test`, using the running JDK's
+keytool, temporary stores/random passwords, and ephemeral ports. They verify
+trusted TLS and plaintext JSON exchanges, untrusted/hostname-mismatched certificate
+rejection, wrong passwords, and socket shutdown without Docker or database access.
+Docker integration tests from PR #41 are unchanged and run separately with `mvn verify`.
 
 ## Authors
 

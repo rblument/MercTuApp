@@ -131,7 +131,8 @@ public class MercApp {
                     throw new IllegalArgumentException("--config needs a file path");
                 }
             } else {
-                throw new IllegalArgumentException("Unknown argument: " + arg);
+                throw new IllegalArgumentException("Unknown startup option. Use --server, --client, or --config=<file>; "
+                        + "enable TLS with server.tls=true in the configuration file.");
             }
         }
 
@@ -154,7 +155,7 @@ public class MercApp {
      * connections. Exits the application if the server cannot start, for
      * example because another process is already using the port.
      */
-    private static void startServer() {
+    private static void startServer() throws IOException {
         LOGGER.info(" Starting Merc Server (Tutoring Service) on port "
                 + serverConfig.getPort() + "...");
 
@@ -193,10 +194,6 @@ public class MercApp {
     private static void startClient() {
         LOGGER.info(" Starting Client GUI, using the server at "
                 + clientConfig.getHost() + ":" + clientConfig.getPort() + "...");
-
-        // Send every request to the configured server, including one set
-        // with --config.
-        SvcFacade.instance().setClientConfig(clientConfig);
 
         // Create and display Swing components on the event dispatch thread.
         SwingUtilities.invokeLater(() -> {
@@ -321,23 +318,25 @@ public class MercApp {
 
         try {
             runningMode = parseArgs(args);
+            // Validate TLS trust and install the resolved destination before starting any local listener or GUI.
+            if (runningMode != ExecutionMode.SERVER) SvcFacade.instance().setClientConfig(clientConfig);
 
+            if (runningMode == ExecutionMode.SERVER || runningMode == ExecutionMode.BOTH) {
+                startServer();
+            }
+
+            if (runningMode == ExecutionMode.CLIENT || runningMode == ExecutionMode.BOTH) {
+                startClient();
+            }
         } catch (IllegalArgumentException e) {
             LOGGER.severe(e.getMessage());
             System.err.println(USAGE);
+            shutdownServer();
             System.exit(1);
-
         } catch (IOException e) {
-            LOGGER.severe("Unable to read config file: " + e.getMessage());
+            LOGGER.severe("Merc startup failed: " + e.getMessage());
+            shutdownServer();
             System.exit(1);
-        }
-
-        if (runningMode == ExecutionMode.SERVER || runningMode == ExecutionMode.BOTH) {
-            startServer();
-        }
-
-        if (runningMode == ExecutionMode.CLIENT || runningMode == ExecutionMode.BOTH) {
-            startClient();
         }
 
         // In server-only mode main() returns here, and the merc-server thread

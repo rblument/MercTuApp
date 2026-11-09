@@ -39,16 +39,9 @@ import java.util.logging.Logger;
 public class MercServer implements Runnable {
 
     /**
-     * Port on which this server (Merc tutor) is listening for client connections.
-     */
-    private int port;
-
-    /**
      * Handler for logging messages.
      */
     private static final Logger LOGGER = Logger.getLogger(MercServer.class.getName());
-
-    private static final int DEFAULT_PORT = 53640;
 
     /**
      * The socket listening for connections from the client.
@@ -65,35 +58,45 @@ public class MercServer implements Runnable {
      */
     private volatile boolean running = true;
 
-    /**
-     * Released once the server socket is bound, or binding has failed.
-     */
+    /** Released after binding succeeds or startup fails. */
     private final CountDownLatch startup = new CountDownLatch(1);
+    private volatile boolean listening;
 
-    /**
-     * Whether the server socket is bound and accepting connections.
-     */
-    private volatile boolean listening = false;
+    /** Socket factories selected and validated during startup. */
+    private final TransportSockets sockets;
 
-    /**
-     * Create a server with the given configuration.
-     *
-     * @param config the server configuration
-     */
-    public MercServer(ServerConfig config) {
-        port = config.getPort();
+    public MercServer() throws IOException {
+        this(new ServerConfig());
     }
 
-    /**
-     * Create a server with default configuration.
-     */
-    public MercServer() {
-        try {
-            port = new ServerConfig().getPort();
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed to load server config, using default port", e);
-            port = DEFAULT_PORT;
-        }
+    public MercServer(ServerConfig config) throws IOException {
+        this(TransportSockets.create(config));
+    }
+
+    MercServer(TransportSockets sockets) {
+        this.sockets = java.util.Objects.requireNonNull(sockets);
+    }
+
+    /** Bind before launching the server thread so startup errors reach the caller. */
+    public synchronized void startListening() throws IOException {
+        if (!running) throw new IOException("Server has been closed.");
+        if (server == null) server = sockets.listen();
+        listening = true;
+        startup.countDown();
+    }
+
+    /** Bind an ephemeral port for local transport tests. */
+    synchronized int startListening(int port) throws IOException {
+        if (!running) throw new IOException("Server has been closed.");
+        if (server == null) server = sockets.listen(port);
+        listening = true;
+        startup.countDown();
+        return server.getLocalPort();
+    }
+
+    /** Wait for binding to finish; a failed bind or shutdown returns false. */
+    public boolean awaitListening(long timeout, TimeUnit unit) throws InterruptedException {
+        return startup.await(timeout, unit) && listening;
     }
 
     /**
@@ -104,69 +107,59 @@ public class MercServer implements Runnable {
      */
     @Override
     public void run() {
-        try (ServerSocket listener = new ServerSocket(port)) {
-            server = listener;
-            listening = true;
-            startup.countDown();
+        try {
+            startListening();
+            try (ServerSocket listener = server) {
 
-            while (running) {
-                try {
-                    activeClient = listener.accept();
+                while (running) {
+                    try {
+                        activeClient = listener.accept();
+                        // Shutdown may have raced with accept before activeClient was assigned.
+                        if (!running) {
+                            activeClient.close();
+                            break;
+                        }
+                        new MercTuConnection(activeClient).run();
 
-                    new MercTuConnection(activeClient).run();
+                    } catch (SocketException e) {
+                        // Closing either socket during application shutdown can
+                        // cause a SocketException. This is expected when the
+                        // application is shutting down.
+                        if (running) {
+                            LOGGER.log(Level.SEVERE, "MercServer.run()", e);
+                        }
 
-                } catch (SocketException e) {
-                    // Closing either socket during application shutdown can
-                    // cause a SocketException. This is expected when the
-                    // application is shutting down.
-                    if (running) {
-                        LOGGER.log(Level.SEVERE, "MercServer.run()", e);
+                        break;
+
+                    } finally {
+                        activeClient = null;
                     }
-
-                    break;
-
-                } finally {
-                    activeClient = null;
                 }
-            }
 
+            }
         } catch (IOException e) {
             if (running) {
-                LOGGER.log(Level.SEVERE, "MercServer.run()", e);
+                LOGGER.log(Level.SEVERE, "Unable to start or accept connections on the configured server port.", e);
             }
 
         } finally {
             listening = false;
+            startup.countDown();
             server = null;
             activeClient = null;
-
-            // Wake anyone waiting in awaitListening() if binding failed.
-            startup.countDown();
 
             LOGGER.info("Merc server stopped.");
         }
     }
 
     /**
-     * Wait until this server is accepting connections or has failed to start.
-     *
-     * @param timeout the maximum time to wait
-     * @param unit the unit of the timeout argument
-     * @return true if the server is listening; false if it could not bind its
-     *         port, has already stopped, or did not start within the timeout
-     * @throws InterruptedException if interrupted while waiting
-     */
-    public boolean awaitListening(long timeout, TimeUnit unit)
-            throws InterruptedException {
-        return startup.await(timeout, unit) && listening;
-    }
-
-    /**
      * Stop accepting new client connections and allow the server thread
      * to terminate normally.
      */
-    public void close() {
+    public synchronized void close() {
         running = false;
+        listening = false;
+        startup.countDown();
 
         Socket currentClient = activeClient;
 
@@ -209,16 +202,6 @@ public class MercServer implements Runnable {
         private final Socket client;
 
         /**
-         * Stream from which messages from the client socket can be read
-         */
-        private BufferedReader in;
-
-        /**
-         * Stream from which messages to the client socket can be written
-         */
-        private PrintWriter out;
-
-        /**
          * The Merc tutor associated with this connection.
          */
         private final TutorSvc tutor;
@@ -242,52 +225,20 @@ public class MercServer implements Runnable {
         public void run() {
             Gson gson = new Gson();
 
-            try {
-                in = new BufferedReader(
-                        new InputStreamReader(client.getInputStream()));
-
-                out = new PrintWriter(client.getOutputStream(), true);
-
-                String msg = in.readLine();
-
-                ClientRequest request = gson.fromJson(msg, ClientRequest.class);
-
-                TutorReply reply = tutor.request(request);
-
-                out.println(gson.toJson(reply));
-
-                out.flush();
-
-            } catch (IOException e) {
-                if (running) {
-                    LOGGER.log(Level.SEVERE, "EncryptionConnection.run()", e);
+            try (Socket connection = client) {
+                TransportSockets.prepare(connection);
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                        PrintWriter out = new PrintWriter(connection.getOutputStream(), true)) {
+                    String msg = in.readLine();
+                    if (msg == null) return;
+                    ClientRequest request = gson.fromJson(msg, ClientRequest.class);
+                    TutorReply reply = tutor.request(request);
+                    out.println(gson.toJson(reply));
                 }
-
-            } finally {
-                // About as ugly as it gets, but the following code ensures that
-                // we've at least tried to close an open socket and its associated
-                // input and output streams in every possible error scenario
-                // If we didn't, it's possible that we're leaking memory.
-                try {
-                    if (out != null) {
-                        out.close();
-                    }
-                } finally {
-                    try {
-                        if (in != null) {
-                            in.close();
-                        }
-                    } catch (IOException e) {
-                        LOGGER.log(Level.SEVERE, "Unable to close client socket in", e);
-                    } finally {
-                        try {
-                            if (client != null) {
-                                client.close();
-                            }
-                        } catch (IOException e) {
-                            LOGGER.log(Level.SEVERE, "Unable to close client socket in", e);
-                        }
-                    }
+            } catch (IOException | RuntimeException e) {
+                if (running) {
+                    LOGGER.log(Level.WARNING, "Client connection failed or sent an invalid request; connection closed.",
+                            e instanceof RuntimeException ? ConnectionDiagnostics.safeCause(e) : e);
                 }
             }
         }

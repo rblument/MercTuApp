@@ -1,3 +1,12 @@
 /target/
 .idea
 .DS_Store
+
+# Local TLS identities and trust stores (never commit private keys or store passwords).
+.dev-tls/
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.truststore
+*.key
