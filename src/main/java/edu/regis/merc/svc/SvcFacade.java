@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.function.Function;
@@ -87,19 +86,29 @@ public class SvcFacade {
      */
     private static final Logger LOGGER = Logger.getLogger(SvcFacade.class.getName());
 
+    private volatile TransportSockets sockets;
+
+    /** Use the resolved external client configuration, including TLS, before GUI startup. */
+    public void configure(ClientConfig config) throws IOException {
+        configure(TransportSockets.create(config));
+    }
+
+    /** Preserve the separation startup API while validating and selecting TLS transport. */
+    public void setClientConfig(ClientConfig clientConfig) throws IOException {
+        configure(clientConfig);
+    }
+
+    /** Install startup transport before the GUI can issue requests. */
+    void configure(TransportSockets sockets) {
+        this.sockets = java.util.Objects.requireNonNull(sockets);
+    }
+
     /**
      * Utility reference to Gson for converting between Java and JSon objects.
      */
     private Gson gson;
     private final Function<String, String> transport;
     private final boolean debug;
-
-    /**
-     * Host and port of the tutor server. MercApp sets this at startup from
-     * the loaded configuration; otherwise the bundled client.properties is
-     * loaded on first use.
-     */
-    private volatile ClientConfig clientConfig;
 
     /**
      * Initialize this facade with its Gson convertor.
@@ -110,21 +119,17 @@ public class SvcFacade {
         debug = IS_DEBUG;
     }
 
+    /** A configured client, also usable by local socket tests without changing the singleton. */
+    SvcFacade(TransportSockets sockets) {
+        this();
+        configure(sockets);
+    }
+
     /** Allows testing the protocol and logging without a live socket server. */
     SvcFacade(Function<String, String> transport, boolean debug) {
         gson = new Gson();
         this.transport = java.util.Objects.requireNonNull(transport);
         this.debug = debug;
-    }
-
-    /**
-     * Send all later requests to the server named in the given configuration,
-     * such as one loaded from a --config file.
-     *
-     * @param clientConfig the server host and port to connect to
-     */
-    public void setClientConfig(ClientConfig clientConfig) {
-        this.clientConfig = java.util.Objects.requireNonNull(clientConfig);
     }
 
     /**
@@ -151,65 +156,44 @@ public class SvcFacade {
     /**
      * Send the given request to the ShaTu server and return the reply.
      *
-     * Communication with the SERVER occurs via the socket connection on port PORT.
+     * Communication uses the host, port, and transport selected at startup.
      *
      * @param request a JSon encoded ClientRequest object
      * @return a JSon encoded TutorReply from the tutor
      */
     private String send(String request) {
-        Socket client = null;
-        BufferedReader in = null;
-        PrintWriter out = null;
-
         try {
-            ClientConfig config = clientConfig;
-
-            if (config == null) {
-                config = new ClientConfig();
-                clientConfig = config;
+            TransportSockets selected = sockets;
+            if (selected == null) {
+                selected = TransportSockets.create(new ClientConfig());
+                sockets = selected;
             }
-
-            client = new Socket(config.getHost(), config.getPort());
-
-            in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-
-            out = new PrintWriter(client.getOutputStream());
-            out.println(request);
-
-            out.flush();
-
-            return in.readLine();
-
-        } catch (UnknownHostException e) {
-            LOGGER.log(Level.SEVERE, "Unknown Host", e);
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "IOException client", e);
-        } finally {
-            // Kludgy, but tries to close an open socket and its associated
-            // input and output streams in every possible error scenario
-            // If we didn't, it's possible that we're leaking memory.
-            try {
-                if (out != null)
-                    out.close();
-            } finally {
-                try {
-                    if (in != null)
-                        in.close();
-                } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, "Unable to close client socket in", e);
-                } finally {
-                    try {
-                        if (client != null)
-                            client.close();
-                    } catch (IOException e) {
-                        LOGGER.log(Level.SEVERE, "Unable to close client socket in", e);
-                    }
-                }
-            }
+            return send(request, selected);
+        } catch (IOException | IllegalArgumentException ex) {
+            LOGGER.log(Level.SEVERE, "Client configuration failed; check transport settings and JSSE stores.",
+                    ConnectionDiagnostics.safeCause(ex));
+            return connectionError();
         }
+    }
 
-        // Return this as a JSon encoded TutorReply object string.
+    private String send(String request, TransportSockets selected) {
+        try (Socket client = selected.connect();
+                BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                PrintWriter out = new PrintWriter(client.getOutputStream())) {
+            out.println(request);
+            out.flush();
+            if (out.checkError()) throw new IOException("Request write failed.");
+            String reply = in.readLine();
+            if (reply == null) throw new IOException("Connection closed before reply.");
+            return reply;
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Server connection failed; check the host, port, TLS trust, and certificate hostname.",
+                    ConnectionDiagnostics.safeCause(e));
+        }
+        return connectionError();
+    }
+
+    private String connectionError() {
         return "{'status':':ERR','data':'A non-recoverable error occurred in the socket connection (see logs)'}";
     }
 }
-

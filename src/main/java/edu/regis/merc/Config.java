@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 public abstract class Config {
+    private static final int MAX_PORT = 65535;
     protected final Properties props = new Properties();
 
     protected void load(String defaultResource, String externalFile) throws IOException {
@@ -17,52 +18,44 @@ public abstract class Config {
         if (externalFile != null) {
             try (InputStream is = new java.io.FileInputStream(externalFile)) {
                 props.load(is);
+            } catch (IOException ex) {
+                throw new IOException("Cannot load external configuration '" + externalFile
+                        + "'; check that the file exists and is readable.", ex);
+            }
+        }
+        for (String key : props.stringPropertyNames()) {
+            if (!key.equals("server.host") && !key.equals("server.port") && !key.equals("server.tls")) {
+                throw new IllegalArgumentException("Unknown transport configuration key '" + key + "'. Use server.host, server.port, or server.tls; "
+                        + "pass JSSE store settings as JVM properties.");
             }
         }
     }
 
-    private static final int MAX_PORT = 65535;
+    /** TLS is opt-in; key and trust stores use standard JSSE JVM properties. */
+    public boolean isTls() {
+        String value = props.getProperty("server.tls", "false").trim();
+        if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+            throw new IllegalArgumentException("server.tls must be true or false.");
+        }
+        return Boolean.parseBoolean(value);
+    }
 
-    /**
-     * Return the port stored under the given key.
-     *
-     * @param key the property key
-     * @param defaultValue the port to use when the key is missing or blank
-     * @return a port number from 1 to 65535
-     * @throws IllegalArgumentException if the value is not a valid port number
-     */
+    public abstract int getPort();
+
     protected int getPort(String key, int defaultValue) {
         String value = props.getProperty(key);
-
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-
+        if (value == null || value.isBlank()) return defaultValue;
         try {
-            // Properties keeps trailing spaces, so "53640 " must still parse.
-            int port = Integer.parseInt(value.trim());
-
-            if (port >= 1 && port <= MAX_PORT) {
-                return port;
-            }
-        } catch (NumberFormatException e) {
-            // Reported below, along with out-of-range values.
+            int port = value != null ? Integer.parseInt(value.trim()) : defaultValue;
+            if (port < 1 || port > MAX_PORT) throw new NumberFormatException();
+            return port;
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("server.port must be between 1 and 65535.");
         }
-
-        throw new IllegalArgumentException("Invalid " + key + " '" + value
-                + "': expected a port number from 1 to " + MAX_PORT);
     }
 
-    /**
-     * Return the host name stored under the given key.
-     *
-     * @param key the property key
-     * @param defaultValue the host to use when the key is missing or blank
-     * @return the host name, without surrounding whitespace
-     */
     protected String getHost(String key, String defaultValue) {
         String value = props.getProperty(key);
-
         return (value == null || value.isBlank()) ? defaultValue : value.trim();
     }
 }
