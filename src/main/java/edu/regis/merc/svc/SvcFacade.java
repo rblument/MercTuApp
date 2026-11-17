@@ -19,8 +19,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.InetSocketAddress;
-import java.util.Properties;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.function.Function;
@@ -88,12 +87,22 @@ public class SvcFacade {
      */
     private static final Logger LOGGER = Logger.getLogger(SvcFacade.class.getName());
 
-    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 5000;
-    private static final int DEFAULT_READ_TIMEOUT_MS = 10000;
-    private final String host;
-    private final int port;
-    private final int connectTimeoutMillis;
-    private final int readTimeoutMillis;
+    private volatile TransportSockets sockets;
+
+    /** Use the resolved external client configuration, including TLS, before GUI startup. */
+    public void configure(ClientConfig config) throws IOException {
+        configure(TransportSockets.create(config));
+    }
+
+    /** Preserve the separation startup API while validating and selecting TLS transport. */
+    public void setClientConfig(ClientConfig clientConfig) throws IOException {
+        configure(clientConfig);
+    }
+
+    /** Install startup transport before the GUI can issue requests. */
+    void configure(TransportSockets sockets) {
+        this.sockets = java.util.Objects.requireNonNull(sockets);
+    }
 
     /**
      * Utility reference to Gson for converting between Java and JSon objects.
@@ -103,58 +112,25 @@ public class SvcFacade {
     private final boolean debug;
 
     /**
-     * Host and port of the tutor server. MercApp sets this at startup from
-     * the loaded configuration; otherwise the bundled client.properties is
-     * loaded on first use.
-     */
-    private volatile ClientConfig clientConfig;
-
-    /**
      * Initialize this facade with its Gson convertor.
      */
     private SvcFacade() {
-        this(null, 0, System.getProperties(), null, IS_DEBUG);
+        gson = new Gson();
+        transport = this::send;
+        debug = IS_DEBUG;
+    }
+
+    /** A configured client, also usable by local socket tests without changing the singleton. */
+    SvcFacade(TransportSockets sockets) {
+        this();
+        configure(sockets);
     }
 
     /** Allows testing the protocol and logging without a live socket server. */
     SvcFacade(Function<String, String> transport, boolean debug) {
-        this(null, 0, System.getProperties(), transport, debug);
-    }
-
-    /** Local socket tests use ephemeral endpoints without changing the singleton. */
-    SvcFacade(String host, int port, Properties settings) {
-        this(host, port, settings, null, IS_DEBUG);
-    }
-
-    private SvcFacade(String host, int port, Properties settings, Function<String, String> transport, boolean debug) {
         gson = new Gson();
-        this.transport = transport == null ? this::send : transport;
+        this.transport = java.util.Objects.requireNonNull(transport);
         this.debug = debug;
-        this.host = host;
-        this.port = port;
-        connectTimeoutMillis = timeout(settings, "edu.regis.merc.client.connectTimeoutMillis", DEFAULT_CONNECT_TIMEOUT_MS);
-        readTimeoutMillis = timeout(settings, "edu.regis.merc.client.readTimeoutMillis", DEFAULT_READ_TIMEOUT_MS);
-    }
-
-    private static int timeout(Properties settings, String key, int fallback) {
-        try {
-            int value = Integer.parseInt(settings.getProperty(key, Integer.toString(fallback)));
-            return value > 0 ? value : fallback;
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
-    }
-
-    Socket newSocket() throws IOException { return new Socket(); }
-
-    /**
-     * Send all later requests to the server named in the given configuration,
-     * such as one loaded from a --config file.
-     *
-     * @param clientConfig the server host and port to connect to
-     */
-    public void setClientConfig(ClientConfig clientConfig) {
-        this.clientConfig = java.util.Objects.requireNonNull(clientConfig);
     }
 
     /**
@@ -181,39 +157,44 @@ public class SvcFacade {
     /**
      * Send the given request to the ShaTu server and return the reply.
      *
-     * Communication uses the configured server host and port.
+     * Communication uses the host, port, and transport selected at startup.
      *
      * @param request a JSon encoded ClientRequest object
      * @return a JSon encoded TutorReply from the tutor
      */
     private String send(String request) {
-        try (Socket client = newSocket()) {
-            ClientConfig config = clientConfig;
-            String destinationHost = host;
-            int destinationPort = port;
-            if (config == null && destinationHost == null) {
-                config = new ClientConfig();
-                clientConfig = config;
+        try {
+            TransportSockets selected = sockets;
+            if (selected == null) {
+                selected = TransportSockets.create(new ClientConfig());
+                sockets = selected;
             }
-            if (config != null) {
-                destinationHost = config.getHost();
-                destinationPort = config.getPort();
-            }
-            client.connect(new InetSocketAddress(destinationHost, destinationPort), connectTimeoutMillis);
-            client.setSoTimeout(readTimeoutMillis);
-            try (BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                    PrintWriter out = new PrintWriter(client.getOutputStream())) {
-                out.println(request);
-                out.flush();
-                if (out.checkError()) throw new IOException("Request write failed.");
-                String reply = in.readLine();
-                if (reply == null) throw new IOException("Connection closed before reply.");
-                return reply;
-            }
-        } catch (IOException ex) {
-            // Do not log the request, server payload, or exception text containing connection details.
-            LOGGER.warning("Server request could not be completed. Check the connection and retry.");
+            return send(request, selected);
+        } catch (IOException | IllegalArgumentException ex) {
+            LOGGER.log(Level.SEVERE, "Client configuration failed; check transport settings and JSSE stores.",
+                    ConnectionDiagnostics.safeCause(ex));
+            return connectionError();
         }
-        return "{'status':':ERR','data':'The server request could not be confirmed. Please try again.'}";
+    }
+
+    private String send(String request, TransportSockets selected) {
+        try (Socket client = selected.connect();
+                BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                PrintWriter out = new PrintWriter(client.getOutputStream())) {
+            out.println(request);
+            out.flush();
+            if (out.checkError()) throw new IOException("Request write failed.");
+            String reply = in.readLine();
+            if (reply == null) throw new IOException("Connection closed before reply.");
+            return reply;
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Server connection failed; check the host, port, TLS trust, and certificate hostname.",
+                    ConnectionDiagnostics.safeCause(e));
+        }
+        return connectionError();
+    }
+
+    private String connectionError() {
+        return "{'status':':ERR','data':'A non-recoverable error occurred in the socket connection (see logs)'}";
     }
 }
