@@ -219,6 +219,40 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
         }
     }
 
+    @Override
+    public void replaceSecurityToken(String userId, String token) throws ObjNotFoundException, NonRecoverableException {
+        if (userId == null || userId.isBlank() || token == null || token.isBlank()) {
+            throw new IllegalArgumentException("A user and nonblank token are required.");
+        }
+        final String sql = "UPDATE TutoringSession SET SecurityToken = ? WHERE UserId = ?";
+        try (Connection conn = tokenConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, token);
+            stmt.setString(2, userId);
+            if (stmt.executeUpdate() != 1) throw new ObjNotFoundException("Session not found for token rotation.");
+        } catch (SQLException ex) {
+            throw new NonRecoverableException("Unable to replace session token.");
+        }
+    }
+
+    @Override
+    public boolean revokeSecurityToken(String userId, String token) throws NonRecoverableException {
+        if (userId == null || userId.isBlank() || token == null || token.isBlank()) return false;
+        // Token matching is case-sensitive even when the database's VARCHAR collation is not.
+        final String sql = "UPDATE TutoringSession SET SecurityToken = '' WHERE UserId = ? AND BINARY SecurityToken = BINARY ?";
+        try (Connection conn = tokenConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            stmt.setString(2, token);
+            return stmt.executeUpdate() == 1;
+        } catch (SQLException ex) {
+            throw new NonRecoverableException("Unable to revoke session token.");
+        }
+    }
+
+    /** Connection seam for focused token SQL tests without a live database. */
+    Connection tokenConnection() throws SQLException {
+        return DriverManager.getConnection(getURL());
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -254,21 +288,17 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
     }
 
     private void update(TutoringSession session, Connection conn) throws NonRecoverableException {
-        final String sql = "UPDATE TutoringSession SET SecurityToken = ?, IsActive = ?, CourseId = ?, UnitId = ?, ProblemId = ? WHERE UserId = ?";
+        // Progress writes must never restore a token revoked or rotated by another request.
+        final String sql = "UPDATE TutoringSession SET CourseId = ?, UnitId = ?, ProblemId = ? WHERE Id = ?";
 
         PreparedStatement stmt = null;
-        Account account = session.getStudent().getAccount();
-        String userId = account.getUserId();
-
         try {
             stmt = conn.prepareStatement(sql);
 
-            stmt.setString(1, session.getSecurityToken());
-            stmt.setBoolean(2, session.isActive());
-            stmt.setInt(3, session.getCourse().getId());
-            stmt.setInt(4, session.getUnit().getId());
-            stmt.setInt(5, session.getProblem().getId());
-            stmt.setString(6, userId);
+            stmt.setInt(1, session.getCourse().getId());
+            stmt.setInt(2, session.getUnit().getId());
+            stmt.setInt(3, session.getProblem().getId());
+            stmt.setInt(4, session.getId());
 
             int rows = stmt.executeUpdate();
             if (rows != 1) {
