@@ -13,7 +13,7 @@ public class MuFunctionTest {
         lhs1.addParameter("x");
         lhs1.addParameter("y");
 
-        MuExpression rhs1 = new MuExpression(OpKind.ADD, "x", "y");
+        MuExpression rhs1 = new MuExpression(OpKind.ADD, new MuExpression("x"), new MuExpression("y"));
         MuFunction f1 = new MuFunction(1, lhs1, rhs1);
 
         assertEquals("add([x, y]) = (x + y)", f1.toString());
@@ -38,7 +38,7 @@ public class MuFunctionTest {
         lhs3.addParameter("x");
         lhs3.addParameter("y");
 
-        MuExpression innerAdd = new MuExpression(OpKind.ADD, "x", "y");
+        MuExpression innerAdd = new MuExpression(OpKind.ADD, new MuExpression("x"), new MuExpression("y"));
         MuExpression rhs3 = new MuExpression(OpKind.MUL, innerAdd, new MuExpression(2));
         MuFunction f3 = new MuFunction(3, lhs3, rhs3);
 
@@ -50,7 +50,7 @@ public class MuFunctionTest {
         LeftHandSide lhs4 = new LeftHandSide("subtractTen");
         lhs4.addParameter("x");
 
-        MuExpression rhs4 = new MuExpression(OpKind.SUB, "x", new MuExpression(10));
+        MuExpression rhs4 = new MuExpression(OpKind.SUB, new MuExpression("x"), new MuExpression(10));
         MuFunction f4 = new MuFunction(4, lhs4, rhs4);
 
         assertEquals("subtractTen([x]) = (x - 10)", f4.toString());
@@ -61,7 +61,7 @@ public class MuFunctionTest {
         LeftHandSide lhs5 = new LeftHandSide("half");
         lhs5.addParameter("x");
 
-        MuExpression rhs5 = new MuExpression(OpKind.DIV, "x", new MuExpression(2));
+        MuExpression rhs5 = new MuExpression(OpKind.DIV, new MuExpression("x"), new MuExpression(2));
         MuFunction f5 = new MuFunction(5, lhs5, rhs5);
 
         assertEquals("half([x]) = (x / 2)", f5.toString());
