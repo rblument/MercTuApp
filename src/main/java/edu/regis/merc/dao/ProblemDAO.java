@@ -700,35 +700,25 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
     /**
      * This method facilitates system interoperability by mapping relational MySQL
      * strings into a hierarchical MuFunction AST.
-     * The parameters are read from the 'Name(Param, ...)' form of the Lhs, and
-     * MuParser turns the Rhs into an expression tree, including operations
-     * such as (x + y) and applications such as S(Z(x)).
+     * MuParser reads the name and parameters from the 'Name(Param, ...)' form
+     * of the Lhs, and turns the Rhs into an expression tree, including
+     * operations such as (x + y) and applications such as S(Z(x)).
      *
-     * @throws MuParseException if the Rhs is not a valid mu expression
+     * @throws MuParseException if the Lhs or Rhs is not valid
      */
 
     private MuFunction retrieveMuFunction(int muId, Connection conn)
             throws SQLException, MuParseException {
-        final String sql = "SELECT Name, Lhs, Rhs FROM MuFunction WHERE Id = ?";
+        final String sql = "SELECT Lhs, Rhs FROM MuFunction WHERE Id = ?";
         PreparedStatement stmt = null;
         try {
             stmt = conn.prepareStatement(sql);
             stmt.setInt(1, muId);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                String name = rs.getString("Name");
-                String lhsStr = rs.getString("Lhs");
-                String rhsStr = rs.getString("Rhs");
-                LeftHandSide lhs = new LeftHandSide(name);
-                int start = lhsStr.indexOf('(');
-                int end = lhsStr.indexOf(')');
-                if (start != -1 && end != -1) {
-                    String params = lhsStr.substring(start + 1, end);
-                    for (String p : params.split(",")) {
-                        lhs.addParameter(p.trim());
-                    }
-                }
-                MuExpression rhs = new MuParser().parse(rhsStr);
+                MuParser parser = new MuParser();
+                LeftHandSide lhs = parser.parseLeftHandSide(rs.getString("Lhs"));
+                MuExpression rhs = parser.parse(rs.getString("Rhs"));
                 return new MuFunction(muId, lhs, rhs);
             }
         } finally {
