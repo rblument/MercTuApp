@@ -28,6 +28,12 @@ public class MuEvaluator{
             case OPERATION:
                 return evalOperation(expr, env);
 
+            case APPLICATION:
+                // Evaluating an application needs a table of the functions it
+                // can call (S, Z, P, and those defined in the DB).
+                throw new UnsupportedOperationException(
+                        "Function application is not evaluated yet: " + expr);
+
             default:
                 throw new IllegalStateException("Unknown expression kind: " + expr.getKind());
         }
