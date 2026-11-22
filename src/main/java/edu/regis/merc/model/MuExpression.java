@@ -6,6 +6,7 @@ package edu.regis.merc.model;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class MuExpression {
     private Kind kind;
@@ -50,6 +51,18 @@ public class MuExpression {
     public OpKind getOpKind() { return opKind; }
     public MuExpression getLeftOperand() { return leftOperand; }
     public MuExpression getRightOperand() { return rightOperand; }
+    public int getNumberValue() { return numberValue; }
+    public String getVariableName() { return variableName; }
+    public String getFunctionName() { return functionName; }
+
+    /**
+     * The arguments of an application, in order.
+     *
+     * @return a read-only list, which is empty for any other kind of expression
+     */
+    public List<MuExpression> getArguments() {
+        return arguments == null ? List.of() : Collections.unmodifiableList(arguments);
+    }
 
     @Override
     public String toString() {

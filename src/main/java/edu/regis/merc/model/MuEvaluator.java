@@ -17,13 +17,15 @@ public class MuEvaluator{
         switch (expr.getKind()) {
 
             case NUMBER:
-                return Integer.parseInt(expr.toString());
+                return expr.getNumberValue();
 
-            case VARIABLE:
-                if (!env.containsKey(expr.toString())) {
-                    throw new IllegalArgumentException("Unbound variable: " + expr.toString());
+            case VARIABLE: {
+                String name = expr.getVariableName();
+                if (!env.containsKey(name)) {
+                    throw new IllegalArgumentException("Unbound variable: " + name);
                 }
-                return env.get(expr.toString());
+                return env.get(name);
+            }
 
             case OPERATION:
                 return evalOperation(expr, env);
@@ -40,12 +42,8 @@ public class MuEvaluator{
     }
 
     private int evalOperation(MuExpression expr, Map<String, Integer> env) {
-        Object left = expr.getLeftOperand();
-        Object right = expr.getRightOperand();
-
-        // Each operand may itself be a MuExpression or a raw String/int
-        int leftVal = convertOperand(left, env);
-        int rightVal = convertOperand(right, env);
+        int leftVal = evalOperand(expr.getLeftOperand(), expr, env);
+        int rightVal = evalOperand(expr.getRightOperand(), expr, env);
 
         switch (expr.getOpKind()) {
             case ADD: return leftVal + rightVal;
@@ -70,14 +68,11 @@ public class MuEvaluator{
         }
     }
 
-    private int convertOperand(Object operand, Map<String, Integer> env) {
-        if (operand instanceof MuExpression) {
-            return eval((MuExpression) operand, env);
-        } else if (operand instanceof String) {
-            return env.get((String) operand);
-        } else if (operand instanceof Integer) {
-            return (int) operand;
+    private int evalOperand(MuExpression operand, MuExpression operation,
+                            Map<String, Integer> env) {
+        if (operand == null) {
+            throw new IllegalArgumentException("Missing operand in " + operation);
         }
-        throw new IllegalArgumentException("Unknown operand type: " + operand);
+        return eval(operand, env);
     }
 }
