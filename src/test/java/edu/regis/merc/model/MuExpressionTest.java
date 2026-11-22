@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 
 public class MuExpressionTest {
-    
+
     private final Gson gson = SignInAction.createSessionGson();
 
     @Test
@@ -38,6 +38,23 @@ public class MuExpressionTest {
         assertEquals(Kind.APPLICATION, oneResult.getKind());
     }
 
+    // The JSON written while the operands were typed Object has the same shape,
+    // so typing them MuExpression still reads it, and reads the operands as
+    // MuExpression instead of LinkedTreeMap.
+    @Test
+    void jsonWrittenWithObjectOperandsStillReads() {
+        String objectOperandJson = "{\"kind\":\"OPERATION\",\"opKind\":\"ADD\","
+                + "\"leftOperand\":{\"kind\":\"VARIABLE\",\"variableName\":\"x\",\"numberValue\":0},"
+                + "\"rightOperand\":{\"kind\":\"VARIABLE\",\"variableName\":\"y\",\"numberValue\":0},"
+                + "\"numberValue\":0}";
+
+        MuExpression expr = gson.fromJson(objectOperandJson, MuExpression.class);
+
+        assertEquals(Kind.OPERATION, expr.getKind());
+        assertEquals(Kind.VARIABLE, expr.getLeftOperand().getKind());
+        assertEquals("(x + y)", expr.toString());
+    }
+
     // Term Builders
 
     private MuExpression buildOne() {
@@ -46,5 +63,4 @@ public class MuExpressionTest {
 
         return new MuExpression("S", List.of(zeroFunc));
     }
-    
 }
