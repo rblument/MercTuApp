@@ -35,13 +35,11 @@ import edu.regis.merc.model.StudentModel;
 import edu.regis.merc.model.Task;
 import edu.regis.merc.model.TutoringSession;
 import edu.regis.merc.model.Unit;
-import edu.regis.merc.util.SHA_256;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.Optional;
-import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -83,7 +81,40 @@ public class MercTutor implements TutorSvc {
      * Initialize the tutor singleton (a NoOp).
      */
     public MercTutor() {
+        this(null, null, null);
+    }
+
+    private final SessionSvc sessions;
+    private final AccountSvc accounts;
+    private final StudentModelSvc studentModels;
+
+    // Use the real session lifecycle with small test doubles for persistence and authentication.
+    MercTutor(SessionSvc sessions, AccountSvc accounts, StudentModelSvc studentModels) {
+        this.sessions = sessions;
+        this.accounts = accounts;
+        this.studentModels = studentModels;
         gson = new GsonBuilder().setPrettyPrinting().create();
+    }
+
+    private SessionSvc sessionSvc() { return sessions == null ? ServiceFactory.findSessionSvc() : sessions; }
+    private AccountSvc accountSvc() { return accounts == null ? ServiceFactory.findAccountSvc() : accounts; }
+    private StudentModelSvc studentModelSvc() { return studentModels == null ? ServiceFactory.findStudentModelSvc() : studentModels; }
+
+    private void rotateToken(TutoringSession saved) throws ObjNotFoundException, NonRecoverableException {
+        String token = SecurityTokens.generate();
+        sessionSvc().replaceSecurityToken(saved.getStudent().getAccount().getUserId(), token);
+        saved.setSecurityToken(token);
+    }
+
+    private TutorReply logout(ClientRequest request) {
+        try {
+            boolean revoked = sessionSvc().revokeSecurityToken(request.getUserId(), request.getSecurityToken());
+            return new TutorReply(revoked ? "LoggedOut" : "InvalidToken");
+        } catch (NonRecoverableException ex) {
+            // Never include SQL diagnostics or token-bearing request data in replies/logs.
+            LOGGER.warning("Session logout could not be completed.");
+            return new TutorReply(":ERR", "Unable to log out. Please try again.");
+        }
     }
 
     /**
@@ -91,9 +122,20 @@ public class MercTutor implements TutorSvc {
      */
     @Override
     public TutorReply request(ClientRequest request) {
+        Logger.getLogger(MercTutor.class.getName()).log(Level.INFO, request.getRequestType().getRequestName());
+        // Logout authenticates and revokes in one conditional DB operation; no progress load is needed.
+        if (request.getRequestType() == ServerRequestType.LOGOUT) {
+            if (request.getUserId() == null || request.getUserId().isBlank()
+                    || request.getSecurityToken() == null || request.getSecurityToken().isBlank()) {
+                return new TutorReply("InvalidToken");
+            }
+            return logout(request);
+        }
+        if (request.getRequestType() == ServerRequestType.RESET_PASSWORD) {
+            return resetPassword(request);
+        }
         // Uses reflection to invoke a method derived from the request name in
         // the client request (e.g., ":SignIn" invokes "signIn(...)").
-        Logger.getLogger(MercTutor.class.getName()).log(Level.INFO, request.getRequestType().getRequestName());
 
         // Efficiently produce "signIn" from ":SignIn", for example.
         char[] c = request.getRequestType().getRequestName().toCharArray();
@@ -114,16 +156,15 @@ public class MercTutor implements TutorSvc {
             case "newExample":
             case "requestHint":
             case "requestModel":
-            case "resetPassword":
                 String userId = request.getUserId();
                 try {
                     if (verifySession(userId, request.getSecurityToken())) {
 
-                        Account account = ServiceFactory.findAccountSvc().retrieve(userId);
+                        Account account = accountSvc().retrieve(userId);
                         student = new Student(account);
 
                         try {
-                            StudentModelSvc stuModSvc = ServiceFactory.findStudentModelSvc();
+                            StudentModelSvc stuModSvc = studentModelSvc();
                             studentModel = stuModSvc.retrieve(userId);
                             student.setStudentModel(studentModel);
 
@@ -133,7 +174,7 @@ public class MercTutor implements TutorSvc {
                             return reply;
                         }
 
-                        session = ServiceFactory.findSessionSvc().retrieve(student.getAccount().getUserId());
+                        session = sessionSvc().retrieve(student.getAccount().getUserId());
 
                     } else {
                         TutorReply reply = new TutorReply(":ERR");
@@ -229,7 +270,7 @@ public class MercTutor implements TutorSvc {
      */
     public TutorReply verifyUser(String jsonAcct) throws NonRecoverableException {
         RecoveryRequest request = gson.fromJson(jsonAcct, RecoveryRequest.class);
-        RecoverySvc recovery = new RecoverySvc(userId -> ServiceFactory.findAccountSvc().retrieve(userId));
+        RecoverySvc recovery = new RecoverySvc(userId -> accountSvc().retrieve(userId));
         try {
             Account dbAcct = recovery.verifyAnswer(request);
 
@@ -238,7 +279,7 @@ public class MercTutor implements TutorSvc {
                 student = new Student(dbAcct);
 
                 try {
-                    StudentModelSvc stuModSvc = ServiceFactory.findStudentModelSvc();
+                    StudentModelSvc stuModSvc = studentModelSvc();
                     studentModel = stuModSvc.retrieve(dbAcct.getUserId());
                     student.setStudentModel(studentModel);
                 } catch (ObjNotFoundException e) {
@@ -247,7 +288,7 @@ public class MercTutor implements TutorSvc {
 
                 dbAcct.setPassword("");
                 // Check if session already exists before creating
-                SessionSvc sessionSvc = ServiceFactory.findSessionSvc();
+                SessionSvc sessionSvc = sessionSvc();
                 TutoringSession session;
 
                 try {
@@ -257,6 +298,7 @@ public class MercTutor implements TutorSvc {
                     session = createSession(student, ServiceFactory.findCourseSvc().retrieve(DEFAULT_COURSE_ID));
                 }
 
+                rotateToken(session);
                 TutorReply reply = new TutorReply("Verified");
                 reply.setData("\"" + session.getSecurityToken() + "\"");
                 return reply;
@@ -276,7 +318,7 @@ public class MercTutor implements TutorSvc {
     /** Public lookup returns only the stored question, never an account or token. */
     public TutorReply getSecurityQuestion(String json) {
         RecoveryRequest request = gson.fromJson(json, RecoveryRequest.class);
-        RecoverySvc recovery = new RecoverySvc(userId -> ServiceFactory.findAccountSvc().retrieve(userId));
+        RecoverySvc recovery = new RecoverySvc(userId -> accountSvc().retrieve(userId));
         return recovery.questionFor(request == null ? null : request.getUserId());
     }
 
@@ -285,38 +327,31 @@ public class MercTutor implements TutorSvc {
      *
      * This method handles ":ResetPassword" requests from the GUI client.
      *
-     * @param jsonAcct a JSon encoded Account object
-     * @return a TutorReply if successful the status is "Created", otherwise the
-     *         status is ":ERR".
-     * @throws edu.regis.merc.err.NonRecoverableException
+     * @param request the password-reset request and its session token
+     * @return a reply indicating whether the password was reset
      */
-    public TutorReply resetPassword(String jsonAcct) throws NonRecoverableException {
-        Account acct = gson.fromJson(jsonAcct, Account.class);
-        if (acct.getPassword() == null || acct.getPassword().isEmpty()) {
-            return createError("A password is required to reset the password on an account.", null);
-        }
-
-        AccountSvc acctSvc = ServiceFactory.findAccountSvc();
-
-        if (!acctSvc.exists(acct.getUserId())) {
-            return new TutorReply("IllegalUserId");
+    private TutorReply resetPassword(ClientRequest request) {
+        String userId = request.getUserId();
+        String token = request.getSecurityToken();
+        if (userId == null || userId.isBlank() || token == null || token.isBlank()) {
+            return new TutorReply(":ERR", "Illegal Security Token");
         }
 
         try {
-            // Retrieve the full account so existing account information is preserved.
-            Account dbAcct = acctSvc.retrieve(acct.getUserId());
-
-            // Password is the only account field changed during password reset.
-            dbAcct.setPassword(acct.getPassword());
-
-            acctSvc.update(dbAcct);
-
-            return new TutorReply("PasswordReset");
-
-        } catch (ObjNotFoundException ex) {
-            return new TutorReply("IllegalUserId");
-        } catch (IllegalArgException ex) {
-            return createError("Password Account Update error", ex);
+            Account acct = gson.fromJson(request.getData(), Account.class);
+            if (acct == null || acct.getPassword() == null || acct.getPassword().isEmpty()) {
+                return new TutorReply(":ERR", "A password is required to reset the password on an account.");
+            }
+            if (!userId.equals(acct.getUserId())) {
+                return new TutorReply("IllegalUserId");
+            }
+            return accountSvc().resetPassword(userId, token, acct.getPassword())
+                    ? new TutorReply("PasswordReset") : new TutorReply(":ERR", "Illegal Security Token");
+        } catch (com.google.gson.JsonParseException ex) {
+            return new TutorReply(":ERR", "Invalid password reset request.");
+        } catch (NonRecoverableException ex) {
+            LOGGER.warning("Password reset could not be completed.");
+            return new TutorReply(":ERR", "Unable to reset password. Please try again.");
         }
     }
 
@@ -336,14 +371,14 @@ public class MercTutor implements TutorSvc {
             if (request.getUserId() == null || request.getUserId().isEmpty() || request.getPassword() == null || request.getPassword().isEmpty()) {
                 return new TutorReply("InvalidPassword");
             }
-            AccountSvc acctSvc = ServiceFactory.findAccountSvc();
+            AccountSvc acctSvc = accountSvc();
             Optional<Account> optAcct = acctSvc.validatePassword(request.getUserId(), request.getPassword());
             if(optAcct.isPresent()) {
                 Account dbAcct = optAcct.get();
                 student = new Student(dbAcct);
 
                 try {
-                    StudentModelSvc stuModSvc = ServiceFactory.findStudentModelSvc();
+                    StudentModelSvc stuModSvc = studentModelSvc();
                     studentModel = stuModSvc.retrieve(dbAcct.getUserId());
                     student.setStudentModel(studentModel);
 
@@ -353,7 +388,7 @@ public class MercTutor implements TutorSvc {
                     return reply;
                 }
 
-                SessionSvc svc = ServiceFactory.findSessionSvc();
+                SessionSvc svc = sessionSvc();
                 TutoringSession session = svc.retrieve(student.getAccount().getUserId());
 
                 Step step = session.currentTask().currentStep().getStep();
@@ -372,6 +407,7 @@ public class MercTutor implements TutorSvc {
                 // problem.setTuringMachine(tm);
                 // session.currentTask().getTask().setProblem(problem);
 
+                rotateToken(session);
                 TutorReply reply = new TutorReply("Authenticated");
 
                 reply.setData(gson.toJson(session));
@@ -582,7 +618,7 @@ public class MercTutor implements TutorSvc {
             // Without this the advance lives only in memory, and the next
             // request reloads the session with the pointer back where it was.
             try {
-                ServiceFactory.findSessionSvc().updateCurrentStep(session);
+                sessionSvc().updateCurrentStep(session);
 
             } catch (NonRecoverableException e) {
                 return createError("Unable to save progress for " + session.getStudent()
@@ -678,7 +714,7 @@ public class MercTutor implements TutorSvc {
         session.setTasks(tasks);
 
         try {
-            ServiceFactory.findSessionSvc().updateCurrentTask(session);
+            sessionSvc().updateCurrentTask(session);
 
         } catch (NonRecoverableException e) {
             return createError("Unable to advance " + session.getStudent().getAccount().getUserId()
@@ -727,10 +763,8 @@ public class MercTutor implements TutorSvc {
         pendingTask.setCurrentStep(new PendingStep(task.getCurrentStep()));
         tSession.addTask(pendingTask);
 
-        // Generate the security token for this tutoring session.
-        Random rnd = new Random();
-        String clearToken = "Session" + account.getUserId() + Integer.toString(rnd.nextInt());
-        tSession.setSecurityToken(SHA_256.instance().sha256(clearToken));
+        // Initial account creation still creates progress once; sign-in rotates only the token.
+        tSession.setSecurityToken(SecurityTokens.generate());
 
         try {
             ServiceFactory.findSessionSvc().create(tSession);
@@ -783,10 +817,9 @@ public class MercTutor implements TutorSvc {
     private boolean verifySession(String userId, String sessionId)
             throws ObjNotFoundException, NonRecoverableException {
 
-        SessionSvc svc = ServiceFactory.findSessionSvc();
-        String dbToken = svc.retrieveSecurityToken(userId);
-
-        return dbToken.equals(sessionId);
+        if (userId == null || userId.isBlank() || sessionId == null || sessionId.isBlank()) return false;
+        String dbToken = sessionSvc().retrieveSecurityToken(userId);
+        return SecurityTokens.matches(dbToken, sessionId);
     }
 
     /**

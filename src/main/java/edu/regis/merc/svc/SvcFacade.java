@@ -18,7 +18,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.UncheckedIOException;
 import java.net.Socket;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.function.Function;
@@ -145,7 +147,12 @@ public class SvcFacade {
         if (debug)
             LOGGER.log(Level.INFO, "Sending tutor request");
 
-        String jsonReply = transport.apply(jsonRequest);
+        String jsonReply;
+        try {
+            jsonReply = transport.apply(jsonRequest);
+        } catch (UncheckedIOException ex) {
+            return TutorReply.connectionFailure();
+        }
 
         if (debug)
             LOGGER.log(Level.INFO, "Tutor reply received");
@@ -189,8 +196,8 @@ public class SvcFacade {
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Server connection failed; check the host, port, TLS trust, and certificate hostname.",
                     ConnectionDiagnostics.safeCause(e));
+            throw new UncheckedIOException(e);
         }
-        return connectionError();
     }
 
     private String connectionError() {

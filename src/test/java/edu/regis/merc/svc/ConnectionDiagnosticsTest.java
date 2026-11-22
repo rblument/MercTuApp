@@ -52,7 +52,9 @@ class ConnectionDiagnosticsTest {
                 SvcFacade facade = new SvcFacade(TransportSockets.create(new ClientConfig(config.toString())));
                 ClientRequest request = new ClientRequest(ServerRequestType.SIGN_IN);
                 request.setData("SECRET_REQUEST_TOKEN");
-                assertEquals(":ERR", facade.tutorRequest(request).getStatus());
+                TutorReply reply = facade.tutorRequest(request);
+                assertEquals(":ERR", reply.getStatus());
+                assertTrue(reply.isConnectionFailure());
                 assertTrue(logs.output().contains(IOException.class.getName()));
                 assertFalse(logs.output().contains("SECRET_REQUEST_TOKEN"));
                 assertNotNull(logs.records.get(0).getThrown());
