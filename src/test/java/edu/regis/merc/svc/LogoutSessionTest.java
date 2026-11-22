@@ -18,6 +18,8 @@ class LogoutSessionTest {
         private final TutoringSession saved = new TutoringSession(new Student(account));
         private String stored = SecurityTokens.generate();
         private boolean failDatabase;
+        private boolean failPasswordReset;
+        private int passwordResets;
         private int rotations;
         private final MercTutor tutor;
 
@@ -54,7 +56,13 @@ class LogoutSessionTest {
                     case "validatePassword": return "correct-password".equals(args[1]) ? Optional.of(account) : Optional.empty();
                     case "exists": return true;
                     case "retrieve": return account;
-                    case "update": return null;
+                    case "resetPassword":
+                        if (failPasswordReset) throw new NonRecoverableException("Test database unavailable");
+                        if (!SecurityTokens.matches(stored, (String) args[1])) return false;
+                        account.setPassword((String) args[2]);
+                        stored = "";
+                        passwordResets++;
+                        return true;
                     default: throw new AssertionError("Unexpected account operation: " + name);
                 }
             });
@@ -139,7 +147,14 @@ class LogoutSessionTest {
         reset.setUserId(EMAIL);
         reset.setSecurityToken(token);
         reset.setData("{\"userId\":\"" + EMAIL + "\",\"password\":\"replacement-password\"}");
+        f.failPasswordReset = true;
+        assertEquals(":ERR", f.tutor.request(reset).getStatus());
+        assertEquals(token, f.stored);
+        f.failPasswordReset = false;
         assertEquals("PasswordReset", f.tutor.request(reset).getStatus());
+        assertEquals("", f.stored);
+        assertEquals(":ERR", f.tutor.request(reset).getStatus());
+        assertEquals(1, f.passwordResets);
         assertEquals(300, f.saved.currentTask().currentStep().getId());
     }
 

@@ -280,6 +280,7 @@ public class SplashFrame extends JFrame {
         MainFrame.instance().clearSession();
         tutoringSession = null;
         if (tutoringSessionView != null) {
+            tutoringSessionView.setModel(null);
             cards.remove(tutoringSessionView);
             tutoringSessionView = null;
         }

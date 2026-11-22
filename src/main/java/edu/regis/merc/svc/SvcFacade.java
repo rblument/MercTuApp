@@ -170,7 +170,12 @@ public class SvcFacade {
         if (debug)
             LOGGER.log(Level.INFO, "Sending tutor request");
 
-        String jsonReply = transport.apply(jsonRequest);
+        String jsonReply;
+        try {
+            jsonReply = transport.apply(jsonRequest);
+        } catch (java.io.UncheckedIOException ex) {
+            return TutorReply.connectionFailure();
+        }
 
         if (debug)
             LOGGER.log(Level.INFO, "Tutor reply received");
@@ -213,7 +218,7 @@ public class SvcFacade {
         } catch (IOException ex) {
             // Do not log the request, server payload, or exception text containing connection details.
             LOGGER.warning("Server request could not be completed. Check the connection and retry.");
+            throw new java.io.UncheckedIOException(ex);
         }
-        return "{'status':':ERR','data':'The server request could not be confirmed. Please try again.'}";
     }
 }

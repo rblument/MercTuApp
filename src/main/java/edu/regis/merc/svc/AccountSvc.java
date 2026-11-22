@@ -57,6 +57,13 @@ public interface AccountSvc {
             throws ObjNotFoundException, IllegalArgException, NonRecoverableException;
 
     /**
+     * Update a student's password and consume the matching session token atomically.
+     *
+     * @return true if the password was updated and the token consumed
+     */
+    boolean resetPassword(String userId, String token, String password) throws NonRecoverableException;
+
+    /**
      * Delete the account for the given user id from the database.
      *
      * @param userId the student's user id (email: user@university.edu)

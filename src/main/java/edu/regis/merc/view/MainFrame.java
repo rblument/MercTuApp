@@ -20,6 +20,7 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.Timer;
 
 /**
@@ -125,9 +126,17 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /** Drop the active session and its views only after a confirmed server logout. */
+    /** Ask whether to exit after a connection failure prevented logout confirmation. */
+    boolean confirmOfflineExit() {
+        return JOptionPane.showConfirmDialog(this,
+                "The server could not be reached to sign out. Do you want to exit anyway?",
+                "Exit application", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE)
+                == JOptionPane.YES_OPTION;
+    }
+
+    /** Drop the active session and its views. */
     public void clearSession() {
-        model = null;
+        view.setModel(null);
         setVisible(false);
         initializeComponents();
         layoutComponents();

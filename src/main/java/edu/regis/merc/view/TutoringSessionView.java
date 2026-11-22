@@ -130,24 +130,23 @@ public class TutoringSessionView extends GPanel {
     private boolean cleanupPending;
     private java.util.function.Consumer<TutoringSession> sessionListener = session -> { };
     private final java.util.function.Consumer<String> logoutError;
+    private final java.util.function.BooleanSupplier confirmOfflineExit;
 
     public TutoringSessionView() {
         this(request -> SvcFacade.instance().tutorRequest(request), () -> SplashFrame.instance().logout(),
                 () -> { SplashFrame.instance().clearSession(); MercApp.shutdown(); },
-                message -> JOptionPane.showMessageDialog(null, message, "Session cleanup", JOptionPane.ERROR_MESSAGE));
+                message -> JOptionPane.showMessageDialog(null, message, "Session cleanup", JOptionPane.ERROR_MESSAGE),
+                () -> MainFrame.instance().confirmOfflineExit());
     }
 
     TutoringSessionView(java.util.function.Function<ClientRequest, TutorReply> requests, Runnable loggedOut,
-            java.util.function.Consumer<String> error) {
-        this(requests, loggedOut, () -> { SplashFrame.instance().clearSession(); MercApp.shutdown(); }, error);
-    }
-
-    TutoringSessionView(java.util.function.Function<ClientRequest, TutorReply> requests, Runnable loggedOut,
-            Runnable closed, java.util.function.Consumer<String> error) {
+            Runnable closed, java.util.function.Consumer<String> error,
+            java.util.function.BooleanSupplier confirmOfflineExit) {
         this.logoutRequests = requests;
         this.loggedOut = loggedOut;
         this.closed = closed;
         this.logoutError = error;
+        this.confirmOfflineExit = confirmOfflineExit;
         initCoreViews();
         initMercTutorPanel();
         initSplits();
@@ -183,6 +182,8 @@ public class TutoringSessionView extends GPanel {
         // for the previous step would still be submitted against this one.
         selectedRepresentation = null;
         selectedComponentId = -1;
+
+        if (model == null) return;
 
         // update the lambda view
         if (model.getProblem() != null) {
@@ -477,12 +478,18 @@ public class TutoringSessionView extends GPanel {
         SwingWorker<TutorReply, Void> worker = new SwingWorker<>() {
             @Override protected TutorReply doInBackground() { return logoutRequests.apply(request); }
             @Override protected void done() {
-                if (model != current) return;
                 try {
+                    if (!isCurrentSession()) return;
                     TutorReply reply = get();
-                    if (reply != null && "LoggedOut".equals(reply.getStatus())) {
+                    String status = reply == null ? null : reply.getStatus();
+                    boolean signedOut = "LoggedOut".equals(status) || "InvalidToken".equals(status);
+                    if (closing && reply != null && reply.isConnectionFailure()) {
+                        signedOut = confirmOfflineExit.getAsBoolean();
+                        if (!signedOut || !isCurrentSession()) return;
+                    }
+                    if (signedOut) {
                         current.setSecurityToken("");
-                        model = null;
+                        setModel(null);
                         completed.run();
                     } else {
                         logoutError.accept("Could not confirm sign-out. The application will stay open. You can try again.");
@@ -495,6 +502,11 @@ public class TutoringSessionView extends GPanel {
                 } finally {
                     setLogoutBusy(false);
                 }
+            }
+
+            private boolean isCurrentSession() {
+                return model == current
+                        && java.util.Objects.equals(request.getSecurityToken(), current.getSecurityToken());
             }
         };
         // A request-owned thread exits after completion; SwingWorker.execute() leaves an idle shared pool under exec:java.

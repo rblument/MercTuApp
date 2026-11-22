@@ -20,6 +20,8 @@ class LogoutViewTest {
     private final AtomicReference<String> error = new AtomicReference<>();
     private final AtomicBoolean returnedToSignIn = new AtomicBoolean();
     private final AtomicBoolean exited = new AtomicBoolean();
+    private final AtomicBoolean allowOfflineExit = new AtomicBoolean();
+    private final java.util.concurrent.atomic.AtomicInteger exitPrompts = new java.util.concurrent.atomic.AtomicInteger();
 
     private TutoringSessionView view(Function<ClientRequest, TutorReply> requests) throws Exception {
         AtomicReference<TutoringSessionView> result = new AtomicReference<>();
@@ -29,7 +31,11 @@ class LogoutViewTest {
         }, () -> {
             assertTrue(SwingUtilities.isEventDispatchThread());
             exited.set(true);
-        }, error::set)));
+        }, error::set, () -> {
+            assertTrue(SwingUtilities.isEventDispatchThread());
+            exitPrompts.incrementAndGet();
+            return allowOfflineExit.get();
+        })));
         TutoringSession saved = new TutoringSession(new Student(new Account("student@example.com")));
         saved.setSecurityToken("current-token");
         // Set only the session under test, avoiding unrelated problem rendering and windows.
@@ -75,12 +81,55 @@ class LogoutViewTest {
         assertFalse(exited.get(), "Logout must not exit the application");
     }
 
-    @Test void rejectedLogoutKeepsSessionAndShowsFailure() throws Exception {
+    @Test void invalidTokenClearsLocalSessionAndReturnsToSignIn() throws Exception {
         TutoringSessionView view = view(request -> new TutorReply("InvalidToken"));
         SwingUtilities.invokeAndWait(view::logout);
-        await(() -> error.get() != null);
-        SwingUtilities.invokeAndWait(() -> assertNotNull(view.getModel()));
+        await(returnedToSignIn::get);
+        SwingUtilities.invokeAndWait(() -> assertNull(view.getModel()));
+        assertNull(error.get());
+    }
+
+    @Test void replacingModelDuringLogoutPreservesNewSessionAndReleasesBusyState() throws Exception {
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        TutoringSessionView view = view(request -> {
+            started.countDown();
+            try {
+                assertTrue(release.await(3, TimeUnit.SECONDS));
+            } catch (InterruptedException ex) {
+                throw new AssertionError(ex);
+            }
+            return new TutorReply("InvalidToken");
+        });
+        TutoringSession newer = new TutoringSession(new Student(new Account("student@example.com")));
+        newer.setSecurityToken("new-token");
+        newer.setProblem(new edu.regis.merc.model.Problem(1));
+        SwingUtilities.invokeAndWait(view::logout);
+        try {
+            assertTrue(started.await(3, TimeUnit.SECONDS));
+            SwingUtilities.invokeAndWait(() -> view.setModel(newer));
+        } finally {
+            release.countDown();
+        }
+        await(() -> button(view, "Logout").isEnabled());
+        SwingUtilities.invokeAndWait(() -> {
+            assertSame(newer, view.getModel());
+            assertEquals("new-token", newer.getSecurityToken());
+            assertTrue(button(view, "Close").isEnabled());
+        });
         assertFalse(returnedToSignIn.get());
+        assertNull(error.get());
+    }
+
+    @Test void nullModelClearsSessionAndNotifiesListener() throws Exception {
+        TutoringSessionView view = view(request -> new TutorReply("LoggedOut"));
+        SwingUtilities.invokeAndWait(() -> {
+            AtomicReference<TutoringSession> owner = new AtomicReference<>(view.getModel());
+            view.setSessionListener(owner::set);
+            view.setModel(null);
+            assertNull(view.getModel());
+            assertNull(owner.get());
+        });
     }
 
     @Test void connectionFailureKeepsSessionAndAllowsRetry() throws Exception {
@@ -124,7 +173,7 @@ class LogoutViewTest {
         AtomicReference<TutoringSessionView> result = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             TutoringSessionView view = new TutoringSessionView(request -> { throw new AssertionError("No session to revoke"); },
-                    () -> returnedToSignIn.set(true), () -> exited.set(true), error::set);
+                    () -> returnedToSignIn.set(true), () -> exited.set(true), error::set, () -> false);
             result.set(view);
             view.closeSession();
         });
@@ -139,6 +188,7 @@ class LogoutViewTest {
         SwingUtilities.invokeAndWait(view::closeSession);
         await(() -> error.get() != null);
         assertFalse(exited.get());
+        assertEquals(0, exitPrompts.get());
         SwingUtilities.invokeAndWait(() -> {
             assertNotNull(view.getModel());
             assertEquals("current-token", view.getModel().getSecurityToken());
@@ -149,6 +199,24 @@ class LogoutViewTest {
         SwingUtilities.invokeAndWait(view::closeSession);
         await(exited::get);
         assertEquals(2, attempts.get());
+    }
+
+    @Test void offlineCloseCanBeDeclinedAndWindowXCanConfirmExit() throws Exception {
+        TutoringSessionView view = view(request -> TutorReply.connectionFailure());
+        SwingUtilities.invokeAndWait(view::closeSession);
+        await(() -> exitPrompts.get() == 1);
+        SwingUtilities.invokeAndWait(() -> {
+            assertFalse(exited.get());
+            assertEquals("current-token", view.getModel().getSecurityToken());
+            assertTrue(button(view, "Close").isEnabled());
+            allowOfflineExit.set(true);
+            TutoringSessionView.closeListener(view::closeSession).windowClosing(null);
+        });
+        await(exited::get);
+        assertEquals(2, exitPrompts.get());
+        assertFalse(returnedToSignIn.get());
+        assertNull(error.get());
+        SwingUtilities.invokeAndWait(() -> assertNull(view.getModel()));
     }
 
     @Test void closeAndWindowXCannotInterruptOrDuplicatePendingLogout() throws Exception {

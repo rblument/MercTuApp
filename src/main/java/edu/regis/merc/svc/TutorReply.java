@@ -31,6 +31,17 @@ public class TutorReply {
      * request to which this is a reply.
      */
     private String data = "";
+    private transient boolean connectionFailure;
+
+    public static TutorReply connectionFailure() {
+        TutorReply reply = new TutorReply(":ERR", "The server request could not be confirmed. Please try again.");
+        reply.connectionFailure = true;
+        return reply;
+    }
+
+    public boolean isConnectionFailure() {
+        return connectionFailure;
+    }
 
     /**
      * A reply from the tutor with an ERR status.

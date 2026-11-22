@@ -131,6 +131,9 @@ public class MercTutor implements TutorSvc {
             }
             return logout(request);
         }
+        if (request.getRequestType() == ServerRequestType.RESET_PASSWORD) {
+            return resetPassword(request);
+        }
         // Uses reflection to invoke a method derived from the request name in
         // the client request (e.g., ":SignIn" invokes "signIn(...)").
 
@@ -153,7 +156,6 @@ public class MercTutor implements TutorSvc {
             case "newExample":
             case "requestHint":
             case "requestModel":
-            case "resetPassword":
                 String userId = request.getUserId();
                 try {
                     if (verifySession(userId, request.getSecurityToken())) {
@@ -325,38 +327,31 @@ public class MercTutor implements TutorSvc {
      *
      * This method handles ":ResetPassword" requests from the GUI client.
      *
-     * @param jsonAcct a JSon encoded Account object
-     * @return a TutorReply if successful the status is "Created", otherwise the
-     *         status is ":ERR".
-     * @throws edu.regis.merc.err.NonRecoverableException
+     * @param request the password-reset request and its session token
+     * @return a reply indicating whether the password was reset
      */
-    public TutorReply resetPassword(String jsonAcct) throws NonRecoverableException {
-        Account acct = gson.fromJson(jsonAcct, Account.class);
-        if (acct.getPassword() == null || acct.getPassword().isEmpty()) {
-            return createError("A password is required to reset the password on an account.", null);
-        }
-
-        AccountSvc acctSvc = accountSvc();
-
-        if (!acctSvc.exists(acct.getUserId())) {
-            return new TutorReply("IllegalUserId");
+    private TutorReply resetPassword(ClientRequest request) {
+        String userId = request.getUserId();
+        String token = request.getSecurityToken();
+        if (userId == null || userId.isBlank() || token == null || token.isBlank()) {
+            return new TutorReply(":ERR", "Illegal Security Token");
         }
 
         try {
-            // Retrieve the full account so existing account information is preserved.
-            Account dbAcct = acctSvc.retrieve(acct.getUserId());
-
-            // Password is the only account field changed during password reset.
-            dbAcct.setPassword(acct.getPassword());
-
-            acctSvc.update(dbAcct);
-
-            return new TutorReply("PasswordReset");
-
-        } catch (ObjNotFoundException ex) {
-            return new TutorReply("IllegalUserId");
-        } catch (IllegalArgException ex) {
-            return createError("Password Account Update error", ex);
+            Account acct = gson.fromJson(request.getData(), Account.class);
+            if (acct == null || acct.getPassword() == null || acct.getPassword().isEmpty()) {
+                return new TutorReply(":ERR", "A password is required to reset the password on an account.");
+            }
+            if (!userId.equals(acct.getUserId())) {
+                return new TutorReply("IllegalUserId");
+            }
+            return accountSvc().resetPassword(userId, token, acct.getPassword())
+                    ? new TutorReply("PasswordReset") : new TutorReply(":ERR", "Illegal Security Token");
+        } catch (com.google.gson.JsonParseException ex) {
+            return new TutorReply(":ERR", "Invalid password reset request.");
+        } catch (NonRecoverableException ex) {
+            LOGGER.warning("Password reset could not be completed.");
+            return new TutorReply(":ERR", "Unable to reset password. Please try again.");
         }
     }
 

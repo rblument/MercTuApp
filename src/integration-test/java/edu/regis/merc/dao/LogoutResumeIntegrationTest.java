@@ -186,9 +186,15 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
         f.assertStoredToken(recoveryToken);
         f.assertRejected(original.getSecurityToken());
         Account replacement = new Account(f.user);
+        assertEquals(":ERR", f.request(ServerRequestType.RESET_PASSWORD, recoveryToken, gson.toJson(replacement)).getStatus());
+        f.assertStoredToken(recoveryToken);
         String newPassword = UUID.randomUUID().toString();
         replacement.setPassword(newPassword);
         assertEquals("PasswordReset", f.request(ServerRequestType.RESET_PASSWORD, recoveryToken, gson.toJson(replacement)).getStatus());
+        f.assertStoredToken("");
+        replacement.setPassword(UUID.randomUUID().toString());
+        assertEquals(":ERR", f.request(ServerRequestType.RESET_PASSWORD, recoveryToken, gson.toJson(replacement)).getStatus());
+        f.assertRejected(recoveryToken);
         TutorReply login = tutor.signIn(gson.toJson(new SignInRequest(f.user, newPassword)));
         assertEquals("Authenticated", login.getStatus());
         TutoringSession restored = gson.fromJson(login.getData(), TutoringSession.class);
@@ -197,6 +203,49 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
         Account saved = new AccountDAO().retrieve(f.user);
         assertEquals(0, saved.getSecurityQuestion());
         assertTrue(f.answer.equals(saved.getSecurityAnswer()), "Recovery must preserve the existing answer");
+    }
+
+    @Test public void invalidAndExpiredResetTokensNeverReachPasswordHashing() throws Exception {
+        Fixture f = new Fixture();
+        String oldToken = f.login().getSecurityToken();
+        String currentToken = f.login().getSecurityToken();
+        AccountDAO accounts = new AccountDAO() {
+            @Override String getPasswordHash(String password, String salt) {
+                return fail("An invalid or expired token reached password hashing");
+            }
+        };
+
+        assertFalse(accounts.resetPassword(f.user, UUID.randomUUID().toString(), "replacement"));
+        assertFalse(accounts.resetPassword(f.user, oldToken, "replacement"));
+        f.assertStoredToken(currentToken);
+        assertTrue(sessions.revokeSecurityToken(f.user, currentToken));
+        assertFalse(accounts.resetPassword(f.user, currentToken, "replacement"));
+        f.assertStoredToken("");
+        assertTrue(accounts.validatePassword(f.user, f.password).isPresent());
+    }
+
+    @Test public void tokenRevokedOrRotatedAfterValidationCannotResetPassword() throws Exception {
+        Fixture f = new Fixture();
+        String replacement = UUID.randomUUID().toString();
+        for (boolean rotate : new boolean[] {false, true}) {
+            String token = f.login().getSecurityToken();
+            String rotatedToken = UUID.randomUUID().toString();
+            AccountDAO accounts = new AccountDAO() {
+                @Override String getPasswordHash(String password, String salt) {
+                    // The DAO has validated the original token. Change it through a second connection.
+                    assertDoesNotThrow(() -> {
+                        if (rotate) sessions.replaceSecurityToken(f.user, rotatedToken);
+                        else assertTrue(sessions.revokeSecurityToken(f.user, token));
+                    });
+                    return super.getPasswordHash(password, salt);
+                }
+            };
+
+            assertFalse(accounts.resetPassword(f.user, token, replacement));
+            f.assertStoredToken(rotate ? rotatedToken : "");
+            assertTrue(accounts.validatePassword(f.user, f.password).isPresent());
+            assertTrue(accounts.validatePassword(f.user, replacement).isEmpty());
+        }
     }
 
     private void assertPosition(TutoringSession session, int stepId, int taskId) {

@@ -46,6 +46,7 @@ class SvcFacadeTimeoutTest {
         RecordingSocket socket = new RecordingSocket();
         TutorReply reply = facade(socket, properties).tutorRequest(new ClientRequest(ServerRequestType.LOGOUT));
         assertEquals("LoggedOut", reply.getStatus());
+        assertFalse(reply.isConnectionFailure());
         assertEquals(123, socket.connectTimeout);
         assertEquals(456, socket.readTimeout);
         assertTrue(socket.closed);
@@ -86,6 +87,7 @@ class SvcFacadeTimeoutTest {
         socket.failConnect = true;
         TutorReply reply = facade(socket, new Properties()).tutorRequest(new ClientRequest(ServerRequestType.LOGOUT));
         assertEquals(":ERR", reply.getStatus());
+        assertTrue(reply.isConnectionFailure());
         assertTrue(socket.closed);
         assertTrue(socket.connectTimeout > 0);
     }
@@ -109,6 +111,7 @@ class SvcFacadeTimeoutTest {
                 TutorReply reply = new SvcFacade("localhost", listener.getLocalPort(), properties)
                         .tutorRequest(new ClientRequest(ServerRequestType.LOGOUT));
                 assertEquals(":ERR", reply.getStatus());
+                assertTrue(reply.isConnectionFailure());
                 assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) < 2000,
                         "Client did not respect its read timeout");
             } finally {
