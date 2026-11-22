@@ -106,7 +106,7 @@ public class ResourceMgr {
         loadProps(PROPERTY_FILE_PATH);
 
         try {
-            locale = new Locale(getProp(LANGUAGE_PROP), getProp(COUNTRY_PROP));
+            locale = Locale.of(getProp(LANGUAGE_PROP), getProp(COUNTRY_PROP));
 
             msgs =  ResourceBundle.getBundle(UI_RESOURCE_PATH, locale);
 

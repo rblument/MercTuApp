@@ -136,7 +136,6 @@ public class HintTextField extends JTextField {
     public class NameFilter extends DocumentFilter {
 
         private boolean isLetterOrHyphen(String str) {
-            boolean isValid = true;
             for (int i = 0; i < str.length(); i++)
                 if (!Character.isLetter(str.charAt(i)) &&
                     (str.charAt(i) != '-'))
@@ -145,7 +144,6 @@ public class HintTextField extends JTextField {
         }
 
         private boolean isEmailChar(String str) {
-            boolean isValid = true;
             for (int i = 0; i < str.length(); i++) {
                 char ch = str.charAt(i);
                 if (!Character.isLetter(ch) &&
@@ -239,7 +237,7 @@ public class HintTextField extends JTextField {
                     if (isFirstEdit) {
                         tf.setCaretPosition(0);
                     } else {
-                        int offset = tf.viewToModel(e.getPoint());
+                        int offset = tf.viewToModel2D(e.getPoint());
                         tf.setCaretPosition(offset);
                     }
                 }

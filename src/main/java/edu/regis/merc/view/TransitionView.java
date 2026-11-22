@@ -25,6 +25,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import javax.swing.JComponent;
 import javax.swing.JPopupMenu;
+import javax.swing.SwingUtilities;
 
 /**
  * A view of an Edge model for a TuringTransition component displayed as an arrow.
@@ -334,7 +335,7 @@ public class TransitionView extends JComponent implements MouseListener, Selecta
      * Mouse-click on this class view. Chek for double-click and handle.
      */
     public void mouseClicked(MouseEvent e) {
-        if (e.getClickCount() > 1 && ((e.getModifiers() & MouseEvent.BUTTON1_MASK) != 0)) {
+        if (e.getClickCount() > 1 && SwingUtilities.isLeftMouseButton(e)) {
             doubleClick();
         }
     }

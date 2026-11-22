@@ -117,16 +117,11 @@ public abstract class MySqlDAO {
     static void atomicallyLoadDriver() {
         try {
             if (isLoaded.compareAndSet(false, true)) {
-                Class.forName(DRIVER).newInstance(); // Old School
+                // Loading the class registers the driver with DriverManager.
+                Class.forName(DRIVER);
             }
         } catch (ClassNotFoundException e) {
             LOGGER.log(Level.SEVERE, "MySqlDao-ERR-1: Illegal driver class name {0}", e.toString());
-            System.exit(1);
-        } catch (InstantiationException e) {
-            LOGGER.log(Level.SEVERE, "MySqlDao-ERR-2: Illegal instance {0}", e.toString());
-            System.exit(1);
-        } catch (IllegalAccessException e) {
-            LOGGER.log(Level.SEVERE, "MySqlDao-ERR-3: No create driver permission {0}", e.toString());
             System.exit(1);
         }
     }
