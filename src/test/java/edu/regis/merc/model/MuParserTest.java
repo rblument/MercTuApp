@@ -4,6 +4,9 @@ import edu.regis.merc.err.MuParseException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -100,8 +103,58 @@ public class MuParserTest {
     }
 
     @Test
+    void nameMayContainUnderscores() throws MuParseException {
+        assertEquals("add_one(x_1)", new MuParser().parse("add_one(x_1)").toString());
+        assertThrows(MuParseException.class, () -> new MuParser().parse("_x"));
+    }
+
+    @Test
     void nullAndEmptyAreRejected() {
         assertThrows(MuParseException.class, () -> new MuParser().parse(null));
         assertThrows(MuParseException.class, () -> new MuParser().parse(""));
+    }
+
+    // Covers the seeded P function, whose left hand side is "P(x1, x2, x3)".
+    @Test
+    void leftHandSideKeepsItsParametersInOrder() throws MuParseException {
+        LeftHandSide lhs = new MuParser().parseLeftHandSide("P(x1, x2, x3)");
+
+        assertEquals("P", lhs.getName());
+        assertEquals(List.of("x1", "x2", "x3"), lhs.getParameters());
+    }
+
+    @Test
+    void bareNameIsALeftHandSideWithNoParameters() throws MuParseException {
+        LeftHandSide lhs = new MuParser().parseLeftHandSide("c");
+
+        assertEquals("c", lhs.getName());
+        assertTrue(lhs.getParameters().isEmpty());
+    }
+
+    @Test
+    void leftHandSideParametersMustBeVariables() {
+        assertThrows(MuParseException.class, () -> new MuParser().parseLeftHandSide("f(0)"));
+        assertThrows(MuParseException.class, () -> new MuParser().parseLeftHandSide("f(g(x))"));
+        assertThrows(MuParseException.class, () -> new MuParser().parseLeftHandSide("f((x + y))"));
+    }
+
+    @Test
+    void leftHandSideMustBeANamedFunction() {
+        assertThrows(MuParseException.class, () -> new MuParser().parseLeftHandSide("(x + y)"));
+        assertThrows(MuParseException.class, () -> new MuParser().parseLeftHandSide("0"));
+        assertThrows(MuParseException.class, () -> new MuParser().parseLeftHandSide(null));
+    }
+
+    @Test
+    void leftHandSideRejectsARepeatedParameter() {
+        assertThrows(MuParseException.class, () -> new MuParser().parseLeftHandSide("f(x, x)"));
+    }
+
+    @Test
+    void leftHandSideErrorQuotesTheInput() {
+        MuParseException ex = assertThrows(MuParseException.class,
+                () -> new MuParser().parseLeftHandSide("f(x"));
+
+        assertTrue(ex.getMessage().contains("'f(x'"));
     }
 }
