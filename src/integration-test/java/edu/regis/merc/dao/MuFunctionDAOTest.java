@@ -28,9 +28,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import edu.regis.merc.err.MuParseException;
+import edu.regis.merc.model.Kind;
 import edu.regis.merc.model.LeftHandSide;
 import edu.regis.merc.model.MuExpression;
 import edu.regis.merc.model.MuFunction;
+import edu.regis.merc.model.MuParser;
+import edu.regis.merc.model.OpKind;
 
 /**
  * Integration tests for MuFunctionDAO, ported from the manual MuDAOTest
@@ -97,5 +101,57 @@ public class MuFunctionDAOTest extends BaseMysqlIT {
         assertNotNull(functions);
         // Should have at least the seed data functions (add, Z)
         assertFalse(functions.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Seeded add Rhs loads as an operation, not a variable")
+    public void testSeededAddLoadsAsOperation() {
+        MuExpression rhs = findFunction(dao.getAllFunctions(), "add").getRhs();
+
+        assertEquals(Kind.OPERATION, rhs.getKind());
+        assertEquals(OpKind.ADD, rhs.getOpKind());
+        assertEquals(Kind.VARIABLE, rhs.getLeftOperand().getKind());
+        assertEquals(Kind.VARIABLE, rhs.getRightOperand().getKind());
+        assertEquals("(x + y)", rhs.toString());
+    }
+
+    @Test
+    @DisplayName("An application Rhs round trips through the DB")
+    public void testApplicationRoundTrips() throws MuParseException {
+        LeftHandSide lhs = new LeftHandSide("test_app");
+        lhs.addParameter("x");
+
+        dao.insertFunction(new MuFunction(999, lhs, new MuParser().parse("S(Z(x))")));
+
+        MuExpression rhs = findFunction(dao.getAllFunctions(), "test_app").getRhs();
+
+        assertEquals(Kind.APPLICATION, rhs.getKind());
+        assertEquals("S(Z(x))", rhs.toString());
+    }
+
+    @Test
+    @DisplayName("A row with an unparseable Rhs is skipped, the rest still load")
+    public void testUnparseableRhsIsSkipped() throws Exception {
+        String sql = "INSERT INTO MuFunction (Name, Lhs, Rhs) VALUES (?, ?, ?)";
+        try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL());
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, "test_bad");
+            stmt.setString(2, "test_bad(x)");
+            stmt.setString(3, "(x +");
+            stmt.executeUpdate();
+        }
+
+        List<MuFunction> functions = dao.getAllFunctions();
+
+        assertTrue(functions.stream().noneMatch(f -> "test_bad".equals(f.getLhs().getName())),
+            "The unparseable function should be skipped");
+        assertNotNull(findFunction(functions, "add"));
+    }
+
+    private MuFunction findFunction(List<MuFunction> functions, String name) {
+        return functions.stream()
+            .filter(f -> name.equals(f.getLhs().getName()))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Function " + name + " was not loaded"));
     }
 }

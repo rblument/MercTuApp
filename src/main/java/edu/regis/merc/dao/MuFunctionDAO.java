@@ -6,11 +6,16 @@ package edu.regis.merc.dao;
 
 import java.sql.*;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import edu.regis.merc.err.MuParseException;
 import edu.regis.merc.model.*;
 import edu.regis.merc.svc.MuFunctionSvc;
 
 public class MuFunctionDAO extends MySqlDAO implements MuFunctionSvc {
+
+    private static final Logger LOGGER = Logger.getLogger(MuFunctionDAO.class.getName());
 
     @Override
     public List<MuFunction> getAllFunctions() {
@@ -31,7 +36,18 @@ public class MuFunctionDAO extends MySqlDAO implements MuFunctionSvc {
                 System.out.println("Loaded MU Function from DB → " + name
                                    + "  LHS=" + lhsText + "  RHS=" + rhsText);
 
-                MuFunction f = new MuFunction(id, new LeftHandSide(name), new MuExpression(rhsText));
+                MuExpression rhs;
+                try {
+                    rhs = new MuParser().parse(rhsText);
+                } catch (MuParseException e) {
+                    // Skip a row the parser rejects so one bad Rhs doesn't
+                    // keep the rest of the functions from loading.
+                    LOGGER.log(Level.WARNING, "Skipping MuFunction " + id + " (" + name
+                            + "): Rhs could not be parsed", e);
+                    continue;
+                }
+
+                MuFunction f = new MuFunction(id, new LeftHandSide(name), rhs);
                 functions.add(f);
             }
 

@@ -8,5 +8,6 @@ package edu.regis.merc.model;
 public enum Kind {
     NUMBER,
     VARIABLE,
-    OPERATION
+    OPERATION,
+    APPLICATION
 }

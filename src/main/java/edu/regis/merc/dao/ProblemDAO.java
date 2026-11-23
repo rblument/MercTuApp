@@ -13,6 +13,7 @@
 package edu.regis.merc.dao;
 
 import edu.regis.merc.err.InconsistentDBException;
+import edu.regis.merc.err.MuParseException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
 import edu.regis.merc.model.Hint;
@@ -31,6 +32,7 @@ import edu.regis.merc.svc.ProblemSvc;
 import edu.regis.merc.svc.ServiceFactory;
 import edu.regis.merc.model.MuFunction;
 import edu.regis.merc.model.MuExpression;
+import edu.regis.merc.model.MuParser;
 import edu.regis.merc.model.LeftHandSide;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -698,13 +700,15 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
     /**
      * This method facilitates system interoperability by mapping relational MySQL
      * strings into a hierarchical MuFunction AST.
-     * Possible future improvement could be done with the current parser. The
-     * current parser assumes a standard 'Name(Param) = Rhs' format. If complex
-     * nested functions are added to the DB, this parser should be upgraded to a
-     * formal Lexer/Parser patterns.
+     * The parameters are read from the 'Name(Param, ...)' form of the Lhs, and
+     * MuParser turns the Rhs into an expression tree, including operations
+     * such as (x + y) and applications such as S(Z(x)).
+     *
+     * @throws MuParseException if the Rhs is not a valid mu expression
      */
 
-    private MuFunction retrieveMuFunction(int muId, Connection conn) throws SQLException {
+    private MuFunction retrieveMuFunction(int muId, Connection conn)
+            throws SQLException, MuParseException {
         final String sql = "SELECT Name, Lhs, Rhs FROM MuFunction WHERE Id = ?";
         PreparedStatement stmt = null;
         try {
@@ -724,12 +728,7 @@ public class ProblemDAO extends MySqlDAO implements ProblemSvc {
                         lhs.addParameter(p.trim());
                     }
                 }
-                MuExpression rhs;
-                try {
-                    rhs = new MuExpression(Integer.parseInt(rhsStr.trim()));
-                } catch (NumberFormatException e) {
-                    rhs = new MuExpression(rhsStr.trim());
-                }
+                MuExpression rhs = new MuParser().parse(rhsStr);
                 return new MuFunction(muId, lhs, rhs);
             }
         } finally {
