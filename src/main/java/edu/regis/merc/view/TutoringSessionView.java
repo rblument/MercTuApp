@@ -163,6 +163,20 @@ public class TutoringSessionView extends GPanel {
         setModel(gson.fromJson(reply.getData(), TutoringSession.class));
     }
 
+    /** Apply only a confirmed reveal with a saved server position. */
+    boolean applyAnswerReveal(TutorReply reply) {
+        if (reply == null || reply.getRevealedAnswerId() == null) return false;
+        switch (reply.getStatus()) {
+            case "Success", "TaskComplete", "ProblemComplete", "UnitComplete":
+                TutoringSession updated = gson.fromJson(reply.getData(), TutoringSession.class);
+                if (updated == null) return false;
+                setModel(updated);
+                return true;
+            default:
+                return false;
+        }
+    }
+
     /** Return the model currently displayed in this view. */
     public TutoringSession getModel() {
         return model;
@@ -373,29 +387,34 @@ public class TutoringSessionView extends GPanel {
                 return;
             }
 
-            int currentStepId = model.currentTask().currentStep().getStep().getId();
-            String jsonPayload = gson.toJson(new StudentPayload(currentStepId));
+            PendingStep current = model.currentTask().currentStep();
+            if (current.getStep() == null || current.isCompleted()) return;
+            StudentPayload payload = new StudentPayload(current.getStep().getId());
+            payload.setPendingStepId(current.getId());
 
             ClientRequest request = new ClientRequest(ServerRequestType.MODEL_REQUEST);
 
             request.setUserId(model.getStudent().getAccount().getUserId());
             request.setSecurityToken(model.getSecurityToken());
-            request.setData(jsonPayload);
+            request.setData(gson.toJson(payload));
 
             TutorReply reply = SvcFacade.instance().tutorRequest(request);
 
-            if ("Model".equals(reply.getStatus())) {
+            if (applyAnswerReveal(reply)) {
+                String outcome = switch (reply.getStatus()) {
+                    case "TaskComplete" -> "Moving to the next task.";
+                    case "ProblemComplete" -> "Moving to the next problem.";
+                    case "UnitComplete" -> "You have reached the end of this unit.";
+                    default -> "Moving to the next step.";
+                };
                 JOptionPane.showMessageDialog(this,
-                        "The correct component ID is: " + reply.getData() + ".\nLet's move to the next step.",
+                        "The correct component ID is: " + reply.getRevealedAnswerId() + ".\n" + outcome,
                         "Answer Revealed",
                         JOptionPane.INFORMATION_MESSAGE);
 
-                model.currentTask().currentStep().setIsCompleted(true);
-                model.currentTask().advanceStep();
-                setModel(model);
-
             } else {
-                JOptionPane.showMessageDialog(this, reply.getData(), "Error", JOptionPane.ERROR_MESSAGE);
+                String message = reply == null ? "Could not confirm the answer reveal." : reply.getData();
+                JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
     }

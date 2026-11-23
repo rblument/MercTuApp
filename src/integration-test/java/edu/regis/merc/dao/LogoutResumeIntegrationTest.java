@@ -75,6 +75,14 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
     }
 
     @Test public void logoutLoginRestoresEveryStepAndCompletesTheSeededUnit() throws Exception {
+        completeSeededUnit(false);
+    }
+
+    @Test public void answerRevealsPersistAcrossLogoutAndCompleteTheSeededUnit() throws Exception {
+        completeSeededUnit(true);
+    }
+
+    private void completeSeededUnit(boolean reveal) throws Exception {
         Fixture f = new Fixture();
         TutoringSession current = f.login();
         int sessionId = current.getId();
@@ -84,6 +92,8 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
         int[] nextSteps = {51, 52, 53, 54, 55, 56, 56};
         int[] tasks = {10, 11, 11, 11, 12, 12, 12};
         int[] problems = {0, 1, 1, 1, 2, 2, 2};
+        List<List<Object>> before = assessment(f.user);
+        assertFalse(before.isEmpty(), "Fixture must have an assessment to protect");
         String[] statuses = {
             "Success",
             "ProblemComplete",
@@ -96,9 +106,25 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
         for (int i = 0; i < steps.length; i++) {
             assertEquals(steps[i], current.currentTask().currentStep().getStep().getId());
             StudentPayload payload = new StudentPayload(steps[i]);
-            payload.setRepresentation(RepresentationKind.LAMBDA_CALCULUS);
-            payload.setSelectedComponentId(answers[i]);
-            TutorReply reply = f.request(ServerRequestType.COMPLETED_STEP, current.getSecurityToken(), gson.toJson(payload));
+            TutorReply reply;
+            if (reveal) {
+                payload.setPendingStepId(current.currentTask().currentStep().getId());
+                reply = f.request(ServerRequestType.MODEL_REQUEST, current.getSecurityToken(), gson.toJson(payload));
+                assertEquals(answers[i], reply.getRevealedAnswerId());
+                TutorReply duplicate = f.request(ServerRequestType.MODEL_REQUEST,
+                        current.getSecurityToken(), gson.toJson(payload));
+                assertEquals(":ERR", duplicate.getStatus());
+                assertNull(duplicate.getRevealedAnswerId());
+            } else {
+                payload.setRepresentation(RepresentationKind.LAMBDA_CALCULUS);
+                payload.setSelectedComponentId(answers[i] + 1000);
+                assertEquals("Incorrect", f.request(ServerRequestType.COMPLETED_STEP,
+                        current.getSecurityToken(), gson.toJson(payload)).getStatus());
+                assertPosition(sessions.retrieve(f.user), steps[i], current.currentTask().getTask().getId());
+                payload.setSelectedComponentId(answers[i]);
+                reply = f.request(ServerRequestType.COMPLETED_STEP, current.getSecurityToken(), gson.toJson(payload));
+                assertNull(reply.getRevealedAnswerId());
+            }
             assertEquals(statuses[i], reply.getStatus());
             TutoringSession returned = gson.fromJson(reply.getData(), TutoringSession.class);
             TutoringSession saved = sessions.retrieve(f.user);
@@ -117,6 +143,7 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
             f.assertStoredToken(current.getSecurityToken());
         }
         assertTrue(current.currentTask().currentStep().isCompleted());
+        assertEquals(before, assessment(f.user));
         try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL());
                 PreparedStatement statement = conn.prepareStatement(
                         "SELECT StepId FROM PendingStep WHERE SessionId = ? AND IsCompleted = 1 ORDER BY StepId")) {
@@ -126,6 +153,120 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
                 while (result.next()) completed.add(result.getInt(1));
             }
             assertEquals(List.of(50, 51, 52, 53, 54, 55, 56), completed);
+        }
+    }
+
+    @Test public void revealRequiresTheCurrentOccurrenceAndCurrentToken() throws Exception {
+        Fixture f = new Fixture();
+        TutoringSession first = f.login();
+        TutoringSession current = f.login();
+        String reveal = revealData(current);
+        for (String token : new String[] {null, "", "invalid", first.getSecurityToken()}) {
+            assertEquals(":ERR", f.request(ServerRequestType.MODEL_REQUEST, token, reveal).getStatus());
+        }
+        String token = current.getSecurityToken();
+        int occurrence = current.currentTask().currentStep().getId();
+        for (String data : new String[] {"null", "[]", "{\"stepId\":50}", gson.toJson(new StudentPayload(51))}) {
+            assertEquals(":ERR", f.request(ServerRequestType.MODEL_REQUEST, token, data).getStatus());
+        }
+        StudentPayload wrongOccurrence = new StudentPayload(50);
+        wrongOccurrence.setPendingStepId(occurrence + 1);
+        assertEquals(":ERR", f.request(ServerRequestType.MODEL_REQUEST, token, gson.toJson(wrongOccurrence)).getStatus());
+        StudentPayload wrongStep = new StudentPayload(51);
+        wrongStep.setPendingStepId(occurrence);
+        assertEquals(":ERR", f.request(ServerRequestType.MODEL_REQUEST, token, gson.toJson(wrongStep)).getStatus());
+
+        assertEquals("LoggedOut", f.request(ServerRequestType.LOGOUT, token, "").getStatus());
+        assertEquals(":ERR", f.request(ServerRequestType.MODEL_REQUEST, token, reveal).getStatus());
+        TutoringSession saved = sessions.retrieve(f.user);
+        assertPosition(saved, 50, 10);
+        assertEquals(occurrence, saved.currentTask().currentStep().getId());
+        assertFalse(saved.currentTask().currentStep().isCompleted());
+    }
+
+    @Test public void progressWriteRechecksTokenAfterAuthentication() throws Exception {
+        Fixture f = new Fixture();
+        TutoringSession stale = f.login();
+        String oldToken = stale.getSecurityToken();
+        String rotated = f.login().getSecurityToken();
+        PendingStep finished = stale.currentTask().currentStep();
+        finished.setIsCompleted(true);
+        assertTrue(stale.currentTask().advanceStep());
+        assertFalse(sessions.saveProgress(stale, finished, oldToken, false));
+        assertTrue(sessions.revokeSecurityToken(f.user, rotated));
+        assertFalse(sessions.saveProgress(stale, finished, rotated, false));
+        TutoringSession saved = sessions.retrieve(f.user);
+        assertPosition(saved, 50, 10);
+        assertFalse(saved.currentTask().currentStep().isCompleted());
+        f.assertStoredToken("");
+    }
+
+    @Test public void progressWriteRejectsAStepThatAdvancedAfterItWasRead() throws Exception {
+        Fixture f = new Fixture();
+        TutoringSession stale = f.login();
+        String token = stale.getSecurityToken();
+        String data = revealData(stale);
+        assertEquals("Success", f.request(ServerRequestType.MODEL_REQUEST, token, data).getStatus());
+        PendingStep finished = stale.currentTask().currentStep();
+        finished.setIsCompleted(true);
+        assertTrue(stale.currentTask().advanceStep());
+        assertFalse(sessions.saveProgress(stale, finished, token, false));
+        assertPosition(sessions.retrieve(f.user), 51, 10);
+        try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL());
+                PreparedStatement stmt = conn.prepareStatement("SELECT COUNT(*) FROM PendingStep WHERE SessionId = ?")) {
+            stmt.setInt(1, stale.getId());
+            try (ResultSet rows = stmt.executeQuery()) {
+                assertTrue(rows.next());
+                assertEquals(2, rows.getInt(1));
+            }
+        }
+    }
+
+    @Test public void failedBoundaryWriteRollsBackCompletionAndProblemChange() throws Exception {
+        Fixture f = new Fixture();
+        TutoringSession initial = f.login();
+        String token = initial.getSecurityToken();
+        assertEquals("Success", f.request(ServerRequestType.MODEL_REQUEST, token, revealData(initial)).getStatus());
+        TutoringSession failed = sessions.retrieve(f.user);
+        String retry = revealData(failed);
+        PendingStep finished = failed.currentTask().currentStep();
+        finished.setIsCompleted(true);
+        Problem next = new ProblemDAO().retrieve(1);
+        failed.setProblem(next);
+        // Failure occurs when writing the destination, after updating completion and problem.
+        failed.setTasks(new ArrayList<>(List.of(new PendingTask(next.findTaskBySequence(0)))));
+        assertThrows(edu.regis.merc.err.NonRecoverableException.class,
+                () -> sessions.saveProgress(failed, finished, token, true));
+
+        TutoringSession saved = sessions.retrieve(f.user);
+        assertEquals(0, saved.getProblem().getId());
+        assertPosition(saved, 51, 10);
+        assertFalse(saved.currentTask().currentStep().isCompleted());
+        assertEquals("ProblemComplete", f.request(ServerRequestType.MODEL_REQUEST, token, retry).getStatus());
+        assertPosition(sessions.retrieve(f.user), 52, 11);
+    }
+
+    private String revealData(TutoringSession session) {
+        PendingStep current = session.currentTask().currentStep();
+        StudentPayload payload = new StudentPayload(current.getStep().getId());
+        payload.setPendingStepId(current.getId());
+        return gson.toJson(payload);
+    }
+
+    private List<List<Object>> assessment(String user) throws Exception {
+        try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL());
+                PreparedStatement stmt = conn.prepareStatement("""
+                    SELECT AssessmentLevel, Exposures, Successes, Hints
+                    FROM Assessment WHERE UserId = ? ORDER BY Id
+                    """)) {
+            stmt.setString(1, user);
+            try (ResultSet rows = stmt.executeQuery()) {
+                List<List<Object>> snapshot = new ArrayList<>();
+                while (rows.next()) {
+                    snapshot.add(List.of(rows.getString(1), rows.getInt(2), rows.getInt(3), rows.getInt(4)));
+                }
+                return snapshot;
+            }
         }
     }
 

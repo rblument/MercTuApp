@@ -34,6 +34,9 @@ public class StudentPayload {
      */
     private int stepId;
 
+    /** Persisted occurrence of the step, required when revealing an answer. */
+    private int pendingStepId;
+
     /**
      * Which of the three computational models the student selected a component
      * in. Null on requests that do not involve a selection.
@@ -75,6 +78,14 @@ public class StudentPayload {
 
     public void setStepId(int stepId) {
         this.stepId = stepId;
+    }
+
+    public int getPendingStepId() {
+        return pendingStepId;
+    }
+
+    public void setPendingStepId(int pendingStepId) {
+        this.pendingStepId = pendingStepId;
     }
 
     public RepresentationKind getRepresentation() {

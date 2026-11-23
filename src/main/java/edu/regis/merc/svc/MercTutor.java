@@ -14,6 +14,7 @@ package edu.regis.merc.svc;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
@@ -198,6 +199,16 @@ public class MercTutor implements TutorSvc {
 
         // Security token has been verified or not required (e.g., signIn,
         // createAccount).
+        if (request.getRequestType() == ServerRequestType.MODEL_REQUEST
+                || request.getRequestType() == ServerRequestType.COMPLETED_STEP) {
+            try {
+                return request.getRequestType() == ServerRequestType.MODEL_REQUEST
+                        ? requestModel(request.getData(), request.getSecurityToken())
+                        : completedStep(request.getData(), request.getSecurityToken());
+            } catch (JsonParseException ex) {
+                return new TutorReply(":ERR", "Invalid tutoring step or answer data.");
+            }
+        }
         try {
             Method method = getClass().getMethod(methodName, String.class);
 
@@ -505,60 +516,38 @@ public class MercTutor implements TutorSvc {
         return new TutorReply("Hint", hintText);
     }
 
-    /**
-     * This method implements a strictly stateless network contract. To prevent
-     * 'server amnesia,' the client must pass the current stepId and hintIndex in
-     * the JSON payload. This makes sure synchonization across asynch socket
-     * connections without relying on session memory
-     *
-     * @param jsonObj
-     * @return
-     */
-    public TutorReply requestModel(String jsonObj) {
-        System.out.println("--- Server Received Model Request (show Answer) ---");
-
-        // find out which step the student is asking about
+    /** Reveal the current answer and advance without grading a response. */
+    private TutorReply requestModel(String jsonObj, String presentedToken) {
         StudentPayload payload = gson.fromJson(jsonObj, StudentPayload.class);
-        int activeStepId = payload.getStepId();
-
-        System.out.println("Client requested the answer for Step ID: " + activeStepId);
-
-        // find the step in teh current task
-        Step requestedStep = null;
-        if (session != null && session.currentTask() != null) {
-            for (Step s : session.currentTask().getTask().getSteps()) {
-                if (s.getId() == activeStepId) {
-                    requestedStep = s;
-                    break;
-                }
-            }
+        PendingStep current = currentPendingStep();
+        if (payload == null || current == null || current.getStep() == null || current.isCompleted()
+                || payload.getPendingStepId() <= 0 || current.getId() != payload.getPendingStepId()
+                || current.getStep().getId() != payload.getStepId()) {
+            return new TutorReply(":ERR", "The requested step is no longer current or is already finished.");
         }
-
-        if (requestedStep == null) {
-            return new TutorReply(":ERR", "Step not found in the current task.");
-        }
-        if (requestedStep.getData() == null || requestedStep.getData().isEmpty()) {
+        StepData answer = gson.fromJson(current.getStep().getData(), StepData.class);
+        if (answer == null || answer.correctComponentId == null) {
             return new TutorReply(":ERR", "This step does not have answer data configured.");
         }
 
-        // extract the correct answer from the database JSON
-        StepData expectedData = gson.fromJson(requestedStep.getData(), StepData.class);
-        String correctAnswerId = String.valueOf(expectedData.correctComponentId);
-
-        System.out.println("Sending Answer ID: " + correctAnswerId);
-
-        return new TutorReply("Model", correctAnswerId);
+        TutorReply reply = advanceProgress(current, presentedToken);
+        if (!":ERR".equals(reply.getStatus())) {
+            reply.setRevealedAnswerId(answer.correctComponentId);
+        }
+        return reply;
     }
 
-    /**
-     * @param jsonObj a JSon encoded StepCompletion object
-     * @return
-     */
-    public TutorReply completedStep(String jsonObj) {
+    private PendingStep currentPendingStep() {
+        PendingTask task = session == null ? null : session.currentTask();
+        return task == null ? null : task.currentStep();
+    }
+
+    private TutorReply completedStep(String jsonObj, String presentedToken) {
         System.out.println("--- Server Received Completed Step ---");
 
         // parse the JSON into the helper object
         StudentPayload payload = gson.fromJson(jsonObj, StudentPayload.class);
+        if (payload == null) return new TutorReply(":ERR", "Missing tutoring step.");
         int studentAnswerId = payload.getSelectedComponentId();
         int activeStepId = payload.getStepId();
 
@@ -568,8 +557,7 @@ public class MercTutor implements TutorSvc {
         // The session's own pointer decides which step is being answered, not
         // the id the client sent. Grading one step while advancing another is
         // how a correct answer could leave the student on the same question.
-        PendingTask pendingTask = session == null ? null : session.currentTask();
-        PendingStep pendingStep = pendingTask == null ? null : pendingTask.currentStep();
+        PendingStep pendingStep = currentPendingStep();
 
         // getStep() is null when a PendingStep row names a StepId the task does
         // not contain, which findStepById reports by returning null rather than
@@ -580,7 +568,7 @@ public class MercTutor implements TutorSvc {
             return new TutorReply(":ERR", "No current step in this session.");
         }
 
-        if (currentStep.getId() != activeStepId) {
+        if (currentStep.getId() != activeStepId || pendingStep.isCompleted()) {
             // A stale client, or one that advanced on its own. Answering a
             // step the session has already moved past must not count.
             System.out.println("Rejected: session is on step " + currentStep.getId()
@@ -595,12 +583,9 @@ public class MercTutor implements TutorSvc {
 
         StepData expectedData = gson.fromJson(currentStep.getData(), StepData.class);
 
-        System.out.println("--- Grading Logic ---");
-        System.out.println("Student answered " + payload.getRepresentation()
-                + " component " + studentAnswerId);
-        System.out.println("Step expects   " + expectedData.representation
-                + " component " + expectedData.correctComponentId);
-
+        if (expectedData == null || expectedData.correctComponentId == null) {
+            return new TutorReply(":ERR", "This step does not have grading data");
+        }
         if (expectedData.representation == null) {
             // Grading on the component id alone would accept the same id from
             // any representation, which is how a lambda question could be
@@ -609,35 +594,29 @@ public class MercTutor implements TutorSvc {
                     "Step " + activeStepId + " does not say which representation it expects.");
         }
 
-        if (isCorrect(expectedData, payload)) {
+        System.out.println("--- Grading Logic ---");
+        System.out.println("Student answered " + payload.getRepresentation()
+                + " component " + studentAnswerId);
+        System.out.println("Step expects   " + expectedData.representation
+                + " component " + expectedData.correctComponentId);
 
-            pendingStep.setIsCompleted(true);
-
-            boolean hasNextStep = pendingTask.advanceStep();
-
-            // Without this the advance lives only in memory, and the next
-            // request reloads the session with the pointer back where it was.
-            try {
-                sessionSvc().updateCurrentStep(session);
-
-            } catch (NonRecoverableException e) {
-                return createError("Unable to save progress for " + session.getStudent()
-                        .getAccount().getUserId(), e);
-            }
-
-            if (hasNextStep) {
-                System.out.println("Advanced to next step: " + pendingTask.currentStep().getStep().getId());
-
-                return new TutorReply("Success", gson.toJson(session));
-
-            } else {
-                // No steps left in this task, so move up a level.
-                System.out.println("Task complete! No more steps.");
-
-                return advanceTask(session, pendingTask);
-            }
-        } else {
+        if (!isCorrect(expectedData, payload)) {
             return new TutorReply("Incorrect", "Not quite. Please try again or request a hint.");
+        }
+        return advanceProgress(pendingStep, presentedToken);
+    }
+
+    private TutorReply advanceProgress(PendingStep finished, String presentedToken) {
+        PendingTask task = session.currentTask();
+        finished.setIsCompleted(true);
+        try {
+            String status = task.advanceStep() ? "Success" : advanceTask(session, task);
+            if (!sessionSvc().saveProgress(session, finished, presentedToken, session.currentTask() != task)) {
+                return new TutorReply(":ERR", "The session or current step has changed. Sign in again to resume.");
+            }
+            return new TutorReply(status, gson.toJson(session));
+        } catch (NonRecoverableException ex) {
+            return createError("Unable to save tutoring progress.", ex);
         }
     }
 
@@ -649,9 +628,9 @@ public class MercTutor implements TutorSvc {
      *
      * @param session the session whose current task is finished
      * @param finished the pending task that was just completed
-     * @return a TutorReply carrying the updated session
+     * @return the transition status
      */
-    private TutorReply advanceTask(TutoringSession session, PendingTask finished) {
+    private String advanceTask(TutoringSession session, PendingTask finished) throws NonRecoverableException {
         Problem problem = session.getProblem();
         int nextTaskSequence = finished.getTask().getSequenceIndex() + 1;
 
@@ -665,43 +644,39 @@ public class MercTutor implements TutorSvc {
         int unitId = session.getUnit().getId();
         int nextProblemSequence = problem.getSequenceIndex() + 1;
 
-        Optional<Problem> nextProblem;
-
-        try {
-            nextProblem = ServiceFactory.findProbelmSvc()
-                    .retrieveByUnitAndSequence(unitId, nextProblemSequence);
-
-        } catch (NonRecoverableException e) {
-            return createError("Unable to look up problem " + nextProblemSequence
-                    + " of unit " + unitId, e);
-        }
+        Optional<Problem> nextProblem = ServiceFactory.findProbelmSvc()
+                .retrieveByUnitAndSequence(unitId, nextProblemSequence);
 
         if (nextProblem.isEmpty()) {
             System.out.println("Unit complete! No problem at sequence " + nextProblemSequence);
 
-            return new TutorReply("UnitComplete", gson.toJson(session));
+            return "UnitComplete";
         }
 
         Problem advanced = nextProblem.get();
         Task firstTask = advanced.findTaskBySequence(0);
 
         if (firstTask == null) {
-            return createError("Problem " + advanced.getId() + " has no task at sequence 0", null);
+            throw new NonRecoverableException("Problem " + advanced.getId() + " has no task at sequence 0.");
         }
 
         return startTask(session, advanced, firstTask, "ProblemComplete");
     }
 
     /**
-     * Point the given session at the given task and persist it.
+     * Prepare the next task for the same transaction that completes the outgoing step.
      *
      * @param session the session to move
      * @param problem the problem the task belongs to
      * @param task the task to start
      * @param status the reply status to return on success
-     * @return a TutorReply carrying the updated session
+     * @return the transition status
      */
-    private TutorReply startTask(TutoringSession session, Problem problem, Task task, String status) {
+    private String startTask(TutoringSession session, Problem problem, Task task, String status)
+            throws NonRecoverableException {
+        if (task.getSteps().isEmpty()) {
+            throw new NonRecoverableException("Task " + task.getId() + " has no first step.");
+        }
         session.setProblem(problem);
 
         // The task list holds outstanding tasks, so the finished one is
@@ -713,17 +688,7 @@ public class MercTutor implements TutorSvc {
         tasks.add(pendingTask);
         session.setTasks(tasks);
 
-        try {
-            sessionSvc().updateCurrentTask(session);
-
-        } catch (NonRecoverableException e) {
-            return createError("Unable to advance " + session.getStudent().getAccount().getUserId()
-                    + " to task " + task.getId(), e);
-        }
-
-        System.out.println("Advanced to problem " + problem.getId() + ", task " + task.getId());
-
-        return new TutorReply(status, gson.toJson(session));
+        return status;
     }
 
     /**
@@ -911,7 +876,7 @@ public class MercTutor implements TutorSvc {
             return false;
         }
 
-        return expected.representation == submitted.getRepresentation()
+        return expected.correctComponentId != null && expected.representation == submitted.getRepresentation()
                 && expected.correctComponentId == submitted.getSelectedComponentId();
     }
 
@@ -924,6 +889,6 @@ public class MercTutor implements TutorSvc {
      */
     static class StepData {
         RepresentationKind representation;
-        int correctComponentId;
+        Integer correctComponentId;
     }
 }

@@ -378,8 +378,7 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
                 // a row of its own, and repoint the task at it.
                 updatePendingStep(pTask.getReplacedStep(), conn);
 
-                int newPendingStepId = createPendingStep(sessionId, pStep, conn);
-                updatePendingTask(sessionId, pTask.getTask().getId(), newPendingStepId, conn);
+                writeNextStep(session, conn);
 
             } else {
                 // Still on the same step; only its state changed.
@@ -422,7 +421,6 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             // nothing and keeps one method serving both kinds of advance.
             conn.setAutoCommit(false);
 
-            int sessionId = session.getId();
             PendingTask pTask = session.currentTask();
 
             // currentStep() is a field that stays null until setCurrentStep is
@@ -430,15 +428,13 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
             // here would escape the SQLException catch, so fail cleanly.
             if (pTask.getTask() == null || pTask.currentStep() == null) {
                 throw new NonRecoverableException(
-                        "SessionDAO-ERR-27: Session " + sessionId
+                        "SessionDAO-ERR-27: Session " + session.getId()
                                 + " has no task and step to advance to");
             }
 
             update(session, conn);
 
-            int pendingStepId = createPendingStep(sessionId, pTask.currentStep(), conn);
-
-            updatePendingTask(sessionId, pTask.getTask().getId(), pendingStepId, conn);
+            writeNextStep(session, conn);
 
             conn.commit();
 
@@ -457,6 +453,57 @@ public class SessionDAO extends MySqlDAO implements SessionSvc {
 
             close(conn);
         }
+    }
+
+    @Override
+    public boolean saveProgress(TutoringSession session, PendingStep finished, String presentedToken,
+            boolean changedTask) throws NonRecoverableException {
+        if (presentedToken == null || presentedToken.isBlank()) return false;
+
+        // This locking read checks both the login and step occurrence at the write boundary.
+        // Logout and token rotation must wait for the same session row before changing it.
+        final String guard = """
+                SELECT s.Id FROM TutoringSession s
+                JOIN PendingTask t ON t.SessionId = s.Id
+                JOIN PendingStep p ON p.Id = t.PendingStepId AND p.SessionId = s.Id
+                WHERE s.Id = ? AND BINARY s.SecurityToken = BINARY ?
+                    AND p.Id = ? AND p.StepId = ? AND p.IsCompleted = 0
+                FOR UPDATE
+                """;
+        try (Connection conn = DriverManager.getConnection(getURL())) {
+            conn.setAutoCommit(false);
+            try {
+                try (PreparedStatement stmt = conn.prepareStatement(guard)) {
+                    stmt.setInt(1, session.getId());
+                    stmt.setString(2, presentedToken);
+                    stmt.setInt(3, finished.getId());
+                    stmt.setInt(4, finished.getStep().getId());
+                    try (ResultSet rows = stmt.executeQuery()) {
+                        if (!rows.next()) return false;
+                    }
+                }
+
+                updatePendingStep(finished, conn);
+                if (changedTask) update(session, conn);
+                if (session.currentTask().currentStep() != finished) writeNextStep(session, conn);
+                conn.commit();
+                return true;
+            } finally {
+                rollback(conn);
+            }
+        } catch (SQLException ex) {
+            throw new NonRecoverableException("Unable to save tutoring progress.", ex);
+        }
+    }
+
+    private void writeNextStep(TutoringSession session, Connection conn) throws NonRecoverableException {
+        PendingTask task = session.currentTask();
+        if (task == null || task.getTask() == null || task.currentStep() == null
+                || task.currentStep().getStep() == null) {
+            throw new NonRecoverableException("No destination step to save.");
+        }
+        int stepId = createPendingStep(session.getId(), task.currentStep(), conn);
+        updatePendingTask(session.getId(), task.getTask().getId(), stepId, conn);
     }
 
     /**

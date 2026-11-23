@@ -31,6 +31,7 @@ public class TutorReply {
      * request to which this is a reply.
      */
     private String data = "";
+    private Integer revealedAnswerId;
     private transient boolean connectionFailure;
 
     public static TutorReply connectionFailure() {
@@ -41,6 +42,14 @@ public class TutorReply {
 
     public boolean isConnectionFailure() {
         return connectionFailure;
+    }
+
+    public Integer getRevealedAnswerId() {
+        return revealedAnswerId;
+    }
+
+    public void setRevealedAnswerId(int revealedAnswerId) {
+        this.revealedAnswerId = revealedAnswerId;
     }
 
     /**
