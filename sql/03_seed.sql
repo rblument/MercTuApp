@@ -576,9 +576,9 @@ INSERT INTO LC_ABS_BODY (AbsId, BodyExprId, SeqIndex) VALUES (240,242,0), (242,2
 -- end of the unit, so a gap would end the unit early.
 --
 -- Only the lambda calculus representation is filled in. The mu
--- recursive form of successor, S(Z(0)), needs function application in
--- MuExpression, which does not exist yet, and there is no Turing
--- machine for it, so both ids are left null.
+-- recursive form of successor, S(Z(0)), can be represented now that
+-- MuExpression has function application, but it is not seeded yet, and
+-- there is no Turing machine for it, so both ids are left null.
 -- ---------------------------------------------------------------
 
 INSERT INTO
@@ -652,11 +652,11 @@ VALUES
 -- than behaviour. The curried form, \x1.(\x2.(\x3. x2)), is the same
 -- function and belongs in a later problem.
 --
--- Unlike successor, projection needs no function application, so the mu
--- recursive form is filled in here: its right hand side is a bare
--- variable, which retrieveMuFunction already handles. The steps still
--- grade against lambda, because MuRecView draws the whole parameter
--- list as a single label and so cannot report which xi was clicked.
+-- The mu recursive form is filled in here: its right hand side is a
+-- bare variable. MuRecView draws each parameter as its own component
+-- (P 2000, x1 2001, x2 2002, x3 2003, and the right hand x2 2004), so a
+-- step could grade against the mu panel, but the steps below still
+-- grade against lambda.
 -- ---------------------------------------------------------------
 
 -- P_2^3:  \x1 x2 x3. x2
