@@ -230,6 +230,43 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         }
     }
 
+    @Override
+    public boolean resetPassword(String userId, String token, String password) throws NonRecoverableException {
+        if (userId == null || userId.isBlank() || token == null || token.isBlank()
+                || password == null || password.isEmpty()) {
+            return false;
+        }
+        final String accountSession = "Account AS a JOIN TutoringSession AS s ON s.UserId = a.UserId";
+        final String matchingToken = " WHERE a.UserId = ? AND a.IsStudent = 1 AND BINARY s.SecurityToken = BINARY ?";
+        final String validate = "SELECT 1 FROM " + accountSession + matchingToken;
+        final String reset = "UPDATE " + accountSession
+                + " SET a.Password = ?, a.Salt = ?, s.SecurityToken = ''" + matchingToken;
+
+        try (Connection conn = DriverManager.getConnection(getURL())) {
+            // Read without locking or consuming the token before doing expensive work.
+            try (PreparedStatement stmt = conn.prepareStatement(validate)) {
+                stmt.setString(1, userId);
+                stmt.setString(2, token);
+                try (ResultSet rows = stmt.executeQuery()) {
+                    if (!rows.next()) return false;
+                }
+            }
+
+            String salt = bytesToHex(generateSalt(SALT_LENGTH_BYTES));
+            String hash = getPasswordHash(password, salt);
+            // Recheck the token in the write because it may have changed since the read.
+            try (PreparedStatement stmt = conn.prepareStatement(reset)) {
+                stmt.setString(1, hash);
+                stmt.setString(2, salt);
+                stmt.setString(3, userId);
+                stmt.setString(4, token);
+                return stmt.executeUpdate() > 0;
+            }
+        } catch (SQLException ex) {
+            throw new NonRecoverableException("Unable to reset password.");
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -366,7 +403,7 @@ public class AccountDAO extends MySqlDAO implements AccountSvc {
         return salt;
     }
 
-    private String getPasswordHash(String password, String salt) {
+    String getPasswordHash(String password, String salt) {
         try {
             return bytesToHex(hashPassword(password.toCharArray(), hexToBytes(salt),
                     PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH_BITS));

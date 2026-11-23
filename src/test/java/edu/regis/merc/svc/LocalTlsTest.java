@@ -98,6 +98,10 @@ class LocalTlsTest {
         try (RunningServer server = new RunningServer(true)) {
             // The generated certificate has only DNS:localhost, deliberately no IP SAN.
             assertThrows(SSLHandshakeException.class, () -> client(server.port, "127.0.0.1", true).connect());
+            SvcFacade facade = new SvcFacade(client(server.port, "127.0.0.1", true));
+            TutorReply reply = facade.tutorRequest(new ClientRequest(ServerRequestType.LOGOUT));
+            assertEquals(":ERR", reply.getStatus());
+            assertTrue(reply.isConnectionFailure());
             assertJsonReply(client(server.port, "localhost", true));
         }
     }
@@ -146,6 +150,7 @@ class LocalTlsTest {
         request.setData("{\"userId\":\"local-test@example.com\",\"password\":\"\"}");
         TutorReply reply = facade.tutorRequest(request);
         assertEquals(":ERR", reply.getStatus());
+        assertFalse(reply.isConnectionFailure());
         assertEquals("A password is required to create an account.", reply.getData());
     }
 

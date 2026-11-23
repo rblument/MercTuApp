@@ -13,7 +13,6 @@
 package edu.regis.merc.svc;
 
 import edu.regis.merc.dao.*;
-import edu.regis.merc.svc.MUSvc;
 import edu.regis.merc.dao.MUSvcImpl;
 
 /**

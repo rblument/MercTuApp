@@ -70,7 +70,7 @@ public class TestLCParser {
         LCExpression expr2 = Assertions.assertDoesNotThrow(() -> parser.parse(t2Expr, false, false),
                 "Parse test 2 application should not throw an exception");
 
-        assertEquals("(\\x. x) x", t2Expr.toString());
+        assertEquals("(\\x. x) x", expr2.toString());
 
         // ********************************
         String churchZero = "(\\f. (\\x. x))";

@@ -1,12 +1,8 @@
 package edu.regis.merc.view;
 
-import edu.regis.merc.model.GuiCtx;
-import edu.regis.merc.model.State;
 import edu.regis.merc.model.TuringMachine;
 import edu.regis.merc.model.TutoringSession;
-import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
 
 public class TuringMachineView extends GPanel {
     private TutoringSession model;

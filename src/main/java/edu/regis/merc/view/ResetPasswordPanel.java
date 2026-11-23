@@ -19,7 +19,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
-import java.math.BigInteger;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.swing.BorderFactory;

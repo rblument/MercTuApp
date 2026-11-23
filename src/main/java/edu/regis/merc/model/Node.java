@@ -12,7 +12,6 @@
  */
 package edu.regis.merc.model;
 
-import edu.regis.merc.model.TitledModel;
 import java.util.ArrayList;
 /**
  * A generic node appearing in a context-dependent workflow

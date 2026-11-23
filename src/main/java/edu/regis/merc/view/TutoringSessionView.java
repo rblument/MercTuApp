@@ -124,18 +124,46 @@ public class TutoringSessionView extends GPanel {
     /**
      * Initialize this view including creating and laying out its child components.
      */
+    private final java.util.function.Function<ClientRequest, TutorReply> logoutRequests;
+    private final Runnable loggedOut;
+    private final Runnable closed;
+    private boolean cleanupPending;
+    private java.util.function.Consumer<TutoringSession> sessionListener = session -> { };
+    private final java.util.function.Consumer<String> logoutError;
+    private final java.util.function.BooleanSupplier confirmOfflineExit;
+
     public TutoringSessionView() {
+        this(request -> SvcFacade.instance().tutorRequest(request), () -> SplashFrame.instance().logout(),
+                () -> { SplashFrame.instance().clearSession(); MercApp.shutdown(); },
+                message -> JOptionPane.showMessageDialog(null, message, "Session cleanup", JOptionPane.ERROR_MESSAGE),
+                () -> MainFrame.instance().confirmOfflineExit());
+    }
+
+    TutoringSessionView(java.util.function.Function<ClientRequest, TutorReply> requests, Runnable loggedOut,
+            Runnable closed, java.util.function.Consumer<String> error,
+            java.util.function.BooleanSupplier confirmOfflineExit) {
+        this.logoutRequests = requests;
+        this.loggedOut = loggedOut;
+        this.closed = closed;
+        this.logoutError = error;
+        this.confirmOfflineExit = confirmOfflineExit;
         initCoreViews();
         initMercTutorPanel();
         initSplits();
         layoutComponents();
     }
 
-    /**
-     * Return the model currently displayed in this view.
-     *
-     * @return a TutoringSession
-     */
+    /** Keep the owning frame synchronized when a server response replaces the session. */
+    void setSessionListener(java.util.function.Consumer<TutoringSession> listener) {
+        sessionListener = listener;
+    }
+
+    /** Apply the persisted server session rather than independently advancing a local copy. */
+    void applySession(TutorReply reply) {
+        setModel(gson.fromJson(reply.getData(), TutoringSession.class));
+    }
+
+    /** Return the model currently displayed in this view. */
     public TutoringSession getModel() {
         return model;
     }
@@ -147,12 +175,15 @@ public class TutoringSessionView extends GPanel {
      */
     public void setModel(TutoringSession model) {
         this.model = model;
+        sessionListener.accept(model);
 
         // Re-rendering the panels clears their own selections, so the
         // selection recorded here has to go too. Otherwise a selection made
         // for the previous step would still be submitted against this one.
         selectedRepresentation = null;
         selectedComponentId = -1;
+
+        if (model == null) return;
 
         // update the lambda view
         if (model.getProblem() != null) {
@@ -212,6 +243,8 @@ public class TutoringSessionView extends GPanel {
         submitButton = new JButton("Submit");
         showAnswerButton = new JButton("Show Answer");
         closeButton = new JButton("Close");
+        logoutButton = new JButton("Logout");
+        logoutButton.addActionListener(e -> logout());
 
         Dimension p1 = hintButton.getPreferredSize();
         Dimension p2 = submitButton.getPreferredSize();
@@ -220,7 +253,7 @@ public class TutoringSessionView extends GPanel {
         int h = Math.max(Math.max(p1.height, p2.height), p3.height);
         Dimension uniform = new Dimension(w, h);
 
-        for (JButton b : new JButton[] { hintButton, submitButton, showAnswerButton, closeButton }) {
+        for (JButton b : new JButton[] { hintButton, submitButton, showAnswerButton, logoutButton, closeButton }) {
             b.setPreferredSize(uniform);
             b.setMinimumSize(uniform);
             b.setMaximumSize(uniform);
@@ -237,11 +270,13 @@ public class TutoringSessionView extends GPanel {
         buttonColumn.add(Box.createVerticalStrut(12));
         buttonColumn.add(submitButton);
         buttonColumn.add(Box.createVerticalStrut(12));
+        buttonColumn.add(logoutButton);
+        buttonColumn.add(Box.createVerticalStrut(12));
         buttonColumn.add(closeButton);
         buttonColumn.add(Box.createVerticalGlue());
 
         mercTutorPanel.add(buttonColumn, BorderLayout.EAST);
-        closeButton.addActionListener(e -> MercApp.shutdown());
+        closeButton.addActionListener(e -> MainFrame.instance().requestClose());
 
         submitButton.addActionListener(e -> {
             if (selectedRepresentation != null) {
@@ -264,9 +299,7 @@ public class TutoringSessionView extends GPanel {
                 if ("Success".equals(reply.getStatus())) {
                     JOptionPane.showMessageDialog(this, "Correct! Moving to the next step.", "Correct!",
                             JOptionPane.INFORMATION_MESSAGE);
-                    model.currentTask().currentStep().setIsCompleted(true);
-                    model.currentTask().advanceStep();
-                    setModel(model);
+                    applySession(reply);
                 } else if ("TaskComplete".equals(reply.getStatus())
                         || "ProblemComplete".equals(reply.getStatus())) {
                     // The task changed, so advanceStep cannot get us there --
@@ -280,11 +313,10 @@ public class TutoringSessionView extends GPanel {
                                     : "Correct! Moving to the next task.",
                             "Correct!", JOptionPane.INFORMATION_MESSAGE);
 
-                    setModel(gson.fromJson(reply.getData(), TutoringSession.class));
+                    applySession(reply);
 
                 } else if ("UnitComplete".equals(reply.getStatus())) {
-                    model.currentTask().currentStep().setIsCompleted(true);
-                    setModel(model);
+                    applySession(reply);
                     JOptionPane.showMessageDialog(this, "Correct! You have completed this unit.", "Unit Complete",
                             JOptionPane.INFORMATION_MESSAGE);
                 } else if ("Incorrect".equals(reply.getStatus())) {
@@ -413,6 +445,82 @@ public class TutoringSessionView extends GPanel {
      * A class called by logout Button to logout
      */
     public void logout() {
-        SplashFrame.instance().logout();
+        endSession(loggedOut, false);
+    }
+
+    /** Both application windows route X through the same guarded close request as the buttons. */
+    static java.awt.event.WindowAdapter closeListener(Runnable requestClose) {
+        return new java.awt.event.WindowAdapter() {
+            @Override public void windowClosing(java.awt.event.WindowEvent event) { requestClose.run(); }
+        };
+    }
+
+    /** Reuse the same authenticated revocation before the final application shutdown. */
+    public void closeSession() {
+        endSession(closed, true);
+    }
+
+    private void endSession(Runnable completed, boolean closing) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> endSession(completed, closing));
+            return;
+        }
+        if (cleanupPending) return;
+        if (model == null) {
+            if (closing) completed.run();
+            return;
+        }
+        TutoringSession current = model;
+        ClientRequest request = new ClientRequest(ServerRequestType.LOGOUT);
+        request.setUserId(current.getStudent().getAccount().getUserId());
+        request.setSecurityToken(current.getSecurityToken());
+        setLogoutBusy(true);
+        SwingWorker<TutorReply, Void> worker = new SwingWorker<>() {
+            @Override protected TutorReply doInBackground() { return logoutRequests.apply(request); }
+            @Override protected void done() {
+                try {
+                    if (!isCurrentSession()) return;
+                    TutorReply reply = get();
+                    String status = reply == null ? null : reply.getStatus();
+                    boolean signedOut = "LoggedOut".equals(status) || "InvalidToken".equals(status);
+                    if (closing && reply != null && reply.isConnectionFailure()) {
+                        signedOut = confirmOfflineExit.getAsBoolean();
+                        if (!signedOut || !isCurrentSession()) return;
+                    }
+                    if (signedOut) {
+                        current.setSecurityToken("");
+                        setModel(null);
+                        completed.run();
+                    } else {
+                        logoutError.accept("Could not confirm sign-out. The application will stay open. You can try again.");
+                    }
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    logoutError.accept("Session cleanup was interrupted. The application will stay open. Please retry.");
+                } catch (java.util.concurrent.ExecutionException | RuntimeException ex) {
+                    logoutError.accept("Session cleanup could not be confirmed. The application will stay open. Check the connection and retry.");
+                } finally {
+                    setLogoutBusy(false);
+                }
+            }
+
+            private boolean isCurrentSession() {
+                return model == current
+                        && java.util.Objects.equals(request.getSecurityToken(), current.getSecurityToken());
+            }
+        };
+        // A request-owned thread exits after completion; SwingWorker.execute() leaves an idle shared pool under exec:java.
+        Thread thread = new Thread(worker, "merc-logout-request");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void setLogoutBusy(boolean busy) {
+        cleanupPending = busy;
+        closeButton.setEnabled(!busy);
+        logoutButton.setEnabled(!busy);
+        submitButton.setEnabled(!busy);
+        hintButton.setEnabled(!busy);
+        showAnswerButton.setEnabled(!busy);
     }
 }

@@ -16,7 +16,6 @@ import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
 import edu.regis.merc.model.Course;
 import edu.regis.merc.model.CourseDigest;
-import edu.regis.merc.model.Task;
 import edu.regis.merc.model.UnitDigest;
 import java.sql.Connection;
 

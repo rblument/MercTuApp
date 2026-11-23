@@ -12,9 +12,6 @@
  */
 package edu.regis.merc.model;
 
-import edu.regis.merc.model.Node;
-import edu.regis.merc.model.Model;
-
 /**
  * A directed binary precedence relation between nodes.
  *

@@ -15,8 +15,6 @@ package edu.regis.merc.view.act;
 import edu.regis.merc.view.SplashFrame;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import static javax.swing.Action.MNEMONIC_KEY;
-import static javax.swing.Action.SHORT_DESCRIPTION;
 
 /**
  * An MVC controller handling a user GUI gesture requesting to create a

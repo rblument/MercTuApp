@@ -12,10 +12,8 @@
  */
 package edu.regis.merc.dao;
 
-import edu.regis.merc.err.InconsistentDBException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
-import edu.regis.merc.model.BloomLevel;
 import edu.regis.merc.model.LCExpression;
 import edu.regis.merc.model.LCAbstraction;
 import edu.regis.merc.model.LCApplication;
@@ -26,7 +24,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 
 /**
  * This is a data access object for loading recursive Lambda Calculus
