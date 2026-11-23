@@ -15,6 +15,7 @@ package edu.regis.merc.svc;
 import edu.regis.merc.err.IllegalArgException;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.err.ObjNotFoundException;
+import edu.regis.merc.model.PendingStep;
 import edu.regis.merc.model.TutoringSession;
 
 /**
@@ -103,6 +104,15 @@ public interface SessionSvc {
      * @throws NonRecoverableException perhaps see getCause().getErrorCode().
      */
     void updateCurrentTask(TutoringSession session) throws NonRecoverableException;
+
+    /**
+     * Save a completed occurrence and its destination together, provided the presented
+     * token and unfinished occurrence are still current at the time of the write.
+     *
+     * @return whether the transition was saved
+     */
+    boolean saveProgress(TutoringSession session, PendingStep finished, String presentedToken,
+            boolean changedTask) throws NonRecoverableException;
 
     /**
      * Delete the session from the database for the given student user id.

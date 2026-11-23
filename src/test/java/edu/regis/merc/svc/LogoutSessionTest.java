@@ -20,7 +20,9 @@ class LogoutSessionTest {
         private boolean failDatabase;
         private boolean failPasswordReset;
         private int passwordResets;
+        private int progressWrites;
         private int rotations;
+        private int nextPendingStepId = 301;
         private final MercTutor tutor;
 
         private Fixture() {
@@ -41,8 +43,11 @@ class LogoutSessionTest {
                 switch (name) {
                     case "retrieve": saved.setSecurityToken(stored); return saved;
                     case "retrieveSecurityToken": return stored;
-                    case "updateCurrentStep":
-                    case "updateCurrentTask": return null;
+                    case "saveProgress":
+                        progressWrites++;
+                        PendingStep next = saved.currentTask().currentStep();
+                        if (next.getId() == Model.DEFAULT_ID) next.setId(nextPendingStepId++);
+                        return true;
                     case "replaceSecurityToken": stored = (String) args[1]; rotations++; return null;
                     case "revokeSecurityToken":
                         if (!SecurityTokens.matches(stored, (String) args[1])) return false;
@@ -204,6 +209,63 @@ class LogoutSessionTest {
     }
 
     @Test void stepAndTaskAdvancementSurviveRepeatedLogoutAndTokenRotation() {
+        completeTasks(false);
+    }
+
+    @Test void answerRevealAdvancesWithinAndAcrossTasks() {
+        completeTasks(true);
+    }
+
+    @Test void missingOrMalformedAnswerDataDoesNotCompleteStep() {
+        Fixture f = new Fixture();
+        PendingStep step = f.saved.currentTask().currentStep();
+        ClientRequest request = new ClientRequest(ServerRequestType.MODEL_REQUEST);
+        request.setUserId(EMAIL);
+        request.setSecurityToken(f.stored);
+        StudentPayload payload = new StudentPayload(step.getStep().getId());
+        payload.setPendingStepId(step.getId());
+        request.setData(gson.toJson(payload));
+        for (String data : new String[] {null, "{}", "{\"correctComponentId\":\"invalid\"}"}) {
+            step.getStep().setData(data);
+            TutorReply reply = f.tutor.request(request);
+            assertEquals(":ERR", reply.getStatus());
+            assertNull(reply.getRevealedAnswerId());
+            assertSame(step, f.saved.currentTask().currentStep());
+            assertFalse(step.isCompleted());
+        }
+    }
+
+    @Test void missingOrMalformedGradingDataReturnsTutorErrorWithoutSaving() {
+        Fixture f = new Fixture();
+        PendingTask task = f.saved.currentTask();
+        PendingStep step = task.currentStep();
+        String token = f.stored;
+        ClientRequest request = new ClientRequest(ServerRequestType.COMPLETED_STEP);
+        request.setUserId(EMAIL);
+        request.setSecurityToken(token);
+        StudentPayload payload = new StudentPayload(step.getStep().getId());
+        payload.setRepresentation(RepresentationKind.LAMBDA_CALCULUS);
+        payload.setSelectedComponentId(101);
+        request.setData(gson.toJson(payload));
+        for (String data : new String[] {null, "", "null", "  \t ", "{}",
+                "{\"representation\":\"LAMBDA_CALCULUS\"}"}) {
+            step.getStep().setData(data);
+            TutorReply reply = f.tutor.request(request);
+            assertEquals(":ERR", reply.getStatus());
+            assertEquals("This step does not have grading data", reply.getData());
+        }
+        step.getStep().setData("{");
+        TutorReply malformed = f.tutor.request(request);
+        assertEquals(":ERR", malformed.getStatus());
+        assertEquals("Invalid tutoring step or answer data.", malformed.getData());
+        assertEquals(0, f.progressWrites);
+        assertSame(task, f.saved.currentTask());
+        assertSame(step, task.currentStep());
+        assertFalse(step.isCompleted());
+        assertEquals(token, f.stored);
+    }
+
+    private void completeTasks(boolean reveal) {
         Fixture f = new Fixture();
         Problem problem = new Problem(0);
         for (int taskIndex = 0; taskIndex < 2; taskIndex++) {
@@ -223,14 +285,28 @@ class LogoutSessionTest {
         initial.setCurrentStep(new PendingStep(300, initial.getTask().getSteps().get(0)));
         f.saved.setTasks(new java.util.ArrayList<>(java.util.List.of(initial)));
         for (int stepId = 50; stepId < 54; stepId++) {
-            ClientRequest answer = new ClientRequest(ServerRequestType.COMPLETED_STEP);
+            ClientRequest answer = new ClientRequest(reveal ? ServerRequestType.MODEL_REQUEST : ServerRequestType.COMPLETED_STEP);
             answer.setUserId(EMAIL);
             answer.setSecurityToken(f.stored);
             StudentPayload payload = new StudentPayload(stepId);
-            payload.setRepresentation(RepresentationKind.LAMBDA_CALCULUS);
-            payload.setSelectedComponentId(101);
+            if (reveal) {
+                payload.setPendingStepId(f.saved.currentTask().currentStep().getId());
+            } else {
+                payload.setRepresentation(RepresentationKind.LAMBDA_CALCULUS);
+                payload.setSelectedComponentId(102);
+                answer.setData(gson.toJson(payload));
+                PendingStep before = f.saved.currentTask().currentStep();
+                int writes = f.progressWrites;
+                assertEquals("Incorrect", f.tutor.request(answer).getStatus());
+                assertEquals(writes, f.progressWrites);
+                assertSame(before, f.saved.currentTask().currentStep());
+                assertFalse(before.isCompleted());
+                payload.setSelectedComponentId(101);
+            }
             answer.setData(gson.toJson(payload));
-            assertEquals(stepId == 51 ? "TaskComplete" : "Success", f.tutor.request(answer).getStatus());
+            TutorReply reply = f.tutor.request(answer);
+            assertEquals(stepId == 51 ? "TaskComplete" : "Success", reply.getStatus());
+            assertEquals(reveal ? 101 : null, reply.getRevealedAnswerId());
             assertEquals(stepId + 1, f.saved.currentTask().currentStep().getStep().getId());
             String oldToken = f.stored;
             assertEquals("LoggedOut", f.logout(oldToken).getStatus());

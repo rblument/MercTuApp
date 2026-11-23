@@ -248,6 +248,14 @@ class LogoutViewTest {
     }
 
     @Test void serverProgressUpdatesDisplayedAndOwningSessionsBeforeLogout() throws Exception {
+        assertServerProgressApplied(false);
+    }
+
+    @Test void answerRevealAppliesServerPositionAndErrorsKeepCurrentSession() throws Exception {
+        assertServerProgressApplied(true);
+    }
+
+    private void assertServerProgressApplied(boolean reveal) throws Exception {
         AtomicReference<ClientRequest> sent = new AtomicReference<>();
         TutoringSessionView view = view(request -> {
             sent.set(request);
@@ -273,7 +281,15 @@ class LogoutViewTest {
             TutorReply reply = new TutorReply(statuses[i], gson.toJson(returned));
             SwingUtilities.invokeAndWait(() -> {
                 view.setSessionListener(owner::set);
-                view.applySession(reply);
+                if (reveal) {
+                    TutoringSession previous = view.getModel();
+                    assertFalse(view.applyAnswerReveal(new TutorReply(":ERR", "Progress was not saved.")));
+                    assertSame(previous, view.getModel());
+                    reply.setRevealedAnswerId(101);
+                    assertTrue(view.applyAnswerReveal(reply));
+                } else {
+                    view.applySession(reply);
+                }
                 assertSame(view.getModel(), owner.get());
                 assertEquals(stepId, owner.get().currentTask().currentStep().getStep().getId());
                 assertEquals("server-token", owner.get().getSecurityToken());
