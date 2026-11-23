@@ -18,7 +18,6 @@ import edu.regis.merc.model.State;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -205,8 +204,6 @@ public class StateView extends JComponent implements MouseListener, MouseMotionL
 
         setFont(f);
 
-        FontMetrics metrics = getFontMetrics(f);
-
         Dimension d = new Dimension(gCtx.getWidth(), gCtx.getWidth());
 
         setPreferredSize(d);
@@ -223,7 +220,6 @@ public class StateView extends JComponent implements MouseListener, MouseMotionL
 
         // Paint the background
         int h = d.height - 1;
-        int w = d.width - 1;
 
         if (!isBeingDragged) {
             GuiCtx ctx = model.getGuiCtx();

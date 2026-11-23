@@ -15,7 +15,6 @@ package edu.regis.merc.util;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 
 /**
  * An implementation of the SHA-256 algorithm.
