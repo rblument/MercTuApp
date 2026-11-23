@@ -36,18 +36,22 @@ public class MuFunctionDAO extends MySqlDAO implements MuFunctionSvc {
                 System.out.println("Loaded MU Function from DB → " + name
                                    + "  LHS=" + lhsText + "  RHS=" + rhsText);
 
+                LeftHandSide lhs;
                 MuExpression rhs;
                 try {
-                    rhs = new MuParser().parse(rhsText);
+                    MuParser parser = new MuParser();
+                    lhs = parser.parseLeftHandSide(lhsText);
+                    rhs = parser.parse(rhsText);
                 } catch (MuParseException e) {
-                    // Skip a row the parser rejects so one bad Rhs doesn't
+                    // Skip a row the parser rejects so one bad row doesn't
                     // keep the rest of the functions from loading.
                     LOGGER.log(Level.WARNING, "Skipping MuFunction " + id + " (" + name
-                            + "): Rhs could not be parsed", e);
+                            + "), Lhs '" + lhsText + "', Rhs '" + rhsText + "': "
+                            + e.getMessage(), e);
                     continue;
                 }
 
-                MuFunction f = new MuFunction(id, new LeftHandSide(name), rhs);
+                MuFunction f = new MuFunction(id, lhs, rhs);
                 functions.add(f);
             }
 

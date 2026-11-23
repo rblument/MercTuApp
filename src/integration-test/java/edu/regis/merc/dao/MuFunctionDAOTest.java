@@ -91,6 +91,7 @@ public class MuFunctionDAOTest extends BaseMysqlIT {
 
         assertTrue(testFunc.isPresent(), "Inserted function testFunc was not loaded back");
         assertEquals("testFunc", testFunc.get().getLhs().getName());
+        assertEquals(List.of("x"), testFunc.get().getLhs().getParameters());
         assertEquals("0", testFunc.get().getRhs().toString());
     }
 
@@ -132,20 +133,54 @@ public class MuFunctionDAOTest extends BaseMysqlIT {
     @Test
     @DisplayName("A row with an unparseable Rhs is skipped, the rest still load")
     public void testUnparseableRhsIsSkipped() throws Exception {
-        String sql = "INSERT INTO MuFunction (Name, Lhs, Rhs) VALUES (?, ?, ?)";
-        try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL());
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, "test_bad");
-            stmt.setString(2, "test_bad(x)");
-            stmt.setString(3, "(x +");
-            stmt.executeUpdate();
-        }
+        insertRawFunction("test_bad", "test_bad(x)", "(x +");
 
         List<MuFunction> functions = dao.getAllFunctions();
 
         assertTrue(functions.stream().noneMatch(f -> "test_bad".equals(f.getLhs().getName())),
             "The unparseable function should be skipped");
         assertNotNull(findFunction(functions, "add"));
+    }
+
+    @Test
+    @DisplayName("Seeded P loads its Lhs parameters in order")
+    public void testSeededProjectionLoadsParameters() {
+        LeftHandSide lhs = findFunction(dao.getAllFunctions(), "P").getLhs();
+
+        assertEquals(List.of("x1", "x2", "x3"), lhs.getParameters());
+    }
+
+    @Test
+    @DisplayName("A loaded function binds its arguments and evaluates")
+    public void testLoadedAddEvaluates() {
+        MuFunction add = findFunction(dao.getAllFunctions(), "add");
+
+        assertEquals(5, dao.evaluate(add, 2, 3));
+    }
+
+    @Test
+    @DisplayName("A row with an unparseable Lhs is skipped, the rest still load")
+    public void testUnparseableLhsIsSkipped() throws Exception {
+        insertRawFunction("test_badlhs", "test_badlhs(0)", "0");
+
+        List<MuFunction> functions = dao.getAllFunctions();
+
+        assertTrue(functions.stream().noneMatch(f -> "test_badlhs".equals(f.getLhs().getName())),
+            "The function with an unparseable Lhs should be skipped");
+        assertNotNull(findFunction(functions, "add"));
+    }
+
+    // Inserts the strings as they are, bypassing insertFunction, so a test
+    // can store text the parser will reject.
+    private void insertRawFunction(String name, String lhs, String rhs) throws Exception {
+        String sql = "INSERT INTO MuFunction (Name, Lhs, Rhs) VALUES (?, ?, ?)";
+        try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL());
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, name);
+            stmt.setString(2, lhs);
+            stmt.setString(3, rhs);
+            stmt.executeUpdate();
+        }
     }
 
     private MuFunction findFunction(List<MuFunction> functions, String name) {

@@ -36,6 +36,31 @@ public class MuExpressionTest {
 
         assertEquals("(x + y)", opResult.toString());
         assertEquals(Kind.APPLICATION, oneResult.getKind());
+        assertEquals("S", oneResult.getFunctionName());
+        assertEquals(1, oneResult.getArguments().size());
+    }
+
+    @Test
+    void gettersReturnEachKindsFields() {
+        MuExpression one = buildOne();
+
+        assertEquals(7, new MuExpression(7).getNumberValue());
+        assertEquals("x", new MuExpression("x").getVariableName());
+        assertEquals("S", one.getFunctionName());
+        assertEquals("Z(0)", one.getArguments().get(0).toString());
+    }
+
+    @Test
+    void argumentsAreReadOnly() {
+        MuExpression one = buildOne();
+
+        assertThrows(UnsupportedOperationException.class,
+                () -> one.getArguments().add(new MuExpression(1)));
+    }
+
+    @Test
+    void nonApplicationHasNoArguments() {
+        assertTrue(new MuExpression("x").getArguments().isEmpty());
     }
 
     // The JSON written while the operands were typed Object has the same shape,

@@ -29,4 +29,43 @@ public class MuEvaluatorTest {
 
         assertTrue(ex.getMessage().contains("S(Z(0))"));
     }
+
+    // eval reads the fields, so a change to how an expression prints can't
+    // change its value.
+    @Test
+    void evaluationDoesNotDependOnToString() {
+        MuExpression number = new MuExpression(7) {
+            @Override
+            public String toString() {
+                return "seven";
+            }
+        };
+        MuExpression variable = new MuExpression("x") {
+            @Override
+            public String toString() {
+                return "not x";
+            }
+        };
+
+        MuEvaluator evaluator = new MuEvaluator();
+
+        assertEquals(7, evaluator.eval(number, Map.of()));
+        assertEquals(2, evaluator.eval(variable, Map.of("x", 2)));
+    }
+
+    @Test
+    void unboundVariableIsReportedByName() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> new MuEvaluator().eval(new MuExpression("y"), Map.of("x", 1)));
+
+        assertEquals("Unbound variable: y", ex.getMessage());
+    }
+
+    @Test
+    void missingOperandIsReported() {
+        MuExpression expr = new MuExpression(OpKind.ADD, new MuExpression("x"), null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new MuEvaluator().eval(expr, Map.of("x", 1)));
+    }
 }

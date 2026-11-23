@@ -22,12 +22,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import edu.regis.merc.model.Kind;
+import edu.regis.merc.model.LeftHandSide;
 import edu.regis.merc.model.MuExpression;
 import edu.regis.merc.model.Problem;
 
@@ -82,14 +84,41 @@ public class ProblemDAOTest extends BaseMysqlIT {
         assertNull(problem.getMuFunction());
     }
 
+    @Test
+    @DisplayName("A problem's mu function Lhs parameters are parsed")
+    public void testMuFunctionLhsIsParsed() throws Exception {
+        insertProblemWithMuFunction(TEST_FUNCTION + "(x1, x2, x3)", "x2");
+
+        Problem problem = new ProblemDAO().retrieve(TEST_PROBLEM_ID);
+
+        assertNotNull(problem.getMuFunction());
+        LeftHandSide lhs = problem.getMuFunction().getLhs();
+        assertEquals(TEST_FUNCTION, lhs.getName());
+        assertEquals(List.of("x1", "x2", "x3"), lhs.getParameters());
+    }
+
+    @Test
+    @DisplayName("An unparseable Lhs leaves the problem without a mu function")
+    public void testUnparseableLhsLeavesNoMuFunction() throws Exception {
+        insertProblemWithMuFunction(TEST_FUNCTION + "(0)", "0");
+
+        Problem problem = new ProblemDAO().retrieve(TEST_PROBLEM_ID);
+
+        assertNull(problem.getMuFunction());
+    }
+
     private void insertProblemWithMuFunction(String rhs) throws SQLException {
+        insertProblemWithMuFunction(TEST_FUNCTION + "(x)", rhs);
+    }
+
+    private void insertProblemWithMuFunction(String lhs, String rhs) throws SQLException {
         try (Connection conn = DriverManager.getConnection(MySqlDAO.getURL())) {
             int muId;
             try (PreparedStatement stmt = conn.prepareStatement(
                     "INSERT INTO MuFunction (Name, Lhs, Rhs) VALUES (?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, TEST_FUNCTION);
-                stmt.setString(2, TEST_FUNCTION + "(x)");
+                stmt.setString(2, lhs);
                 stmt.setString(3, rhs);
                 stmt.executeUpdate();
 

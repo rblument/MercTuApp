@@ -26,7 +26,11 @@ import java.util.List;
  *         | name [ '(' expr (',' expr)* ')' ]
  *         | '(' expr op expr ')'
  *   op   := '+' | '-' | '*' | '/'
+ *   name := letter (letter | digit | '_')*
  * </pre>
+ *
+ * <p>A left hand side uses the same grammar, limited to a name with an
+ * optional list of distinct variable names (see {@link #parseLeftHandSide}).
  *
  * <p>Not thread safe: a parser tracks its position in the input, so each
  * parse needs its own instance.
@@ -61,6 +65,54 @@ public class MuParser {
                 + ": " + input.substring(position));
         }
         return expr;
+    }
+
+    /**
+     * Parses the left hand side of a Mu function, such as "P(x1, x2, x3)",
+     * into its name and parameters. A bare name, such as "c", has no
+     * parameters.
+     *
+     * @param lhs the left hand side of a Mu function
+     * @return the function's name and its parameters, in order
+     * @throws MuParseException if lhs is not a name followed by an optional
+     *         list of distinct variable names
+     */
+    public LeftHandSide parseLeftHandSide(String lhs) throws MuParseException {
+        MuExpression expr;
+
+        try {
+            expr = parse(lhs);
+        } catch (MuParseException ex) {
+            throw new MuParseException("Invalid left hand side '" + lhs + "': "
+                + ex.getMessage(), ex);
+        }
+
+        if (expr.getKind() == Kind.VARIABLE) {
+            return new LeftHandSide(expr.getVariableName());
+        }
+
+        if (expr.getKind() != Kind.APPLICATION) {
+            throw new MuParseException("Invalid left hand side '" + lhs
+                + "': expected a name such as P(x1, x2)");
+        }
+
+        LeftHandSide result = new LeftHandSide(expr.getFunctionName());
+
+        for (MuExpression param : expr.getArguments()) {
+            if (param.getKind() != Kind.VARIABLE) {
+                throw new MuParseException("Invalid left hand side '" + lhs
+                    + "': parameter '" + param + "' is not a variable name");
+            }
+
+            if (result.getParameters().contains(param.getVariableName())) {
+                throw new MuParseException("Invalid left hand side '" + lhs
+                    + "': parameter '" + param + "' appears more than once");
+            }
+
+            result.addParameter(param.getVariableName());
+        }
+
+        return result;
     }
 
     /**
@@ -176,14 +228,16 @@ public class MuParser {
     }
 
     /**
-     * Consumes a name, which starts with a letter and may then hold digits.
+     * Consumes a name, which starts with a letter and may then hold digits
+     * and underscores.
      *
      * @return the name
      */
     private String consumeName() {
         int start = position;
 
-        while (position < input.length() && Character.isLetterOrDigit(input.charAt(position))) {
+        while (position < input.length() && (Character.isLetterOrDigit(input.charAt(position))
+                || input.charAt(position) == '_')) {
             position++;
         }
 
