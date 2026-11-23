@@ -59,6 +59,8 @@ public class MercTutor implements TutorSvc {
      * exception, which are logged by the exception.
      */
     private static final Logger LOGGER = Logger.getLogger(MercTutor.class.getName());
+    private static final TokenValidationCache TOKEN_CACHE = new TokenValidationCache(
+            TokenValidationCache.MAX_ENTRIES, TokenValidationCache.RETENTION, System::nanoTime);
 
     /**
      * The current tutoring session, which contains information on the current
@@ -81,18 +83,26 @@ public class MercTutor implements TutorSvc {
      * Initialize the tutor singleton (a NoOp).
      */
     public MercTutor() {
-        this(null, null, null);
+        this(null, null, null, TOKEN_CACHE);
     }
 
     private final SessionSvc sessions;
     private final AccountSvc accounts;
     private final StudentModelSvc studentModels;
+    private final TokenValidationCache tokenCache;
 
     // Use the real session lifecycle with small test doubles for persistence and authentication.
     MercTutor(SessionSvc sessions, AccountSvc accounts, StudentModelSvc studentModels) {
+        this(sessions, accounts, studentModels, new TokenValidationCache(
+                TokenValidationCache.MAX_ENTRIES, TokenValidationCache.RETENTION, System::nanoTime));
+    }
+
+    MercTutor(SessionSvc sessions, AccountSvc accounts, StudentModelSvc studentModels,
+            TokenValidationCache tokenCache) {
         this.sessions = sessions;
         this.accounts = accounts;
         this.studentModels = studentModels;
+        this.tokenCache = tokenCache;
         gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
@@ -102,13 +112,16 @@ public class MercTutor implements TutorSvc {
 
     private void rotateToken(TutoringSession saved) throws ObjNotFoundException, NonRecoverableException {
         String token = SecurityTokens.generate();
-        sessionSvc().replaceSecurityToken(saved.getStudent().getAccount().getUserId(), token);
+        String userId = saved.getStudent().getAccount().getUserId();
+        sessionSvc().replaceSecurityToken(userId, token);
+        tokenCache.invalidate(userId);
         saved.setSecurityToken(token);
     }
 
     private TutorReply logout(ClientRequest request) {
         try {
             boolean revoked = sessionSvc().revokeSecurityToken(request.getUserId(), request.getSecurityToken());
+            if (revoked) tokenCache.invalidate(request.getUserId());
             return new TutorReply(revoked ? "LoggedOut" : "InvalidToken");
         } catch (NonRecoverableException ex) {
             // Never include SQL diagnostics or token-bearing request data in replies/logs.
@@ -157,36 +170,8 @@ public class MercTutor implements TutorSvc {
             case "requestHint":
             case "requestModel":
                 String userId = request.getUserId();
-                try {
-                    if (verifySession(userId, request.getSecurityToken())) {
-
-                        Account account = accountSvc().retrieve(userId);
-                        student = new Student(account);
-
-                        try {
-                            StudentModelSvc stuModSvc = studentModelSvc();
-                            studentModel = stuModSvc.retrieve(userId);
-                            student.setStudentModel(studentModel);
-
-                        } catch (ObjNotFoundException ex) {
-                            TutorReply reply = new TutorReply(":ERR");
-                            reply.setData("Student model not found for: " + userId);
-                            return reply;
-                        }
-
-                        session = sessionSvc().retrieve(student.getAccount().getUserId());
-
-                    } else {
-                        TutorReply reply = new TutorReply(":ERR");
-                        reply.setData("Illegal Security Token");
-                        return reply;
-                    }
-
-                } catch (ObjNotFoundException ex) {
-                    return createError("No session exists for user: " + userId, ex);
-                } catch (NonRecoverableException ex) {
-                    return createError(ex.toString(), ex);
-                }
+                TutorReply rejected = authenticateTutoringRequest(userId, request.getSecurityToken());
+                if (rejected != null) return rejected;
 
                 String msg = "Session verified for " + request.getUserId();
                 Logger.getLogger(MercTutor.class.getName()).log(Level.INFO, msg);
@@ -345,8 +330,11 @@ public class MercTutor implements TutorSvc {
             if (!userId.equals(acct.getUserId())) {
                 return new TutorReply("IllegalUserId");
             }
-            return accountSvc().resetPassword(userId, token, acct.getPassword())
-                    ? new TutorReply("PasswordReset") : new TutorReply(":ERR", "Illegal Security Token");
+            if (!accountSvc().resetPassword(userId, token, acct.getPassword())) {
+                return new TutorReply(":ERR", "Illegal Security Token");
+            }
+            tokenCache.invalidate(userId);
+            return new TutorReply("PasswordReset");
         } catch (com.google.gson.JsonParseException ex) {
             return new TutorReply(":ERR", "Invalid password reset request.");
         } catch (NonRecoverableException ex) {
@@ -805,21 +793,45 @@ public class MercTutor implements TutorSvc {
 
     }
 
-    /**
-     * Verify that the user with the given id has a session with the given
-     * session id.
-     *
-     * @param userId    String "user@regis.edu"
-     * @param sessionId String identifying a previously generated session id.
-     * @return the current TutoringSession associated with the given user id and
-     *         session id
-     */
-    private boolean verifySession(String userId, String sessionId)
-            throws ObjNotFoundException, NonRecoverableException {
+    /** Load the authorized session and student, or return the tutor error to send. */
+    private TutorReply authenticateTutoringRequest(String userId, String token) {
+        if (userId == null || userId.isBlank() || token == null || token.isBlank()) {
+            return new TutorReply(":ERR", "Illegal Security Token");
+        }
 
-        if (userId == null || userId.isBlank() || sessionId == null || sessionId.isBlank()) return false;
-        String dbToken = sessionSvc().retrieveSecurityToken(userId);
-        return SecurityTokens.matches(dbToken, sessionId);
+        SessionSvc service = sessionSvc();
+        long revision = tokenCache.revision();
+        String fingerprint = SecurityTokens.fingerprint(token);
+        boolean cached = tokenCache.contains(userId, fingerprint);
+        try {
+            if (!cached && !SecurityTokens.matches(service.retrieveSecurityToken(userId), token)) {
+                return new TutorReply(":ERR", "Illegal Security Token");
+            }
+
+            // Protected requests already need the session. Its DB token is authoritative
+            // on both paths, including when another process revokes or rotates a token.
+            TutoringSession loaded = service.retrieve(userId);
+            if (!SecurityTokens.matches(loaded.getSecurityToken(), token)) {
+                if (cached) tokenCache.invalidate(userId);
+                return new TutorReply(":ERR", "Illegal Security Token");
+            }
+
+            student = new Student(accountSvc().retrieve(userId));
+            try {
+                studentModel = studentModelSvc().retrieve(userId);
+                student.setStudentModel(studentModel);
+            } catch (ObjNotFoundException ex) {
+                return new TutorReply(":ERR", "Student model not found for: " + userId);
+            }
+
+            session = loaded;
+            if (!cached) tokenCache.remember(userId, fingerprint, revision);
+            return null;
+        } catch (ObjNotFoundException ex) {
+            return createError("No session exists for user: " + userId, ex);
+        } catch (NonRecoverableException ex) {
+            return createError(ex.toString(), ex);
+        }
     }
 
     /**
