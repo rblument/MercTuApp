@@ -25,6 +25,8 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 /** Real authentication and persisted progress, without sockets or native Swing windows. */
@@ -140,6 +142,31 @@ public class LogoutResumeIntegrationTest extends BaseMysqlIT {
         f.assertRejected(newest);
         assertEquals("InvalidToken", f.request(ServerRequestType.LOGOUT, newest, "").getStatus());
         f.assertStoredToken("");
+    }
+
+    @Test public void concurrentRequestsRecheckWarmTokensAfterIndependentDatabaseChanges() throws Exception {
+        Fixture f = new Fixture();
+        String original = f.login().getSecurityToken();
+        String hint = "{\"stepId\":50,\"hintIndex\":0}";
+        assertEquals("Hint", f.request(ServerRequestType.REQUEST_HINT, original, hint).getStatus());
+
+        // Change the database via an independent DAO so no tutor invalidation runs.
+        String replacement = UUID.randomUUID().toString();
+        sessions.replaceSecurityToken(f.user, replacement);
+        assertEquals(":ERR", f.request(ServerRequestType.REQUEST_HINT, original, hint).getStatus());
+        assertEquals("Hint", f.request(ServerRequestType.REQUEST_HINT, replacement, hint).getStatus());
+        try (var requests = Executors.newFixedThreadPool(2)) {
+            var stale = requests.submit(() -> f.request(ServerRequestType.REQUEST_HINT, original, hint));
+            var current = requests.submit(() -> f.request(ServerRequestType.REQUEST_HINT, replacement, hint));
+            assertEquals(":ERR", stale.get(10, TimeUnit.SECONDS).getStatus());
+            assertEquals("Hint", current.get(10, TimeUnit.SECONDS).getStatus());
+
+            assertTrue(sessions.revokeSecurityToken(f.user, replacement));
+            var first = requests.submit(() -> f.request(ServerRequestType.REQUEST_HINT, replacement, hint));
+            var second = requests.submit(() -> f.request(ServerRequestType.REQUEST_HINT, replacement, hint));
+            assertEquals(":ERR", first.get(10, TimeUnit.SECONDS).getStatus());
+            assertEquals(":ERR", second.get(10, TimeUnit.SECONDS).getStatus());
+        }
     }
 
     @Test public void staleProgressCannotRestoreRevokedOrSupersededTokens() throws Exception {

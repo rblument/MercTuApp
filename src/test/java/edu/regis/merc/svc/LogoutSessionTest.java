@@ -5,7 +5,9 @@ import com.google.gson.JsonObject;
 import edu.regis.merc.err.NonRecoverableException;
 import edu.regis.merc.model.*;
 import java.lang.reflect.Proxy;
+import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -18,9 +20,14 @@ class LogoutSessionTest {
         private final TutoringSession saved = new TutoringSession(new Student(account));
         private String stored = SecurityTokens.generate();
         private boolean failDatabase;
+        private boolean failSessionLoad;
         private boolean failPasswordReset;
         private int passwordResets;
         private int rotations;
+        private int tokenLookups;
+        private int sessionLoads;
+        private final AtomicLong time = new AtomicLong();
+        private final TokenValidationCache cache = new TokenValidationCache(2, Duration.ofSeconds(10), time::get);
         private final MercTutor tutor;
 
         private Fixture() {
@@ -39,8 +46,12 @@ class LogoutSessionTest {
             SessionSvc sessions = proxy(SessionSvc.class, (name, args) -> {
                 if (failDatabase) throw new NonRecoverableException("Test database unavailable");
                 switch (name) {
-                    case "retrieve": saved.setSecurityToken(stored); return saved;
-                    case "retrieveSecurityToken": return stored;
+                    case "retrieve":
+                        sessionLoads++;
+                        if (failSessionLoad) throw new NonRecoverableException("Test session load failed");
+                        saved.setSecurityToken(stored);
+                        return saved;
+                    case "retrieveSecurityToken": tokenLookups++; return stored;
                     case "updateCurrentStep":
                     case "updateCurrentTask": return null;
                     case "replaceSecurityToken": stored = (String) args[1]; rotations++; return null;
@@ -70,7 +81,7 @@ class LogoutSessionTest {
                 if (name.equals("retrieve")) return new StudentModel(EMAIL);
                 throw new AssertionError("Unexpected model operation: " + name);
             });
-            tutor = new MercTutor(sessions, accounts, models);
+            tutor = new MercTutor(sessions, accounts, models, cache);
         }
 
         private TutorReply logout(String token) {
@@ -83,6 +94,57 @@ class LogoutSessionTest {
         private TutorReply login() {
             return tutor.signIn("{\"userId\":\"" + EMAIL + "\",\"password\":\"correct-password\"}");
         }
+
+        private TutorReply hint(String token) {
+            ClientRequest request = new ClientRequest(ServerRequestType.REQUEST_HINT);
+            request.setUserId(EMAIL);
+            request.setSecurityToken(token);
+            request.setData("{\"stepId\":120,\"hintIndex\":0}");
+            return tutor.request(request);
+        }
+    }
+
+    @Test void warmRequestsSkipOnlyThePreliminaryReadAndExpirationRestoresIt() {
+        Fixture f = new Fixture();
+        assertEquals("Hint", f.hint(f.stored).getStatus());
+        assertEquals("Hint", f.hint(f.stored).getStatus());
+        assertEquals(1, f.tokenLookups);
+        assertEquals(2, f.sessionLoads);
+        f.time.set(Duration.ofSeconds(10).toNanos());
+        assertEquals("Hint", f.hint(f.stored).getStatus());
+        assertEquals(2, f.tokenLookups);
+        assertEquals(3, f.sessionLoads);
+    }
+
+    @Test void invalidAndFailedChecksNeverWarmTheCache() {
+        Fixture f = new Fixture();
+        assertEquals(":ERR", f.hint("incorrect").getStatus());
+        assertEquals(":ERR", f.hint("incorrect").getStatus());
+        assertEquals(2, f.tokenLookups);
+        assertEquals(0, f.sessionLoads);
+        f.failSessionLoad = true;
+        assertEquals(":ERR", f.hint(f.stored).getStatus());
+        assertFalse(f.cache.contains(EMAIL, SecurityTokens.fingerprint(f.stored)));
+        f.failSessionLoad = false;
+        assertEquals("Hint", f.hint(f.stored).getStatus());
+        assertEquals(4, f.tokenLookups);
+        f.failDatabase = true;
+        assertEquals(":ERR", f.hint(f.stored).getStatus(), "A warm cache must fail closed without the DB");
+        assertEquals(4, f.tokenLookups);
+    }
+
+    @Test void warmCredentialsAreInvalidatedByLogoutAndRotation() {
+        Fixture f = new Fixture();
+        String first = f.stored;
+        assertEquals("Hint", f.hint(first).getStatus());
+        assertEquals("Authenticated", f.login().getStatus());
+        assertFalse(f.cache.contains(EMAIL, SecurityTokens.fingerprint(first)));
+        assertEquals(":ERR", f.hint(first).getStatus());
+        String second = f.stored;
+        assertEquals("Hint", f.hint(second).getStatus());
+        assertEquals("LoggedOut", f.logout(second).getStatus());
+        assertFalse(f.cache.contains(EMAIL, SecurityTokens.fingerprint(second)));
+        assertEquals(":ERR", f.hint(second).getStatus());
     }
 
     @Test void logoutRevokesOldTokenAndLoginRestoresProgressWithFreshToken() {
@@ -147,12 +209,15 @@ class LogoutSessionTest {
         reset.setUserId(EMAIL);
         reset.setSecurityToken(token);
         reset.setData("{\"userId\":\"" + EMAIL + "\",\"password\":\"replacement-password\"}");
+        assertEquals("Hint", f.hint(token).getStatus());
         f.failPasswordReset = true;
         assertEquals(":ERR", f.tutor.request(reset).getStatus());
         assertEquals(token, f.stored);
+        assertTrue(f.cache.contains(EMAIL, SecurityTokens.fingerprint(token)));
         f.failPasswordReset = false;
         assertEquals("PasswordReset", f.tutor.request(reset).getStatus());
         assertEquals("", f.stored);
+        assertFalse(f.cache.contains(EMAIL, SecurityTokens.fingerprint(token)));
         assertEquals(":ERR", f.tutor.request(reset).getStatus());
         assertEquals(1, f.passwordResets);
         assertEquals(300, f.saved.currentTask().currentStep().getId());
